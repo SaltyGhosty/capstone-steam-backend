@@ -1,14 +1,15 @@
-# Capstone Steam: backend
+# Capstone Steam
 
-API REST de una tienda de videojuegos inspirada en Steam. Tiene catálogo con búsqueda avanzada, panel para desarrolladores, carrito, lista de deseos, biblioteca, reseñas y compras con pago simulado. Los correos de confirmación se envían de forma asíncrona.
+Tienda de videojuegos inspirada en Steam: una API REST en Spring Boot y un frontend en React ([`frontend/`](frontend/)) hecho a partir de un diseño de Figma Make. Tiene catálogo con búsqueda avanzada, panel para desarrolladores, carrito, lista de deseos, biblioteca, reseñas y compras con pago simulado. Los correos de confirmación se envían de forma asíncrona.
 
 Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 
 | | |
 |---|---|
-| **Stack** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · JUnit 5 + Mockito + H2 · Maven |
-| **Tests** | 102 tests · 96 % de líneas cubiertas (JaCoCo) |
-| **API** | 47 peticiones documentadas en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
+| **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · JUnit 5 + Mockito + H2 · Maven |
+| **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
+| **Tests** | Backend: 105 tests, 96 % de líneas cubiertas (JaCoCo) · Frontend: 17 tests · CI en GitHub Actions |
+| **API** | Swagger UI en `/swagger-ui.html` · 47 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
 
@@ -16,11 +17,13 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 1. [Funcionalidades](#funcionalidades)
 2. [Requisitos técnicos y dónde se cumplen](#requisitos-técnicos-y-dónde-se-cumplen)
 3. [Puesta en marcha](#puesta-en-marcha)
-4. [Arquitectura](#arquitectura)
-5. [Base de datos (Flyway V1 a V4)](#base-de-datos-flyway-v1-a-v4)
-6. [API](#api)
-7. [Tests](#tests)
-8. [Decisiones técnicas](#decisiones-técnicas)
+4. [Frontend](#frontend)
+5. [Arquitectura](#arquitectura)
+6. [Base de datos (Flyway V1 a V4)](#base-de-datos-flyway-v1-a-v4)
+7. [API](#api)
+8. [Tests](#tests)
+9. [Despliegue](#despliegue)
+10. [Decisiones técnicas](#decisiones-técnicas)
 
 ---
 
@@ -50,12 +53,13 @@ Los pagos son **simulados**: una tarjeta terminada en `0000` siempre se rechaza,
 |---|---|
 | Spring Security + JWT stateless | [SecurityConfig](src/main/java/com/capstone/steam/security/SecurityConfig.java), [JwtService](src/main/java/com/capstone/steam/security/JwtService.java) (HS256, jjwt 0.13) y [JwtAuthFilter](src/main/java/com/capstone/steam/security/JwtAuthFilter.java) |
 | **Criteria API** para los filtros del catálogo | [GameCriteriaRepository](src/main/java/com/capstone/steam/game/search/GameCriteriaRepository.java): 9 filtros opcionales y 6 órdenes, con un subquery para los géneros y paginación en la base de datos |
-| **UPDATE atómicos escritos a mano** | [GameRepository](src/main/java/com/capstone/steam/game/GameRepository.java) (`incrementSalesCount`, `applyRatingDelta`, `bulkDiscountForDeveloper`) y [OrderRepository](src/main/java/com/capstone/steam/order/OrderRepository.java) (`markPaid`, `closePending`) |
+| **UPDATE atómicos escritos a mano** | [GameRepository](src/main/java/com/capstone/steam/game/GameRepository.java) (`incrementSalesCount`, `applyRatingDelta`, `bulkDiscountForDeveloper`), [OrderRepository](src/main/java/com/capstone/steam/order/OrderRepository.java) (`markPaid`, `closePending`) y [LibraryRepository](src/main/java/com/capstone/steam/library/LibraryRepository.java) (`addPlaytime`) |
 | Flyway V1 a V4 | [db/migration](src/main/resources/db/migration) (ver [abajo](#base-de-datos-flyway-v1-a-v4)) |
 | Spring Mail + Gmail SMTP | [EmailService](src/main/java/com/capstone/steam/notification/EmailService.java) y [EmailTemplates](src/main/java/com/capstone/steam/notification/EmailTemplates.java) |
 | Spring Events **AFTER_COMMIT** + `@Async` con **pool propio** | [MailListener](src/main/java/com/capstone/steam/notification/MailListener.java) y [AsyncConfig](src/main/java/com/capstone/steam/config/AsyncConfig.java) (`mailExecutor`, hilos `mail-*`) |
 | JUnit 5 + Mockito + H2 | [src/test](src/test/java/com/capstone/steam): tests unitarios, de repositorio, de integración HTTP y de concurrencia |
 | PostgreSQL + Docker Compose | [docker-compose.yml](docker-compose.yml) (o un PostgreSQL local) |
+| Frontend | [frontend/](frontend/): React consumiendo toda la API ([detalles](frontend/README.md)) |
 
 ## Puesta en marcha
 
@@ -83,7 +87,7 @@ cp .env.example .env    # y rellena los valores
 | `JWT_SECRET` | ✅ | Clave en Base64 de al menos 32 bytes. La app no arranca sin ella |
 | `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Recomendada | Si `ADMIN_PASSWORD` tiene valor, se crea el admin inicial al arrancar |
 | `MAIL_USERNAME`, `MAIL_APP_PASSWORD` | Opcional | Cuenta de Gmail y [contraseña de aplicación](https://myaccount.google.com/apppasswords). Si están vacías, los correos solo se registran en el log |
-| `SERVER_PORT` | Opcional | Por defecto 8080 (`.env.example` usa 8081) |
+| `SERVER_PORT` | Opcional | Por defecto `PORT` (lo fija Render) o 8080 (`.env.example` usa 8081) |
 | `PAYMENT_FAILURE_RATE` | Opcional | Probabilidad de rechazo aleatorio en las demos (0.0 a 1.0, por defecto 0) |
 | `CORS_ALLOWED_ORIGINS` | Opcional | URL del frontend (por defecto `http://localhost:5173`) |
 
@@ -94,7 +98,21 @@ cp .env.example .env    # y rellena los valores
 Flyway crea el esquema al arrancar y Hibernate lo valida (`ddl-auto=validate`). Para comprobar que funciona: `GET http://localhost:8081/actuator/health` debe devolver `{"status":"UP"}`.
 
 ### 4. Probar
-Importa [`postman/Capstone-Steam.postman_collection.json`](postman/Capstone-Steam.postman_collection.json) y ejecútala con el **Collection Runner**. Es un flujo completo: registro, publicación de un juego, compra y reseña. Los tokens y los ids se guardan solos. Para la carpeta *Admin*, pon tu `ADMIN_PASSWORD` en la variable `adminPassword`.
+Con la app arrancada, **Swagger UI** está en `http://localhost:8081/swagger-ui.html`: el botón *Authorize* acepta el `accessToken` del login.
+
+También puedes importar [`postman/Capstone-Steam.postman_collection.json`](postman/Capstone-Steam.postman_collection.json) y ejecútala con el **Collection Runner**. Es un flujo completo: registro, publicación de un juego, compra y reseña. Los tokens y los ids se guardan solos. Para la carpeta *Admin*, pon tu `ADMIN_PASSWORD` en la variable `adminPassword`.
+
+## Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev      # http://localhost:5173 (el backend debe estar en el 8081)
+```
+
+ARCADE es la tienda completa: portada con destacados, catálogo con todos los filtros de la Criteria API, ficha del juego con reseñas, carrito y pago simulado, pedidos, biblioteca (con sesiones de juego simuladas), wishlist, ajustes, panel del estudio para developers y panel de moderación para admins. Todo se explica en [frontend/README.md](frontend/README.md).
+
+**Usuarios demo** (perfil `dev`): `demo_player`, `demo_dev` y `nebula_dev` con la contraseña `password123`, y `admin` / el `ADMIN_PASSWORD` de tu `.env`.
 
 ## Arquitectura
 
@@ -112,7 +130,7 @@ com.capstone.steam
 ├── order/         pedidos, checkout y pagos
 │   └── payment/   PaymentGateway + SimulatedPaymentGateway
 ├── notification/  eventos, MailListener y EmailService
-├── config/        AsyncConfig (pool mailExecutor)
+├── config/        AsyncConfig (pool mailExecutor) y OpenApiConfig (Swagger)
 └── common/        GlobalExceptionHandler (ProblemDetail), excepciones, PageResponse y Slugs
 ```
 
@@ -166,6 +184,7 @@ La autenticación es `Authorization: Bearer <accessToken>`. El token se obtiene 
 | GET | `/api/wishlist` · PUT / DELETE `/api/wishlist/{gameId}` | usuario | Lista de deseos |
 | GET | `/api/library` | usuario | Mi biblioteca |
 | GET | `/api/library/status/{gameId}` | usuario | ¿Lo tengo? ¿Está en el carrito o la wishlist? ¿Lo he reseñado? |
+| POST | `/api/library/{gameId}/play` | usuario | Sesión de juego simulada: suma `minutes` (1 a 1440) al tiempo jugado. 404 si no lo tienes |
 | POST | `/api/orders` | usuario | Checkout: carrito → pedido PENDING |
 | POST | `/api/orders/{id}/pay` | usuario | Pagar → 200 PAID · **402** FAILED · 409 si ya está procesado |
 | POST | `/api/orders/{id}/cancel` | usuario | Cancelar un pedido pendiente |
@@ -201,7 +220,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 102 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 105 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
@@ -214,6 +233,20 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 | Concurrencia | `AtomicUpdateConcurrencyTest` | 16 hilos reales: ninguna venta se pierde y **exactamente 1** pago gana el pedido |
 
 Los tests usan H2 en modo PostgreSQL **con las mismas migraciones de Flyway** que producción; no hay `ddl-auto=create`.
+
+**Frontend** (`cd frontend && npm test`): 17 tests con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402), los formateadores y los flujos de login, registro y checkout (pedido → pago aprobado o rechazado) sobre las páginas reales con `fetch` simulado.
+
+**CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta `./mvnw verify` y los tests y el build del frontend en cada push a `main`.
+
+## Despliegue
+
+El repositorio incluye todo lo necesario; solo faltan las cuentas.
+
+1. **Backend + PostgreSQL en Render.** Ve a *New → Blueprint* y elige este repositorio: [`render.yaml`](render.yaml) crea la base de datos y el servicio web a partir del [`Dockerfile`](Dockerfile). `JWT_SECRET` se genera solo. Al crearlo se piden `CORS_ALLOWED_ORIGINS` (la URL del frontend), `ADMIN_PASSWORD` y, opcionalmente, `MAIL_USERNAME` y `MAIL_APP_PASSWORD`.
+2. **Frontend en Vercel.** Importa el repositorio con *Root Directory* = `frontend` (el [`vercel.json`](frontend/vercel.json) ya configura el build y las rutas) y define `VITE_API_URL` con la URL del backend en Render.
+3. Vuelve a Render y pon en `CORS_ALLOWED_ORIGINS` la URL final de Vercel.
+
+En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda unos 30-60 s en despertarlo.
 
 ## Decisiones técnicas
 

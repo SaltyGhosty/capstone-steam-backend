@@ -20,3 +20,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Capturas y logs de las pruebas con Playwright MCP
+.playwright-mcp/

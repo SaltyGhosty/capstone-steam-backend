@@ -12,8 +12,8 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 |---|---|
 | Paquete base | `com.capstone.steam` |
 | Artifact | `capstone-steam-backend` |
-| Estado actual | **✅ Plan completo (bloques 0 a 9): backend terminado, con 102 tests, 96 % de cobertura, README y colección de Postman verificada** |
-| Siguiente paso | Pendiente de decidir con el usuario: <br>• primer commit y push a GitHub (el repo no tiene commits todavía) <br>• probar el envío real con Gmail <br>• crear el admin en `dev` (`ADMIN_PASSWORD` en `.env`) <br>• empezar el frontend <br>• mejoras opcionales (refresh token, OpenAPI/Swagger, subir portadas) |
+| Estado actual | **✅ Bloques 0 a 11: backend (105 tests, 96 % de cobertura, Swagger) + frontend React (17 tests) + CI + despliegue preparado** |
+| Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). El primer commit (`0578f9e`) está subido a `main`, que sigue a `origin/main`. Pendiente (necesita cuentas del usuario): <br>• **Gmail**: `MAIL_USERNAME` + `MAIL_APP_PASSWORD` en `.env` y probar el envío real <br>• **Desplegar**: Render (Blueprint con `render.yaml`) + Vercel (`frontend/`), ver README → Despliegue <br>Opcional: refresh token, subir portadas (Cloudinary), amigos/descargas del diseño |
 | Última actualización | 2026-09-30 |
 
 ### Entorno local (máquina del usuario, Windows 11)
@@ -26,10 +26,22 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
   - Usuario `postgres`; la contraseña está en `.env`.
   - La BD `capstone_steam` ya está creada y tiene aplicadas las migraciones V1 a V4.
 - **`.env`:** ya existe (git lo ignora), con `DB_PASSWORD` y un `JWT_SECRET` aleatorio. Siguen vacíos los datos de Gmail (`MAIL_*`) y `ADMIN_PASSWORD`, así que en `dev` todavía no hay admin. Para crearlo basta con añadir `ADMIN_PASSWORD=...` y arrancar la app. `.env.example` ya incluye `ADMIN_*` y `SERVER_PORT`.
+- **Datos de demo en `dev`** (cargados el 2026-09-30 a través de la API): <br>• `admin` / `Admin12345!` (creado desde `ADMIN_PASSWORD` en `.env`) <br>• Developers: `demo_dev` (Pixel Forge Studios) y `nebula_dev` (Nebula Games), con 8 juegos publicados <br>• Jugadores: `reviewer_ana`, `reviewer_leo` y `reviewer_sam`, con compras y 10 reseñas <br>• `demo_player`: 1 compra, 1 pago rechazado, 2 juegos en la wishlist y 1 en el carrito <br>• Contraseña de todos (salvo admin): `password123`
 - **Tests de MockMvc en Boot 4.1:** `org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc`. En el perfil `test`, el admin es `admin` / `Admin12345!`.
 - **Puerto 8080:** lo ocupa otra app Java del usuario (un JDK 25.0.3 en `AppData\Local\Programs`), así que no hay que cerrarla. Para arrancar esta app se usa otro puerto: `$env:SERVER_PORT="8081"` (o se añade `SERVER_PORT` a `.env`).
 - **Docker:** no está instalado. `docker-compose.yml` queda como opción y usa el puerto **5433**.
 - **Git:** repo propio en la carpeta del proyecto (antes estaba dentro del repo del home).
+
+### Frontend (hecho el 2026-09-30, en `frontend/`; ver `frontend/README.md`)
+- **Cómo se hizo:** se partió del código exportado de Figma Make (`D:\Video Game Website`) y se quitaron los plugins de Figma. Stack: React 19, Vite 8, Tailwind v4, React Router 7 y npm (no hay pnpm instalado). La interfaz está en español y los precios en €.
+- **Cobertura de la API:** se usan todos los endpoints (tienda, carrito, checkout y pago, biblioteca, wishlist, reseñas, perfil, panel de developer y panel de admin).
+- **Proxy de Vite:** `/api` → `localhost:8081`. El proxy **quita la cabecera `Origin`**: si no, el CORS del backend rechaza con 403 los POST cuando Vite no corre justo en el 5173.
+- **Puertos:** el 5174 lo ocupa Agent Office; el 5173 lo usaba `sprout-capstone`, que se cerró a petición del usuario el 2026-09-30.
+- **Probado en el navegador con Playwright:** portada, catálogo con filtros (también en móvil), login, pago rechazado (tarjeta `0000`) → 402, pago correcto → PAID, ficha con el formulario de reseña y panel de admin.
+- **Datos de demo modificados por las pruebas:** `demo_player` ahora tiene Neon Drift en la biblioteca (pedido #11 PAID, #10 FAILED), el carrito vacío, una reseña de 5★ en Neon Drift y 55 min jugados. El juego de prueba «QA Test Game» (id 17) se creó y se borró.
+- **Diseño original en Figma Make:** https://www.figma.com/make/dCxjFlqDGURAtW8CbXbMUu/Video-Game-Website (privado). El código exportado se guardó en `D:\Video Game Website`.
+- **Plugins instalados** (ámbito user, marketplace oficial): `frontend-design`, `figma`, `context7`, `playwright`, `modern-web-guidance` y `playground`. La skill `dataviz` ya venía incluida.
+- **La API espera el frontend en `http://localhost:5173`** (CORS). El backend corre en el 8081 y la colección de Postman sirve de contrato.
 
 ### Versiones fijadas
 Spring Boot **4.1.1** · jjwt **0.13.0** · Java **25** · Flyway (gestionado por Boot) · H2 2.4 (solo tests).
@@ -93,6 +105,8 @@ Spring Boot **4.1.1** · jjwt **0.13.0** · Java **25** · Flyway (gestionado po
 | D36 | `EmailService` **nunca lanza excepciones**: un fallo de SMTP se registra en el log y no afecta a la operación, que ya hizo commit. Si `MAIL_USERNAME` está vacío, el correo queda **desactivado** y solo se registra en el log, para poder desarrollar sin cuenta de Gmail. Si `MAIL_FROM` está vacío, se usa el usuario SMTP como remitente | Bloque 7 | ✅ Aplicada |
 | D37 | El test de correo **no es `@Transactional`** (AFTER_COMMIT necesita commits reales) y usa su propio H2 (`jdbc:h2:mem:mail_events`, con `@TestPropertySource`) para no dejar datos en la BD de los demás tests. Comprueba que el envío ocurre en un hilo `mail-*` y que, si la transacción hace rollback, no se envía nada | Bloque 7 | ✅ Aplicada |
 | D38 | En surefire, `argLine` es `@{argLine} -javaagent:mockito`, con `<argLine></argLine>` vacío en las properties. Así funciona con JaCoCo, que rellena argLine, y también con `-Djacoco.skip` | Bloque 8 | ✅ Aplicada |
+| D39 | Swagger UI y `/v3/api-docs` son públicos también en `prod` (sirven para la presentación). Para ocultarlos: `springdoc.api-docs.enabled=false` y `springdoc.swagger-ui.enabled=false` | Bloque 11 | ✅ Aplicada |
+| D40 | Tiempo de juego simulado: no hay cliente real, así que «Jugar» suma 30-90 min con un UPDATE atómico (igual que ventas y rating), sin leer antes la fila | Bloque 11 | ✅ Aplicada |
 **Forma de trabajar:**
 - Se construye bloque a bloque y cada bloque se valida antes de pasar al siguiente.
 - Las respuestas van en español.
@@ -244,6 +258,8 @@ com.capstone.steam
 | 7 | Eventos y correo asíncrono | ✅ Hecho | 2026-09-30 | Componentes: <br>• `AsyncConfig`: pool `mailExecutor` con hilos `mail-*` y `AsyncUncaughtExceptionHandler` <br>• `MailListener`: `AFTER_COMMIT` + `@Async` para los 3 eventos <br>• `EmailService` y `EmailTemplates`: HTML con los datos del usuario escapados <br><br>Tests nuevos: `EmailServiceTest` (4) y `MailEventIntegrationTest` (4, con su propio H2 y sin `@Transactional`); en total 92 en verde. <br><br>En Postgres: el registro responde en 480 ms y el correo sale en el hilo `mail-1`. **El envío real a Gmail aún no se ha probado**: faltan las credenciales. |
 | 8 | Suite de tests | ✅ Hecho | 2026-09-30 | JaCoCo 0.8.15: `./mvnw verify` genera `target/site/jacoco/index.html` y **falla si la cobertura de líneas baja del 80 %**. <br><br>Cobertura: **96,0 % de líneas, 78,2 % de ramas y 91,8 % de métodos** (antes: 90,5 % y 70,7 %). <br><br>Tests nuevos: <br>• `AdminIntegrationTest` (5): CRUD de géneros, cuenta desactivada → 403 en el login, moderación y 404 <br>• `AtomicUpdateConcurrencyTest` (2): **16 hilos reales**; ninguna venta se pierde y exactamente 1 pago gana el pedido <br>• 3 casos más en Catalog y Storefront <br><br>**102 tests en verde.** |
 | 9 | README y colección de Postman | ✅ Hecho | 2026-09-30 | `README.md`: incluye la tabla "requisito → dónde se cumple", la puesta en marcha, la arquitectura, la API y los tests. <br><br>`postman/Capstone-Steam.postman_collection.json`: 47 peticiones en 8 carpetas, como un flujo completo que guarda tokens e ids solo. **Ejecutada con newman contra Postgres: 47 peticiones y 60 comprobaciones, 0 fallos.** |
+| 10 | Frontend React (`frontend/`) | ✅ Hecho | 2026-09-30 | Desde la exportación de Figma Make: 10 páginas, toda la API conectada, en español y en €. Probado con Playwright (compra aprobada/rechazada, reseña, wishlist, panel developer y admin). Arreglos: el proxy quita `Origin` (403 de CORS), celdas de tabla sin flex, cierre de sesión con recarga en `/`. |
+| 11 | Cierre: Swagger, tiempo de juego, tests del frontend, CI y despliegue | ✅ Hecho | 2026-09-30 | • springdoc 3.1.1 → `/swagger-ui.html` (público, esquema bearer) <br>• `POST /api/library/{gameId}/play` con UPDATE atómico `addPlaytime` (404 si no lo tienes) y botón «Jugar» <br>• Backend: **105 tests** (+ `OpenApiIntegrationTest` y play), 96,1 % de líneas <br>• Frontend: Vitest + Testing Library, **17 tests** <br>• `.github/workflows/ci.yml` (verify + test/build del frontend) <br>• `Dockerfile`, `render.yaml`, `frontend/vercel.json`; `application-prod.yml` acepta `DB_URL` o `DB_HOST/DB_PORT/DB_NAME`; `server.port` usa `PORT` si existe |
 
 ---
 

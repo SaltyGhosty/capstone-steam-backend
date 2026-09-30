@@ -1,0 +1,8 @@
+target/
+frontend/
+postman/
+.git/
+.github/
+.env
+.env.*
+*.md
