@@ -18,6 +18,11 @@ describe('format', () => {
     expect(formatPlaytime(750)).toBe('13 h jugadas');
   });
 
+  it('usa la imagen panorámica de Steam para el hero', () => {
+    expect(wideImage('https://cdn.cloudflare.steamstatic.com/steam/apps/367520/library_600x900_2x.jpg'))
+      .toBe('https://cdn.cloudflare.steamstatic.com/steam/apps/367520/library_hero.jpg');
+  });
+
   it('pide las portadas de Unsplash y picsum en apaisado y deja el resto igual', () => {
     expect(wideImage('https://images.unsplash.com/photo-1?auto=format&fit=crop&w=900&h=1200&q=80'))
       .toBe('https://images.unsplash.com/photo-1?auto=format&fit=crop&w=1800&h=800&q=80');

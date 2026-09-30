@@ -18,15 +18,17 @@ Tienda de videojuegos en React 19 + Vite 8 + Tailwind CSS v4 + React Router 7. P
 3. `npm test` ejecuta los tests (Vitest + Testing Library, sin backend: `fetch` está simulado).
 4. `npm run build` comprueba los tipos con `tsc` y genera `dist/`. Si el frontend se sirve desde otro dominio, define `VITE_API_URL` (ver `.env.example`) y añade ese origen a `CORS_ALLOWED_ORIGINS` en el backend.
 
-**Usuarios demo** (perfil `dev`):
+**Usuarios demo** (tras `node scripts/seed-demo.mjs` en la raíz del repositorio; contraseña `password123`):
 
-| Usuario | Contraseña | Rol |
+| Usuario | Rol | Qué tiene |
 |---|---|---|
-| `demo_player` | `password123` | Jugador |
-| `demo_dev` | `password123` | Developer |
-| `admin` | `Admin12345!` | Administrador |
+| `demo_player` | Jugador | 3 juegos con horas jugadas, 4 en la wishlist, Celeste en el carrito y un pago rechazado |
+| `team_cherry` | Developer | Hollow Knight publicado y *Silksong* como borrador |
+| `admin` | Administrador | Contraseña: el `ADMIN_PASSWORD` del `.env` del backend |
 
 **Pago simulado:** una tarjeta que termina en `0000` siempre se rechaza.
+
+Las portadas son las de Steam: `cardImage()` y `wideImage()` (en `lib/format.ts`) eligen la cápsula apaisada para las tarjetas y la imagen panorámica para el hero.
 
 ## Estructura
 

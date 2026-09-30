@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import type { GameSummary } from '@/api/types';
 import { useStore } from '@/context/StoreContext';
-import { formatMoney, genreLabel } from '@/lib/format';
+import { cardImage, formatMoney, genreLabel } from '@/lib/format';
 import Icon from './Icon';
 
 export default function GameCard({ game }: { game: GameSummary }) {
@@ -12,7 +12,7 @@ export default function GameCard({ game }: { game: GameSummary }) {
     <article className="game-card">
       <div className="cover">
         <Link to={`/games/${game.slug}`} aria-label={game.title}>
-          {game.coverUrl ? <img src={game.coverUrl} alt="" loading="lazy" /> : <div className="cover-fallback">{game.title}</div>}
+          {game.coverUrl ? <img src={cardImage(game.coverUrl)} alt="" loading="lazy" /> : <div className="cover-fallback">{game.title}</div>}
         </Link>
         <button onClick={() => toggleWishlist(game.id, game.title)} className={wished ? 'wish active' : 'wish'}
           aria-label={wished ? `Quitar ${game.title} de la wishlist` : `Añadir ${game.title} a la wishlist`}>

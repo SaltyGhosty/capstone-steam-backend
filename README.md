@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 105 tests, 96 % de líneas cubiertas (JaCoCo) · Frontend: 17 tests · CI en GitHub Actions |
+| **Tests** | Backend: 105 tests, 96 % de líneas cubiertas (JaCoCo) · Frontend: 18 tests · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 47 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -112,7 +112,7 @@ npm run dev      # http://localhost:5173 (el backend debe estar en el 8081)
 
 ARCADE es la tienda completa: portada con destacados, catálogo con todos los filtros de la Criteria API, ficha del juego con reseñas, carrito y pago simulado, pedidos, biblioteca (con sesiones de juego simuladas), wishlist, ajustes, panel del estudio para developers y panel de moderación para admins. Todo se explica en [frontend/README.md](frontend/README.md).
 
-**Usuarios demo** (perfil `dev`): `demo_player`, `demo_dev` y `nebula_dev` con la contraseña `password123`, y `admin` / el `ADMIN_PASSWORD` de tu `.env`.
+**Usuarios demo** (tras ejecutar `node scripts/seed-demo.mjs`): `demo_player` (jugador con biblioteca, wishlist, carrito y un pago rechazado) y las cuentas de los estudios, como `team_cherry` (tiene un borrador para publicar), todas con la contraseña `password123`; y `admin` / el `ADMIN_PASSWORD` de tu `.env`.
 
 ## Arquitectura
 
@@ -234,7 +234,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 
 Los tests usan H2 en modo PostgreSQL **con las mismas migraciones de Flyway** que producción; no hay `ddl-auto=create`.
 
-**Frontend** (`cd frontend && npm test`): 17 tests con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402), los formateadores y los flujos de login, registro y checkout (pedido → pago aprobado o rechazado) sobre las páginas reales con `fetch` simulado.
+**Frontend** (`cd frontend && npm test`): 18 tests con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402), los formateadores y los flujos de login, registro y checkout (pedido → pago aprobado o rechazado) sobre las páginas reales con `fetch` simulado.
 
 **CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta `./mvnw verify` y los tests y el build del frontend en cada push a `main`.
 
@@ -245,20 +245,20 @@ El repositorio incluye todo lo necesario; solo faltan las cuentas.
 1. **Backend + PostgreSQL en Render.** Ve a *New → Blueprint* y elige este repositorio: [`render.yaml`](render.yaml) crea la base de datos y el servicio web a partir del [`Dockerfile`](Dockerfile). `JWT_SECRET` se genera solo. Al crearlo se piden `CORS_ALLOWED_ORIGINS` (la URL del frontend), `ADMIN_PASSWORD` y, opcionalmente, `MAIL_USERNAME` y `MAIL_APP_PASSWORD`.
 2. **Frontend en Vercel.** Importa el repositorio con *Root Directory* = `frontend` (el [`vercel.json`](frontend/vercel.json) ya configura el build y las rutas) y define `VITE_API_URL` con la URL del backend en Render.
 3. Vuelve a Render y pon en `CORS_ALLOWED_ORIGINS` la URL final de Vercel.
+4. Carga el catálogo demo en la base de datos nueva: `node scripts/seed-demo.mjs --api https://<tu-servicio>.onrender.com`.
 
 En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda unos 30-60 s en despertarlo.
 
-## Créditos de las imágenes
+## Datos demo y créditos
 
-Las portadas de los juegos demo se enlazan desde Unsplash y Wikimedia Commons (no están en el repositorio):
+[`scripts/seed-demo.mjs`](scripts/seed-demo.mjs) carga, **a través de la API**, un catálogo de 23 juegos reales (22 publicados y *Hollow Knight: Silksong* como borrador), 21 estudios, 6 jugadores, 20 pedidos (uno rechazado), 32 reseñas, wishlists y tiempo de juego. Los datos están en [`scripts/demo-data.json`](scripts/demo-data.json) y se puede ejecutar varias veces sin duplicar nada:
 
-| Juego | Imagen | Autor y licencia |
-|---|---|---|
-| Starfall Odyssey, Void Runner, Echoes of Aether, Neon Drift | Fotos de [Unsplash](https://unsplash.com) (las mismas del diseño de Figma Make) | [Licencia de Unsplash](https://unsplash.com/license) |
-| Hollow Depths | [Batu Caves Dark Cave Interior](https://commons.wikimedia.org/wiki/File:Batu_Caves_Dark_Cave_Interior_2015.jpg) | KQuhen · CC BY-SA 4.0 |
-| Pixel Farmers | [Setting sun over barley field, near Chapel Barn Farm](https://commons.wikimedia.org/wiki/File:Setting_sun_over_barley_field,_near_Chapel_Barn_Farm_-_geograph.org.uk_-_6494598.jpg) | Christopher Hilton · CC BY-SA 2.0 |
-| Kingdoms of Ash | [Ruins of the Trakai Island Castle at sunset](https://commons.wikimedia.org/wiki/File:J%C3%B3zef_Marszewski_-_Ruins_of_the_Trakai_Island_Castle_at_sunset_-_MP_2685_-_National_Museum_in_Warsaw.jpg) | Józef Marszewski (Museo Nacional de Varsovia) · Dominio público |
-| The Lantern House | [House](https://commons.wikimedia.org/wiki/File:House_(223131825).jpeg) | Максим Барбухин · CC0 |
+```bash
+node scripts/seed-demo.mjs                                   # contra http://localhost:8081
+node scripts/seed-demo.mjs --api https://tu-api.onrender.com # contra el despliegue
+```
+
+Las portadas, cápsulas e imágenes de cabecera se enlazan desde el CDN de Steam (`cdn.cloudflare.steamstatic.com`). Los nombres, las imágenes y las marcas pertenecen a sus respectivos estudios y editores; se usan solo como datos de demostración en este proyecto educativo. Los textos de las descripciones y las reseñas son propios.
 
 ## Decisiones técnicas
 

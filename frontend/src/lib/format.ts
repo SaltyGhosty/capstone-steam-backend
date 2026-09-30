@@ -22,11 +22,13 @@ export function initials(name: string) {
     .join('');
 }
 
-// Las portadas se guardan en vertical. Para el hero y las ofertas se pide la versión apaisada
-// cuando el proveedor recorta por URL (Unsplash con w/h/fit=crop, picsum con /ancho/alto);
-// cualquier otra URL se usa tal cual y la recorta el CSS (background-size: cover).
+// Las portadas se guardan en vertical. Para el hero y las ofertas se pide la versión apaisada:
+// en Steam, la imagen "library_hero" del mismo juego; en Unsplash y picsum, un recorte por URL.
+// Cualquier otra URL se usa tal cual y la recorta el CSS (background-size: cover).
 export function wideImage(url: string | null | undefined, width = 1800, height = 800) {
   if (!url) return '';
+  const steam = url.match(/^(https:\/\/[^/]*steamstatic\.com\/steam\/apps\/\d+)\/library_600x900(_2x)?\.jpg/);
+  if (steam) return `${steam[1]}/library_hero.jpg`;
   if (url.startsWith('https://images.unsplash.com/')) {
     const wide = new URL(url);
     wide.searchParams.set('w', String(width));
@@ -38,7 +40,14 @@ export function wideImage(url: string | null | undefined, width = 1800, height =
   return picsum ? `${picsum[1]}/${width}/${height}` : url;
 }
 
-export const genreLabel = (genres: { name: string }[]) =>
+// Tarjetas y líneas del carrito son apaisadas (≈1,6:1): en Steam hay una cápsula con ese formato.
+export function cardImage(url: string | null | undefined) {
+  if (!url) return '';
+  const steam = url.match(/^(https:\/\/[^/]*steamstatic\.com\/steam\/apps\/\d+)\/library_600x900(_2x)?\.jpg/);
+  return steam ? `${steam[1]}/capsule_616x353.jpg` : url;
+}
+
+export const genreLabel =(genres: { name: string }[]) =>
   genres.map((g) => g.name).join(' · ') || 'Sin género';
 
 export const ORDER_STATUS: Record<string, string> = {

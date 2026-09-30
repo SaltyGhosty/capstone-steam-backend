@@ -89,8 +89,8 @@ export default function Discover() {
 
   const maxDiscount = Math.max(0, ...data.onSale.map((g) => g.discountPercent));
   const saleImage = data.onSale[0]?.coverUrl ?? data.bestSelling[1]?.coverUrl;
-  // Imagen distinta a la de la tarjeta de ofertas
-  const topImage = [...data.featured, ...data.newest].map((g) => g.coverUrl).find((url) => url && url !== saleImage);
+  // Distinta de la del hero (featured[0]) y de la tarjeta de ofertas
+  const topImage = [...data.featured.slice(1), ...data.newest].map((g) => g.coverUrl).find((url) => url && url !== saleImage);
 
   return (
     <>

@@ -23,3 +23,6 @@ Thumbs.db
 
 # Capturas y logs de las pruebas con Playwright MCP
 .playwright-mcp/
+
+# Copias locales de la base de datos
+backups/

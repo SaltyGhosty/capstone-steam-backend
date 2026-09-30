@@ -12,7 +12,7 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 |---|---|
 | Paquete base | `com.capstone.steam` |
 | Artifact | `capstone-steam-backend` |
-| Estado actual | **✅ Bloques 0 a 11: backend (105 tests, 96 % de cobertura, Swagger) + frontend React (17 tests) + CI + despliegue preparado** |
+| Estado actual | **✅ Bloques 0 a 12: backend (105 tests, 96 % de cobertura, Swagger) + frontend React (18 tests) + CI + despliegue preparado** |
 | Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). El primer commit (`0578f9e`) está subido a `main`, que sigue a `origin/main`. Pendiente (necesita cuentas del usuario): <br>• **Gmail**: `MAIL_USERNAME` + `MAIL_APP_PASSWORD` en `.env` y probar el envío real <br>• **Desplegar**: Render (Blueprint con `render.yaml`) + Vercel (`frontend/`), ver README → Despliegue <br>Opcional: refresh token, subir portadas (Cloudinary), amigos/descargas del diseño |
 | Última actualización | 2026-09-30 |
 
@@ -26,7 +26,7 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
   - Usuario `postgres`; la contraseña está en `.env`.
   - La BD `capstone_steam` ya está creada y tiene aplicadas las migraciones V1 a V4.
 - **`.env`:** ya existe (git lo ignora), con `DB_PASSWORD` y un `JWT_SECRET` aleatorio. Siguen vacíos los datos de Gmail (`MAIL_*`) y `ADMIN_PASSWORD`, así que en `dev` todavía no hay admin. Para crearlo basta con añadir `ADMIN_PASSWORD=...` y arrancar la app. `.env.example` ya incluye `ADMIN_*` y `SERVER_PORT`.
-- **Datos de demo en `dev`** (cargados el 2026-09-30 a través de la API): <br>• `admin` / `Admin12345!` (creado desde `ADMIN_PASSWORD` en `.env`) <br>• Developers: `demo_dev` (Pixel Forge Studios) y `nebula_dev` (Nebula Games), con 8 juegos publicados <br>• Jugadores: `reviewer_ana`, `reviewer_leo` y `reviewer_sam`, con compras y 10 reseñas <br>• `demo_player`: 1 compra, 1 pago rechazado, 2 juegos en la wishlist y 1 en el carrito <br>• Contraseña de todos (salvo admin): `password123`
+- **Datos de demo en `dev`**: los carga `node scripts/seed-demo.mjs` en la BD `capstone_steam_demo` (ver bloque 12). Cuentas con contraseña `password123`: `demo_player`, `reviewer_ana`, `reviewer_leo`, `reviewer_sam`, `lucia_gamer`, `marco_rpg` y un estudio por juego (`team_cherry`, `cdprojektred`, `fromsoftware`…); `admin` / `Admin12345!`.
 - **Tests de MockMvc en Boot 4.1:** `org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc`. En el perfil `test`, el admin es `admin` / `Admin12345!`.
 - **Puerto 8080:** lo ocupa otra app Java del usuario (un JDK 25.0.3 en `AppData\Local\Programs`), así que no hay que cerrarla. Para arrancar esta app se usa otro puerto: `$env:SERVER_PORT="8081"` (o se añade `SERVER_PORT` a `.env`).
 - **Docker:** no está instalado. `docker-compose.yml` queda como opción y usa el puerto **5433**.
@@ -260,6 +260,7 @@ com.capstone.steam
 | 9 | README y colección de Postman | ✅ Hecho | 2026-09-30 | `README.md`: incluye la tabla "requisito → dónde se cumple", la puesta en marcha, la arquitectura, la API y los tests. <br><br>`postman/Capstone-Steam.postman_collection.json`: 47 peticiones en 8 carpetas, como un flujo completo que guarda tokens e ids solo. **Ejecutada con newman contra Postgres: 47 peticiones y 60 comprobaciones, 0 fallos.** |
 | 10 | Frontend React (`frontend/`) | ✅ Hecho | 2026-09-30 | Desde la exportación de Figma Make: 10 páginas, toda la API conectada, en español y en €. Probado con Playwright (compra aprobada/rechazada, reseña, wishlist, panel developer y admin). Arreglos: el proxy quita `Origin` (403 de CORS), celdas de tabla sin flex, cierre de sesión con recarga en `/`. |
 | 11 | Cierre: Swagger, tiempo de juego, tests del frontend, CI y despliegue | ✅ Hecho | 2026-09-30 | • springdoc 3.1.1 → `/swagger-ui.html` (público, esquema bearer) <br>• `POST /api/library/{gameId}/play` con UPDATE atómico `addPlaytime` (404 si no lo tienes) y botón «Jugar» <br>• Backend: **105 tests** (+ `OpenApiIntegrationTest` y play), 96,1 % de líneas <br>• Frontend: Vitest + Testing Library, **17 tests** <br>• `.github/workflows/ci.yml` (verify + test/build del frontend) <br>• `Dockerfile`, `render.yaml`, `frontend/vercel.json`; `application-prod.yml` acepta `DB_URL` o `DB_HOST/DB_PORT/DB_NAME`; `server.port` usa `PORT` si existe |
+| 12 | Catálogo con juegos reales | ✅ Hecho | 2026-09-30 | • `scripts/seed-demo.mjs` + `scripts/demo-data.json`: siembra por la API (idempotente) 21 estudios, 23 juegos reales de Steam (Silksong en borrador), 6 jugadores, 20 pedidos (1 FAILED), 32 reseñas, wishlists, carrito y horas <br>• Portadas del CDN de Steam: `library_600x900_2x` (vertical), `capsule_616x353` (tarjetas, `cardImage`) y `library_hero` (hero, `wideImage`) <br>• **BD local nueva `capstone_steam_demo`** (el `.env` apunta a ella). La antigua `capstone_steam` sigue intacta y además hay copia en `backups/capstone_steam-antes-juegos-reales.dump` (borrarla la bloqueó el permiso de auto mode; queda a decisión del usuario) |
 
 ---
 

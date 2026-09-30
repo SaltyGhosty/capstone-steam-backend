@@ -4,7 +4,7 @@ import { cartApi, orderApi } from '@/api/endpoints';
 import Icon from '@/components/Icon';
 import { Empty, Loading, PageHeader, Price } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
-import { formatMoney } from '@/lib/format';
+import { cardImage, formatMoney } from '@/lib/format';
 
 export default function Cart() {
   const { cart, removeFromCart, refreshCart, notifyError } = useStore();
@@ -62,7 +62,7 @@ export default function Cart() {
           {cart.items.map((item) => (
             <article key={item.gameId} className={item.available ? 'line' : 'line unavailable'}>
               <Link to={`/games/${item.slug}`} className="line-cover">
-                {item.coverUrl && <img src={item.coverUrl} alt="" />}
+                {item.coverUrl && <img src={cardImage(item.coverUrl)} alt="" />}
               </Link>
               <div className="line-info">
                 <h3><Link to={`/games/${item.slug}`}>{item.title}</Link></h3>

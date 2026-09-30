@@ -6,7 +6,7 @@ import type { Order, PaymentMethod } from '@/api/types';
 import Icon from '@/components/Icon';
 import { Empty, ErrorState, FieldError, Loading, PageHeader, Pagination } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
-import { formatDateTime, formatMoney, ORDER_STATUS } from '@/lib/format';
+import { cardImage, formatDateTime, formatMoney, ORDER_STATUS } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 
 export function OrderList() {
@@ -125,7 +125,7 @@ export function OrderDetail() {
         <div className="line-list">
           {o.items.map((item) => (
             <article key={item.gameId} className="line">
-              <Link to={`/games/${item.slug}`} className="line-cover">{item.coverUrl && <img src={item.coverUrl} alt="" />}</Link>
+              <Link to={`/games/${item.slug}`} className="line-cover">{item.coverUrl && <img src={cardImage(item.coverUrl)} alt="" />}</Link>
               <div className="line-info"><h3><Link to={`/games/${item.slug}`}>{item.title}</Link></h3></div>
               <span className="price"><b>{formatMoney(item.unitPrice)}</b></span>
             </article>

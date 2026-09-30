@@ -5,7 +5,7 @@ import { libraryApi, wishlistApi } from '@/api/endpoints';
 import Icon from '@/components/Icon';
 import { Empty, ErrorState, Loading, PageHeader, Pagination, Price } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
-import { formatDate, formatPlaytime } from '@/lib/format';
+import { cardImage, formatDate, formatPlaytime } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 
 // No hay cliente de juego real: cada partida suma una sesión simulada de 30 a 90 minutos
@@ -96,7 +96,7 @@ export function Wishlist() {
       <div className="line-list">
         {data?.content.map((item) => (
           <article key={item.gameId} className={item.available ? 'line' : 'line unavailable'}>
-            <Link to={`/games/${item.slug}`} className="line-cover">{item.coverUrl && <img src={item.coverUrl} alt="" />}</Link>
+            <Link to={`/games/${item.slug}`} className="line-cover">{item.coverUrl && <img src={cardImage(item.coverUrl)} alt="" />}</Link>
             <div className="line-info">
               <h3><Link to={`/games/${item.slug}`}>{item.title}</Link></h3>
               <p>Añadido el {formatDate(item.addedAt)}</p>
