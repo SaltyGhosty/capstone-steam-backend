@@ -1,0 +1,36 @@
+package com.capstone.steam.user;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.capstone.steam.security.AppUserPrincipal;
+import com.capstone.steam.user.dto.UpdateProfileRequest;
+import com.capstone.steam.user.dto.UserResponse;
+
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping("/api/users/me")
+public class UserController {
+
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @GetMapping
+    public UserResponse me(@AuthenticationPrincipal AppUserPrincipal principal) {
+        return userService.getProfile(principal.getId());
+    }
+
+    @PatchMapping
+    public UserResponse updateMe(@AuthenticationPrincipal AppUserPrincipal principal,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        return userService.updateProfile(principal.getId(), request);
+    }
+}

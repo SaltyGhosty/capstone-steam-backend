@@ -1,0 +1,11 @@
+package com.capstone.steam.user.dto;
+
+import org.hibernate.validator.constraints.URL;
+
+import jakarta.validation.constraints.Size;
+
+/** Campos null = no se modifican. */
+public record UpdateProfileRequest(
+        @Size(min = 1, max = 100) String displayName,
+        @URL @Size(max = 500) String avatarUrl) {
+}

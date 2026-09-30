@@ -1,0 +1,18 @@
+# Tests: H2 en memoria en modo compatible con PostgreSQL, con las migraciones Flyway reales
+spring:
+  datasource:
+    url: jdbc:h2:mem:capstone_steam;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  mail:
+    host: localhost
+    port: 3025
+
+app:
+  jwt:
+    secret: dGVzdC1zZWNyZXQtY2Fwc3RvbmUtc3RlYW0tMzItYnl0ZXMtbWluaW11bS0hIQ==
+    expiration: PT15M
+  admin:
+    username: admin
+    email: admin@test.local
+    password: Admin12345!

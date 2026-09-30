@@ -1,0 +1,74 @@
+# Configuración común a todos los perfiles.
+# Los secretos llegan por variables de entorno o desde el archivo .env (ver .env.example).
+spring:
+  application:
+    name: capstone-steam-backend
+  config:
+    import: optional:file:.env[.properties]
+  profiles:
+    default: dev
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate # el esquema es propiedad de Flyway
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        # colecciones LAZY (roles, géneros) se cargan en lotes con IN (...) en vez de 1 query por fila
+        default_batch_fetch_size: 50
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+  flyway:
+    enabled: true
+    # V1-V3 son SQL portable; V4 tiene una variante por motor ({vendor} = postgresql | h2)
+    locations: classpath:db/migration/common,classpath:db/migration/{vendor}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_APP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+    expiration: ${JWT_EXPIRATION:PT2H}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  payments:
+    failure-rate: ${PAYMENT_FAILURE_RATE:0.0} # rechazo aleatorio para demos (0.0-1.0)
+    declined-suffix: "0000"                  # tarjeta terminada en 0000 = rechazada siempre
+  admin:
+    username: ${ADMIN_USERNAME:admin}
+    email: ${ADMIN_EMAIL:admin@capstone-steam.local}
+    password: ${ADMIN_PASSWORD:}
+  mail:
+    from: ${MAIL_FROM:${MAIL_USERNAME:no-reply@capstone-steam.local}}
+    executor:
+      core-pool-size: 2
+      max-pool-size: 5
+      queue-capacity: 100
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  health:
+    mail:
+      enabled: false # un fallo de SMTP no debe marcar la API como caída (el correo es asíncrono y opcional)
+  endpoints:
+    web:
+      exposure:
+        include: health,info
