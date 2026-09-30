@@ -22,12 +22,20 @@ export function initials(name: string) {
     .join('');
 }
 
-// Las portadas demo son de picsum en vertical (600x800); para el hero pedimos la misma
-// semilla en apaisado. Cualquier otra URL se usa tal cual.
+// Las portadas se guardan en vertical. Para el hero y las ofertas se pide la versión apaisada
+// cuando el proveedor recorta por URL (Unsplash con w/h/fit=crop, picsum con /ancho/alto);
+// cualquier otra URL se usa tal cual y la recorta el CSS (background-size: cover).
 export function wideImage(url: string | null | undefined, width = 1800, height = 800) {
   if (!url) return '';
-  const match = url.match(/^(https:\/\/picsum\.photos\/seed\/[^/]+)\/\d+\/\d+/);
-  return match ? `${match[1]}/${width}/${height}` : url;
+  if (url.startsWith('https://images.unsplash.com/')) {
+    const wide = new URL(url);
+    wide.searchParams.set('w', String(width));
+    wide.searchParams.set('h', String(height));
+    wide.searchParams.set('fit', 'crop');
+    return wide.toString();
+  }
+  const picsum = url.match(/^(https:\/\/picsum\.photos\/seed\/[^/]+)\/\d+\/\d+/);
+  return picsum ? `${picsum[1]}/${width}/${height}` : url;
 }
 
 export const genreLabel = (genres: { name: string }[]) =>

@@ -18,7 +18,9 @@ describe('format', () => {
     expect(formatPlaytime(750)).toBe('13 h jugadas');
   });
 
-  it('pide las portadas de picsum en apaisado y deja el resto igual', () => {
+  it('pide las portadas de Unsplash y picsum en apaisado y deja el resto igual', () => {
+    expect(wideImage('https://images.unsplash.com/photo-1?auto=format&fit=crop&w=900&h=1200&q=80'))
+      .toBe('https://images.unsplash.com/photo-1?auto=format&fit=crop&w=1800&h=800&q=80');
     expect(wideImage('https://picsum.photos/seed/neon-drift/600/800')).toBe('https://picsum.photos/seed/neon-drift/1800/800');
     expect(wideImage('https://cdn.example.com/cover.jpg')).toBe('https://cdn.example.com/cover.jpg');
     expect(wideImage(null)).toBe('');

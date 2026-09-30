@@ -248,6 +248,18 @@ El repositorio incluye todo lo necesario; solo faltan las cuentas.
 
 En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda unos 30-60 s en despertarlo.
 
+## Créditos de las imágenes
+
+Las portadas de los juegos demo se enlazan desde Unsplash y Wikimedia Commons (no están en el repositorio):
+
+| Juego | Imagen | Autor y licencia |
+|---|---|---|
+| Starfall Odyssey, Void Runner, Echoes of Aether, Neon Drift | Fotos de [Unsplash](https://unsplash.com) (las mismas del diseño de Figma Make) | [Licencia de Unsplash](https://unsplash.com/license) |
+| Hollow Depths | [Batu Caves Dark Cave Interior](https://commons.wikimedia.org/wiki/File:Batu_Caves_Dark_Cave_Interior_2015.jpg) | KQuhen · CC BY-SA 4.0 |
+| Pixel Farmers | [Setting sun over barley field, near Chapel Barn Farm](https://commons.wikimedia.org/wiki/File:Setting_sun_over_barley_field,_near_Chapel_Barn_Farm_-_geograph.org.uk_-_6494598.jpg) | Christopher Hilton · CC BY-SA 2.0 |
+| Kingdoms of Ash | [Ruins of the Trakai Island Castle at sunset](https://commons.wikimedia.org/wiki/File:J%C3%B3zef_Marszewski_-_Ruins_of_the_Trakai_Island_Castle_at_sunset_-_MP_2685_-_National_Museum_in_Warsaw.jpg) | Józef Marszewski (Museo Nacional de Varsovia) · Dominio público |
+| The Lantern House | [House](https://commons.wikimedia.org/wiki/File:House_(223131825).jpeg) | Максим Барбухин · CC0 |
+
 ## Decisiones técnicas
 
 La justificación de cada decisión (D1 a D38) está en [handoff.md](handoff.md). Estas son las más relevantes:
