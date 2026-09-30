@@ -20,6 +20,7 @@
         <java.version>25</java.version>
         <jjwt.version>0.13.0</jjwt.version>
         <jacoco.version>0.8.15</jacoco.version>
+        <springdoc.version>3.1.1</springdoc.version>
         <!-- JaCoCo rellena argLine con su agente; vacío por defecto para que @{argLine} funcione con -Djacoco.skip -->
         <argLine></argLine>
     </properties>
@@ -79,6 +80,13 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- Documentación de la API: /swagger-ui.html y /v3/api-docs -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
 
         <!-- Correo -->

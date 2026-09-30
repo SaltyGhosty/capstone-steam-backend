@@ -117,6 +117,30 @@ class StorefrontIntegrationTest {
     }
 
     @Test
+    void playSessionsAddUpPlaytimeOnlyForOwnedGames() throws Exception {
+        // sin tenerlo -> 404
+        mvc.perform(auth(post("/api/library/" + gameId + "/play"), playerToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"minutes\":30}"))
+                .andExpect(status().isNotFound());
+
+        grantToPlayer();
+        mvc.perform(auth(post("/api/library/" + gameId + "/play"), playerToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"minutes\":30}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.playtimeMinutes").value(30));
+        mvc.perform(auth(post("/api/library/" + gameId + "/play"), playerToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"minutes\":45}"))
+                .andExpect(jsonPath("$.playtimeMinutes").value(75))
+                .andExpect(jsonPath("$.slug").value("celeste"));
+
+        // fuera de rango -> 400
+        mvc.perform(auth(post("/api/library/" + gameId + "/play"), playerToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"minutes\":0}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.minutes").exists());
+    }
+
+    @Test
     void reviewLifecycleKeepsGameRatingInSync() throws Exception {
         // sin tener el juego -> 403
         mvc.perform(auth(post("/api/reviews"), playerToken).contentType(MediaType.APPLICATION_JSON)

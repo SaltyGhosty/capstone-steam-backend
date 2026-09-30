@@ -61,6 +61,18 @@ public class LibraryService {
                 reviewRepository.existsByUserIdAndGameId(userId, gameId));
     }
 
+    /** Sesión de juego simulada (no hay cliente real): suma minutos con un UPDATE atómico. */
+    @Transactional
+    public LibraryEntryResponse play(Long userId, Long gameId, int minutes) {
+        if (libraryRepository.addPlaytime(userId, gameId, minutes) == 0) {
+            throw new NotFoundException("No tienes este juego en tu biblioteca");
+        }
+        // clearAutomatically separó las entidades: se vuelve a leer la fila ya actualizada
+        return libraryRepository.findByUserIdAndGameId(userId, gameId)
+                .map(LibraryEntryResponse::from)
+                .orElseThrow();
+    }
+
     /** Alta manual (regalo/soporte) por un admin: sin pedido asociado. */
     @Transactional
     public LibraryEntryResponse grant(Long userId, Long gameId) {
