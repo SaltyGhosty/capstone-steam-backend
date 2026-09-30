@@ -1,0 +1,73 @@
+# ARCADE: frontend de Capstone Steam
+
+Tienda de videojuegos en React 19 + Vite 8 + Tailwind CSS v4 + React Router 7. Parte del diseño de Figma Make *Video-Game-Website* y consume la API Spring Boot de este mismo repositorio.
+
+## Puesta en marcha
+
+1. Arranca el backend en el puerto 8081. Consulta el [README principal](../README.md).
+2. Instala las dependencias y arranca el frontend:
+
+   ```bash
+   cd frontend
+   npm install
+   npm run dev        # http://localhost:5173
+   ```
+
+   En desarrollo, las peticiones a `/api` pasan por el proxy de Vite y llegan a `http://localhost:8081`. Para usar otra URL: `API_TARGET=http://localhost:8080 npm run dev`.
+
+3. `npm test` ejecuta los tests (Vitest + Testing Library, sin backend: `fetch` está simulado).
+4. `npm run build` comprueba los tipos con `tsc` y genera `dist/`. Si el frontend se sirve desde otro dominio, define `VITE_API_URL` (ver `.env.example`) y añade ese origen a `CORS_ALLOWED_ORIGINS` en el backend.
+
+**Usuarios demo** (perfil `dev`):
+
+| Usuario | Contraseña | Rol |
+|---|---|---|
+| `demo_player` | `password123` | Jugador |
+| `demo_dev` | `password123` | Developer |
+| `admin` | `Admin12345!` | Administrador |
+
+**Pago simulado:** una tarjeta que termina en `0000` siempre se rechaza.
+
+## Estructura
+
+```
+src/
+├── api/          client.ts (fetch + JWT + ProblemDetail), endpoints.ts (una función por endpoint), types.ts (DTOs)
+├── context/      StoreContext: sesión, carrito, ids de la wishlist y avisos (toast)
+├── components/   Layout (barra lateral + barra superior del diseño), GameCard, Icon, ui (estados, precio, estrellas, RequireAuth)
+├── lib/          format (€, fechas es-ES, tiempo jugado), useAsync
+├── test/         setup de Vitest, doble de fetch y render con router + StoreProvider
+├── pages/        Discover, Browse, GameDetail, Cart, Orders, Collection (biblioteca y wishlist), Auth, Settings, Developer, Admin
+├── index.css     CSS original del diseño de Figma Make
+└── app.css       estilos de las páginas nuevas, con la misma paleta
+```
+
+## Páginas
+
+| Ruta | Acceso | Qué hace |
+|---|---|---|
+| `/` | Público | Hero con los mejor valorados, más vendidos, ofertas y novedades |
+| `/browse` | Público | Catálogo con los filtros de la Criteria API (texto, géneros, precio, valoración, ofertas, orden y paginación); los filtros se guardan en la URL |
+| `/games/:slug` | Público | Ficha del juego con los botones según `/library/status` y las reseñas (crear, editar y borrar) |
+| `/login`, `/register` | Público | Registro como jugador o developer |
+| `/cart` | Usuario | Carrito; «Continuar al pago» crea el pedido PENDING |
+| `/orders`, `/orders/:id` | Usuario | Historial y pago (200 → PAID, 402 → FAILED) |
+| `/library`, `/wishlist` | Usuario | Colecciones del usuario; «Jugar» simula una sesión de 30 a 90 minutos (`POST /library/{id}/play`) |
+| `/settings` | Usuario | Perfil (`PATCH /users/me`) |
+| `/developer` | DEVELOPER | Sus juegos: crear, editar (con `version` para el bloqueo optimista), publicar y aplicar un descuento masivo |
+| `/admin` | ADMIN | Moderación de juegos, roles y activación de usuarios, regalar juegos y CRUD de géneros |
+
+El token se guarda en `localStorage`. Si la API responde 401 con un token guardado (caduca a las 2 h), se cierra la sesión y se abre el login.
+
+## Tests
+
+| Archivo | Qué comprueba |
+|---|---|
+| `api/client.test.ts` | Token en las cabeceras, query de los filtros, ProblemDetail → `ApiError` con errores por campo, 402 aceptado y 401 → cierre de sesión |
+| `lib/format.test.ts` | Precios en €, tiempo jugado, portadas apaisadas e iniciales |
+| `pages/Auth.test.tsx` | Login correcto (token guardado y redirección), credenciales incorrectas y errores de validación del registro |
+| `pages/Checkout.test.tsx` | Carrito → pedido → pago aprobado; pago rechazado (402) con su motivo; validación de la tarjeta; carrito sin sesión → login |
+
+## Despliegue
+
+`vercel.json` deja listo el despliegue en Vercel (*Root Directory* = `frontend`). Define `VITE_API_URL` con la URL pública del backend y añade la URL de Vercel a `CORS_ALLOWED_ORIGINS` en el backend. Los pasos completos están en el [README principal](../README.md#despliegue).
