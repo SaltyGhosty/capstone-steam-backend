@@ -26,3 +26,6 @@ Thumbs.db
 
 # Copias locales de la base de datos
 backups/
+
+# Instrucciones personales de Claude Code (rutas de este equipo)
+CLAUDE.local.md
