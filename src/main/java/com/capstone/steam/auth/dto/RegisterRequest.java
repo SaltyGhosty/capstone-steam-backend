@@ -22,5 +22,9 @@ public record RegisterRequest(
         String displayName,
 
         /** Opcional; por defecto PLAYER. */
-        AccountType accountType) {
+        AccountType accountType,
+
+        /** Opcional; idioma de los correos. Null = "es". */
+        @Pattern(regexp = "^(es|en|it)$", message = "debe ser es, en o it")
+        String locale) {
 }

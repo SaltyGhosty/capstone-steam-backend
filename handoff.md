@@ -12,9 +12,9 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 |---|---|
 | Paquete base | `com.capstone.steam` |
 | Artifact | `capstone-steam-backend` |
-| Estado actual | **✅ Bloques 0 a 12: backend (105 tests, 96 % de cobertura, Swagger) + frontend React (18 tests) + CI + despliegue preparado** |
-| Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). El primer commit (`0578f9e`) está subido a `main`, que sigue a `origin/main`. Pendiente (necesita cuentas del usuario): <br>• **Gmail**: `MAIL_USERNAME` + `MAIL_APP_PASSWORD` en `.env` y probar el envío real <br>• **Desplegar**: Render (Blueprint con `render.yaml`) + Vercel (`frontend/`), ver README → Despliegue <br>Opcional: refresh token, subir portadas (Cloudinary), amigos/descargas del diseño |
-| Última actualización | 2026-09-30 |
+| Estado actual | **✅ Bloques 0 a 15: backend (158 tests, 96 % de cobertura, Swagger) + frontend React (21 tests) + CI + despliegue preparado. Último bloque: correos en el idioma del usuario (es, en, it), con `users.locale` (V5)** |
+| Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). El primer commit (`0578f9e`) está subido a `main`, que sigue a `origin/main`. Pendiente (necesita cuentas del usuario): <br>• **Desplegar**: Render (Blueprint con `render.yaml`) + Vercel (`frontend/`), ver README → Despliegue <br>Opcional: refresh token, subir portadas (Cloudinary), amigos/descargas del diseño <br>Opcional, de la revisión de seguridad del bloque 13 (no bloqueantes): <br>• `GameRequest.java:27`: `@URL` no limita el esquema (acepta `file:`, `ftp:`…) → limitarlo a http(s) (**backend-tienda**) <br>• `EmailTemplates.safeImageUrl` acepta `http://` sin TLS → valorar aceptar solo `https://` (**pagos-y-correo**) <br>• `EmailService.java` (líneas 81, 92 y 94) escribe el email del destinatario en el log → enmascararlo (**pagos-y-correo**) <br>Pendientes del bloque 15: <br>• El motivo de rechazo (`reason`) de `SimulatedPaymentGateway.java` (líneas 49 y 53) está en español y sale así en los correos en inglés e italiano → pasar un código de motivo y traducirlo en `MailTexts` (**pagos-y-correo**, menor) <br>• Ejecutar Newman con los nuevos bodies de Postman (`locale` en el registro del developer y al actualizar el perfil) (**qa**) <br>• Probar en el navegador el selector de idioma y un envío real en inglés e italiano (sin probar todavía) |
+| Última actualización | 2026-10-09 |
 
 ### Entorno local (máquina del usuario, Windows 11)
 - **JDK:**
@@ -25,7 +25,8 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 - **Base de datos:** PostgreSQL 18 como servicio de Windows (`postgresql-x64-18`) en `localhost:5432`.
   - Usuario `postgres`; la contraseña está en `.env`.
   - La BD `capstone_steam` ya está creada y tiene aplicadas las migraciones V1 a V4.
-- **`.env`:** ya existe (git lo ignora), con `DB_PASSWORD` y un `JWT_SECRET` aleatorio. Siguen vacíos los datos de Gmail (`MAIL_*`) y `ADMIN_PASSWORD`, así que en `dev` todavía no hay admin. Para crearlo basta con añadir `ADMIN_PASSWORD=...` y arrancar la app. `.env.example` ya incluye `ADMIN_*` y `SERVER_PORT`.
+  - La BD `capstone_steam_demo` (la del `.env`) tiene aplicadas V1 a V5 desde el bloque 15. Los 31 usuarios que había quedaron con `locale = 'es'`.
+- **`.env`:** ya existe (git lo ignora), con `DB_PASSWORD` y un `JWT_SECRET` aleatorio. Desde el 2026-10-09 también tiene `MAIL_USERNAME` y `MAIL_APP_PASSWORD` de Gmail (envío real probado, bloque 14); `MAIL_FROM` es igual a `MAIL_USERNAME` o está vacío. Sigue vacío `ADMIN_PASSWORD`, así que en `dev` todavía no hay admin. Para crearlo basta con añadir `ADMIN_PASSWORD=...` y arrancar la app. `.env.example` ya incluye `ADMIN_*` y `SERVER_PORT`.
 - **Datos de demo en `dev`**: los carga `node scripts/seed-demo.mjs` en la BD `capstone_steam_demo` (ver bloque 12). Cuentas con contraseña `password123`: `demo_player`, `reviewer_ana`, `reviewer_leo`, `reviewer_sam`, `lucia_gamer`, `marco_rpg` y un estudio por juego (`team_cherry`, `cdprojektred`, `fromsoftware`…); `admin` / `Admin12345!`.
 - **Tests de MockMvc en Boot 4.1:** `org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc`. En el perfil `test`, el admin es `admin` / `Admin12345!`.
 - **Puerto 8080:** lo ocupa otra app Java del usuario (un JDK 25.0.3 en `AppData\Local\Programs`), así que no hay que cerrarla. Para arrancar esta app se usa otro puerto: `$env:SERVER_PORT="8081"` (o se añade `SERVER_PORT` a `.env`).
@@ -39,6 +40,7 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 - **Puertos:** el 5174 lo ocupa Agent Office; el 5173 lo usaba `sprout-capstone`, que se cerró a petición del usuario el 2026-09-30.
 - **Probado en el navegador con Playwright:** portada, catálogo con filtros (también en móvil), login, pago rechazado (tarjeta `0000`) → 402, pago correcto → PAID, ficha con el formulario de reseña y panel de admin.
 - **Datos de demo modificados por las pruebas:** `demo_player` ahora tiene Neon Drift en la biblioteca (pedido #11 PAID, #10 FAILED), el carrito vacío, una reseña de 5★ en Neon Drift y 55 min jugados. El juego de prueba «QA Test Game» (id 17) se creó y se borró. El 2026-09-30 se cambiaron por la API las portadas de los 8 juegos (de picsum a Unsplash/Wikimedia acordes a cada juego; créditos en el README); ahora están en `version` 2.
+- **Datos de prueba del correo en `capstone_steam_demo`** (2026-10-09, contraseña `password123`): `mailtest_arcade` (pedido #22 PAID, Baldur's Gate 3; su correo falló por credenciales) y `mailtest_arcade2` (pedido #23 PAID, Cyberpunk 2077 + Celeste, 63,98 €). Sus emails son direcciones `+alias` de la cuenta del usuario. Se pueden borrar o dejar; no afectan al resto de la demo.
 - **Diseño original en Figma Make:** https://www.figma.com/make/dCxjFlqDGURAtW8CbXbMUu/Video-Game-Website (privado). El código exportado se guardó en `D:\Video Game Website`.
 - **Plugins instalados** (ámbito user, marketplace oficial): `frontend-design`, `figma`, `context7`, `playwright`, `modern-web-guidance` y `playground`. La skill `dataviz` ya venía incluida.
 - **La API espera el frontend en `http://localhost:5173`** (CORS). El backend corre en el 8081 y la colección de Postman sirve de contrato.
@@ -59,6 +61,7 @@ Spring Boot **4.1.1** · jjwt **0.13.0** · Java **25** · Flyway (gestionado po
   - **V2:** biblioteca, carrito, wishlist y reseñas.
   - **V3:** compras, transacciones y estados de pago.
   - **V4:** índices y optimizaciones de búsqueda.
+  - V1 a V4 es el mínimo exigido. Además existe **V5** (`users.locale`, bloque 15).
 - **Correo:** Spring Mail con SMTP de Gmail.
 - **Eventos:** Spring Events en fase **AFTER_COMMIT** y `@Async` con un **thread pool propio** para el correo.
 - **Tests:** JUnit 5 (Jupiter), Mockito y H2, con pruebas unitarias y de integración.
@@ -107,6 +110,11 @@ Spring Boot **4.1.1** · jjwt **0.13.0** · Java **25** · Flyway (gestionado po
 | D38 | En surefire, `argLine` es `@{argLine} -javaagent:mockito`, con `<argLine></argLine>` vacío en las properties. Así funciona con JaCoCo, que rellena argLine, y también con `-Djacoco.skip` | Bloque 8 | ✅ Aplicada |
 | D39 | Swagger UI y `/v3/api-docs` son públicos también en `prod` (sirven para la presentación). Para ocultarlos: `springdoc.api-docs.enabled=false` y `springdoc.swagger-ui.enabled=false` | Bloque 11 | ✅ Aplicada |
 | D40 | Tiempo de juego simulado: no hay cliente real, así que «Jugar» suma 30-90 min con un UPDATE atómico (igual que ventas y rating), sin leer antes la fila | Bloque 11 | ✅ Aplicada |
+| D41 | Correos con el aspecto de ARCADE: <br>• `EmailTemplates` usa la paleta del frontend, con tablas y estilos en línea (lo único que los clientes de correo muestran igual). <br>• El remitente lleva nombre: `MAIL_FROM_NAME` (por defecto ARCADE), que también es la marca dentro del correo y en el asunto de bienvenida («¡Bienvenido a ARCADE!»). <br>• Los botones apuntan a `FRONTEND_URL`; si falta, al primer origen de `CORS_ALLOWED_ORIGINS`; sin URL, el correo sale sin botones. <br>• El recibo lleva portada y precio por juego desde el bloque 13 (ver D42). | 2026-10-09 | ✅ Aplicada (validada en el bloque 13: `EmailServiceTest` 21 y `MailEventIntegrationTest` 4 en verde) |
+| D42 | Recibo con portada y precio por juego: <br>• `OrderPaidEvent` lleva `List<Line(title, coverUrl, unitPrice)>` en lugar de solo títulos. `unitPrice` es el precio pagado con descuento (`OrderItem.unitPrice`). <br>• Las líneas se construyen **dentro de la transacción** de `OrderService.pay()`: `Game` es LAZY y el listener corre después del commit (`AFTER_COMMIT` + `@Async`) en otro hilo, donde ya no se puede cargar. <br>• `EmailTemplates.safeImageUrl` solo acepta URLs que empiezan por `http://` o `https://` (sin distinguir mayúsculas, tras `trim`). Si no, deja una celda vacía de 76 px para no descuadrar las filas. <br>• Miniatura de 64×36 con `alt` = título; todo escapado con `HtmlUtils`. Las portadas son la única imagen externa de los correos. | Bloque 13 | ✅ Aplicada |
+| D43 | Limitación conocida (aceptada por alcance académico): la portada del recibo se carga desde la URL del developer, que puede saber cuándo se abre el correo (como un píxel de seguimiento). Ya pasa igual en la tienda web y Gmail lo atenúa con su proxy de imágenes. Solución: alojar las portadas en un almacenamiento propio (p. ej. Cloudinary) | Bloque 13 | 📝 Documentada |
+| D44 | Idioma de los correos guardado en la BD: <br>• V5 añade `users.locale VARCHAR(5) NOT NULL DEFAULT 'es'` con `CHECK ck_users_locale IN ('es','en','it')`. <br>• La API es estricta: `locale` es opcional en `POST /api/auth/register` y `PATCH /api/users/me`, con `@Pattern ^(es\|en\|it)$` (solo minúsculas). Un valor inválido → 400 con `errors.locale`. Sin valor: `es` al registrarse, sin cambios en el perfil. <br>• Sale siempre en `UserResponse` (y en `AuthResponse.user`). **No va en el JWT.** Cada usuario solo cambia el suyo (el id sale del JWT). <br>• Añadir un idioma exige una migración que amplíe el CHECK, además de sus textos (D45). | Bloque 15 | ✅ Aplicada |
+| D45 | Textos de los correos por idioma: <br>• Están en el record `notification/MailTexts`, con una constante por idioma (ES, EN, IT). Se eligió frente a `MessageSource` porque **el compilador obliga** a que cada idioma tenga todos los textos. <br>• `EmailTemplates` y `EmailService` reciben el `locale`; el HTML lleva `<html lang>`. <br>• Importes: `es-ES`, `en-IE` (para que el inglés siga en €) e `it-IT`. <br>• `MailTexts.of` es tolerante (trim y minúsculas); `null` o un idioma desconocido → `es`. Un test fija esta diferencia con la API estricta. <br>• El `locale` viaja en `UserRegisteredEvent`, `OrderPaidEvent` y `PaymentFailedEvent`, y se lee del `User` **dentro de la transacción** (mismo motivo que D42). | Bloque 15 | ✅ Aplicada |
 **Forma de trabajar:**
 - Se construye bloque a bloque y cada bloque se valida antes de pasar al siguiente.
 - Las respuestas van en español.
@@ -128,7 +136,7 @@ com.capstone.steam
 ├── wishlist/      WishlistItem, WishlistService, WishlistController
 ├── review/        Review, ReviewService, ReviewController
 ├── order/         Order, OrderItem, OrderStatus, Payment, PaymentStatus, CheckoutService, PaymentSimulator
-├── notification/  events (UserRegisteredEvent, OrderPaidEvent, PaymentFailedEvent), MailListener, EmailService
+├── notification/  events (UserRegisteredEvent, OrderPaidEvent, PaymentFailedEvent), MailListener, EmailService, EmailTemplates, MailTexts (es/en/it)
 └── common/        GlobalExceptionHandler (ProblemDetail), excepciones de dominio, BaseEntity
 ```
 - **Capas:** Controller → Service (`@Transactional`) → Repository.
@@ -185,6 +193,9 @@ com.capstone.steam
   - `pg_trgm` con un índice GIN sobre `lower(title)`.
   - Un índice parcial `WHERE status='PUBLISHED'`.
 
+**V5__user_locale.sql** (en `common`, bloque 15)
+- **`users.locale`:** `VARCHAR(5) NOT NULL DEFAULT 'es'`, con `CHECK ck_users_locale` (`es`, `en` o `it`). Los usuarios existentes quedan en `es` (D44).
+
 ---
 
 ## 6. Funcionalidad por fases
@@ -198,7 +209,7 @@ com.capstone.steam
   - `/api/developer/**` exige DEVELOPER.
   - El resto requiere estar autenticado.
 - **Token:** HS256; los claims son `sub` = userId y `roles`; la expiración es configurable.
-- **Endpoints:** `POST /api/auth/register` (publica un `UserRegisteredEvent`), `POST /api/auth/login` y `GET /api/users/me`.
+- **Endpoints:** `POST /api/auth/register` (publica un `UserRegisteredEvent`), `POST /api/auth/login` y `GET`/`PATCH /api/users/me`. El registro y el `PATCH` aceptan un `locale` opcional (`es`, `en` o `it`), que sale en `UserResponse` y no va en el JWT (D44).
 - **Ownership:** un DEVELOPER solo edita sus propios juegos; si no es el dueño, recibe un 403.
 - **Errores:** en formato `ProblemDetail` (RFC 9457), con los 401 y 403 en JSON.
 
@@ -224,16 +235,23 @@ com.capstone.steam
 
 ### Checkout, eventos y correo
 - **Checkout:**
-  1. Carrito → `Order` PENDING (con snapshot de precios) → `Payment` → `PaymentSimulator`.
-  2. Si el pago tiene éxito: `markOrderPaid`, se crean las entradas de biblioteca, `incrementSalesCount`, se vacía el carrito y se publica el `OrderPaidEvent`.
+  1. Carrito → `Order` PENDING (con snapshot de precios) → `Payment` → `PaymentGateway` (`SimulatedPaymentGateway`), todo en `OrderService`.
+  2. Si el pago tiene éxito: `markPaid`, se crean las entradas de biblioteca, `incrementSalesCount`, se quitan los juegos comprados del carrito y la wishlist y se publica el `OrderPaidEvent` (D29).
   3. Si falla: el pedido pasa a FAILED y se publica el `PaymentFailedEvent`.
 - **`AsyncConfig`:** `ThreadPoolTaskExecutor mailExecutor` (core 2, max 5, cola 100, prefijo `mail-`) y un `AsyncUncaughtExceptionHandler`.
 - **`MailListener`:**
   - `@TransactionalEventListener(phase = AFTER_COMMIT)` + `@Async("mailExecutor")`.
-  - Los eventos llevan solo IDs y datos primitivos.
+  - Los eventos no llevan entidades: solo IDs, textos y números. `OrderPaidEvent` incluye las líneas del recibo (título, portada y precio pagado), resueltas antes del commit (D42).
 - **`EmailService`:**
   - Gmail: `smtp.gmail.com:587` con STARTTLS.
-  - Plantillas: bienvenida, recibo de compra y pago fallido.
+  - Plantillas (`EmailTemplates`): bienvenida, recibo de compra (miniatura de portada, título y precio de cada juego, más el total) y pago fallido.
+  - Idioma: cada correo sale en el `locale` del usuario (es, en o it), con los textos de `MailTexts` (D45). Asuntos:
+
+    | Correo | es | en | it |
+    |---|---|---|---|
+    | Bienvenida | ¡Bienvenido a ARCADE! | Welcome to ARCADE! | Benvenuto su ARCADE! |
+    | Recibo | Recibo de tu compra #N | Receipt for your purchase #N | Ricevuta del tuo acquisto #N |
+    | Rechazo | No hemos podido cobrar tu pedido #N | We couldn't charge your order #N | Non siamo riusciti ad addebitare il tuo ordine #N |
 
 ### Testing
 - **Unitarios (Mockito):** `JwtServiceTest`, `CheckoutServiceTest`, `ReviewServiceTest` y `CartServiceTest`.
@@ -261,6 +279,9 @@ com.capstone.steam
 | 10 | Frontend React (`frontend/`) | ✅ Hecho | 2026-09-30 | Desde la exportación de Figma Make: 10 páginas, toda la API conectada, en español y en €. Probado con Playwright (compra aprobada/rechazada, reseña, wishlist, panel developer y admin). Arreglos: el proxy quita `Origin` (403 de CORS), celdas de tabla sin flex, cierre de sesión con recarga en `/`. |
 | 11 | Cierre: Swagger, tiempo de juego, tests del frontend, CI y despliegue | ✅ Hecho | 2026-09-30 | • springdoc 3.1.1 → `/swagger-ui.html` (público, esquema bearer) <br>• `POST /api/library/{gameId}/play` con UPDATE atómico `addPlaytime` (404 si no lo tienes) y botón «Jugar» <br>• Backend: **105 tests** (+ `OpenApiIntegrationTest` y play), 96,1 % de líneas <br>• Frontend: Vitest + Testing Library, **17 tests** <br>• `.github/workflows/ci.yml` (verify + test/build del frontend) <br>• `Dockerfile`, `render.yaml`, `frontend/vercel.json`; `application-prod.yml` acepta `DB_URL` o `DB_HOST/DB_PORT/DB_NAME`; `server.port` usa `PORT` si existe |
 | 12 | Catálogo con juegos reales | ✅ Hecho | 2026-09-30 | • `scripts/seed-demo.mjs` + `scripts/demo-data.json`: siembra por la API (idempotente) 21 estudios, 23 juegos reales de Steam (Silksong en borrador), 6 jugadores, 20 pedidos (1 FAILED), 32 reseñas, wishlists, carrito y horas <br>• Portadas del CDN de Steam: `library_600x900_2x` (vertical), `capsule_616x353` (tarjetas, `cardImage`) y `library_hero` (hero, `wideImage`) <br>• **BD local nueva `capstone_steam_demo`** (el `.env` apunta a ella). La antigua `capstone_steam` sigue intacta y además hay copia en `backups/capstone_steam-antes-juegos-reales.dump` (borrarla la bloqueó el permiso de auto mode; queda a decisión del usuario) |
+| 13 | Recibo de compra con portada y precio | ✅ Hecho | 2026-10-09 | • Correos con el estilo de ARCADE (D41) y recibo con miniatura de portada, título y precio pagado por juego, más el total (D42) <br>• `OrderPaidEvent` pasa a `List<Line(title, coverUrl, unitPrice)>`; nuevo `EmailTemplates.safeImageUrl` <br>• La página de pedidos del frontend ya mostraba portada y precio: sin cambios <br>• `.\mvnw.cmd verify`: **122 tests, 0 fallos, 0 errores**, BUILD SUCCESS. Cobertura: **96,28 % de líneas (1.192 de 1.238)** y 80 % de ramas. Frontend no ejecutado (sin cambios; siguen 18 tests) <br>• Revisión de seguridad sin hallazgos bloqueantes; 3 mejoras menores pendientes (ver «Siguiente paso») y una limitación aceptada (D43) <br>• **El envío real a Gmail sigue sin probarse**: `MAIL_USERNAME`, `MAIL_APP_PASSWORD` y `MAIL_FROM` están vacíos en `.env` |
+| 14 | Prueba real del correo con Gmail | ✅ Hecho | 2026-10-09 | Backend en el 8081, perfil `dev`, BD `capstone_steam_demo`. <br>• **1.ª prueba (fallida):** `535 5.7.8 BadCredentials`, porque la contraseña de aplicación era de otra cuenta distinta de `MAIL_USERNAME`. La app degradó bien (D36): pedido #22 PAID y el error solo en el log. El usuario corrigió `.env`. <br>• **2.ª prueba (correcta):** usuario nuevo `mailtest_arcade2`. Pedido #23 PAID: Cyberpunk 2077 (id 7) a 44,99 € con 25 % de descuento + Celeste (id 3) a 18,99 €; total **63,98 €**. Log: «¡Bienvenido a ARCADE!» en `mail-1` y «Recibo de tu compra #23» en `mail-2`, sin excepciones. **El usuario confirmó que los dos correos llegaron a su bandeja.** <br>• Sin cambios de código ni tests ejecutados en este bloque. Lecciones del entorno en la sección 8 |
+| 15 | Correos en el idioma del usuario (es, en, it) | ✅ Hecho | 2026-10-09 | Pedido por el usuario antes del commit. <br>• **BD:** `V5__user_locale.sql` (`users.locale` + CHECK), aplicada en `capstone_steam_demo` (31 usuarios en `es`) (D44) <br>• **API:** `locale` opcional en el registro y en `PATCH /api/users/me`; sale en `UserResponse`; no va en el JWT. Postman: `locale` en el registro del developer (`en`) y al actualizar el perfil (`it`) <br>• **Correo:** `MailTexts` con ES, EN e IT; el `locale` viaja en los 3 eventos; `<html lang>` e importes por idioma (D45). Hecho también el `trim()` de `MAIL_FROM` <br>• **Frontend:** `lib/locale.ts` (`detectLocale` con el idioma del navegador; si no es es/en/it → es). El registro lo envía sin campo visible. En Ajustes, «Perfil público» tiene el selector «Idioma de los correos» (Español, English, Italiano), que se guarda con «Guardar cambios». La interfaz web sigue solo en español <br>• `.\mvnw.cmd verify`: **158 tests, 0 fallos, 0 errores, 0 omitidos**, coverage checks met, BUILD SUCCESS. Cobertura: **96,35 % de líneas (1.213 de 1.259)** y 81 % de ramas. Frontend: **21 tests en 6 archivos** y build correcto <br>• **Sin probar:** Newman con los nuevos bodies, el selector en el navegador y un envío real en inglés o italiano. El motivo de rechazo sigue en español (ver «Siguiente paso») |
 
 ---
 
@@ -273,6 +294,10 @@ com.capstone.steam
   - Los test slices están en módulos separados.
 - **Compatibilidad con H2:** H2 no tiene `pg_trgm` ni índices por expresión, por eso la V4 va por vendor. Hay que mantener V1 a V3 en SQL portable.
 - **Secretos:** nunca subir el secreto de JWT ni la contraseña de Gmail. Para Gmail hace falta una **contraseña de aplicación**, con la verificación en 2 pasos activada.
+- **Gmail SMTP (probado el 2026-10-09):**
+  - La contraseña de aplicación solo vale para la cuenta de Google donde se creó: `MAIL_USERNAME` tiene que ser esa misma cuenta. Si no, Gmail responde `535 5.7.8 BadCredentials`.
+  - `MAIL_FROM` distinto de `MAIL_USERNAME` solo funciona si es un alias configurado en Gmail como «Enviar como». Lo seguro es dejarlo vacío o igual a `MAIL_USERNAME`.
+  - En el puerto 587, Gmail corta la conexión si se autentica con AUTH PLAIN (p. ej. desde una prueba manual). JavaMail usa AUTH LOGIN y funciona; para probar credenciales, mejor hacerlo desde la app.
 
 - **Tipos SQL compatibles con `ddl-auto=validate`:**
   - Se usa `INTEGER` en lugar de `SMALLINT` y `VARCHAR(n)` en lugar de `TEXT`, para que Hibernate 7 valide igual en Postgres y en H2.
@@ -288,7 +313,7 @@ com.capstone.steam
 0. Crear la BD (solo la primera vez):
    `& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -h localhost -c "CREATE DATABASE capstone_steam;"`
 1. `docker compose up -d` (solo si se usa Docker en lugar de Postgres local)
-2. `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`: Flyway aplica V1 a V4 y Hibernate valida el esquema.
+2. `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`: Flyway aplica V1 a V5 y Hibernate valida el esquema.
 3. `./mvnw test`: todo en verde sobre H2.
 4. Prueba manual: register → login → buscar con filtros → carrito → checkout → biblioteca → reseña.
 5. Comprobar que llega el correo y que en los logs el envío aparece en un hilo `mail-*`.

@@ -1,6 +1,7 @@
 package com.capstone.steam.order;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -85,7 +86,9 @@ class CheckoutIntegrationTest {
 
         assertThat(events.stream(OrderPaidEvent.class))
                 .singleElement()
-                .satisfies(e -> assertThat(e.gameTitles()).containsExactlyInAnyOrder("Celeste", "Hades"));
+                .satisfies(e -> assertThat(e.lines())
+                        .extracting(OrderPaidEvent.Line::title, line -> line.unitPrice().stripTrailingZeros().toPlainString())
+                        .containsExactlyInAnyOrder(tuple("Celeste", "15"), tuple("Hades", "24.99")));
 
         // doble clic en "pagar" -> el pedido ya no está PENDING
         mvc.perform(auth(post("/api/orders/" + orderId + "/pay"), playerToken)

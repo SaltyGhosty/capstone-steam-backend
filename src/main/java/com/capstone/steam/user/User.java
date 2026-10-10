@@ -45,6 +45,10 @@ public class User {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    /** Idioma de los correos: es, en o it (CHECK ck_users_locale en V5). */
+    @Column(name = "locale", nullable = false, length = 5)
+    private String locale = "es";
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
@@ -123,6 +127,14 @@ public class User {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public String getLocale() {
+        return locale;
+    }
+
+    public void setLocale(String locale) {
+        this.locale = locale;
     }
 
     public Set<Role> getRoles() {

@@ -116,7 +116,7 @@
             "description": "accountType: PLAYER (por defecto) o DEVELOPER. ADMIN nunca se puede autoasignar.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"pm_dev_{{suffix}}\",\n  \"email\": \"pm_dev_{{suffix}}@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Postman Studios\",\n  \"accountType\": \"DEVELOPER\"\n}",
+              "raw": "{\n  \"username\": \"pm_dev_{{suffix}}\",\n  \"email\": \"pm_dev_{{suffix}}@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Postman Studios\",\n  \"accountType\": \"DEVELOPER\",\n  \"locale\": \"en\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -352,7 +352,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"displayName\": \"Player One\"\n}",
+              "raw": "{\n  \"displayName\": \"Player One\",\n  \"locale\": \"it\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

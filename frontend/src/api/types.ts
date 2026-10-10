@@ -7,6 +7,8 @@ export type OrderStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
 export type PaymentMethod = 'CREDIT_CARD' | 'PAYPAL' | 'WALLET';
 export type PaymentStatus = 'INITIATED' | 'SUCCEEDED' | 'FAILED';
 export type AccountType = 'PLAYER' | 'DEVELOPER';
+/** Idioma de los correos del usuario (la interfaz web sigue solo en español). */
+export type Locale = 'es' | 'en' | 'it';
 
 export interface PageResponse<T> {
   content: T[];
@@ -26,6 +28,23 @@ export interface User {
   enabled: boolean;
   roles: Role[];
   createdAt: string;
+  locale: Locale;
+}
+
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+  displayName?: string;
+  accountType: AccountType;
+  locale?: Locale;
+}
+
+/** Campos omitidos = no se modifican */
+export interface UpdateProfileRequest {
+  displayName?: string;
+  avatarUrl?: string;
+  locale?: Locale;
 }
 
 export interface AuthResponse {

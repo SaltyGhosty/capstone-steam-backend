@@ -12,6 +12,7 @@ public record UserResponse(
         String email,
         String displayName,
         String avatarUrl,
+        String locale,
         boolean enabled,
         List<String> roles,
         Instant createdAt) {
@@ -23,6 +24,7 @@ public record UserResponse(
                 user.getEmail(),
                 user.getDisplayName(),
                 user.getAvatarUrl(),
+                user.getLocale(),
                 user.isEnabled(),
                 user.getRoles().stream().map(Role::getName).map(Enum::name).sorted().toList(),
                 user.getCreatedAt());

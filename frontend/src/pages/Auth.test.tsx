@@ -40,7 +40,7 @@ describe('login y registro', () => {
   });
 
   it('pinta los errores de validación junto a cada campo del registro', async () => {
-    mockFetch({
+    const fetchMock = mockFetch({
       'POST /api/auth/register': {
         status: 400,
         body: { detail: 'Datos no válidos', errors: { username: "solo letras, números, '_', '.' y '-'" } },
@@ -56,5 +56,7 @@ describe('login y registro', () => {
 
     expect(await screen.findByText("solo letras, números, '_', '.' y '-'")).toBeInTheDocument();
     expect(screen.getByLabelText(/Nombre del estudio/)).toBeInTheDocument();
+    // el idioma de los correos se deduce del navegador (jsdom: en-US), sin campo visible
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]!.body)).locale).toBe('en');
   });
 });

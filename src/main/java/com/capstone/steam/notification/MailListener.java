@@ -31,20 +31,20 @@ public class MailListener {
     @Async(AsyncConfig.MAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onUserRegistered(UserRegisteredEvent event) {
-        emailService.sendWelcome(event.email(), event.displayName());
+        emailService.sendWelcome(event.email(), event.displayName(), event.locale());
     }
 
     @Async(AsyncConfig.MAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onOrderPaid(OrderPaidEvent event) {
         emailService.sendPurchaseReceipt(event.email(), event.displayName(), event.orderId(), event.total(),
-                event.gameTitles());
+                event.lines(), event.locale());
     }
 
     @Async(AsyncConfig.MAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPaymentFailed(PaymentFailedEvent event) {
         emailService.sendPaymentFailed(event.email(), event.displayName(), event.orderId(), event.total(),
-                event.reason());
+                event.reason(), event.locale());
     }
 }

@@ -1,8 +1,9 @@
 // Una función por endpoint del backend. La colección de Postman es el contrato de referencia.
 import { api } from './client';
 import type {
-  AccountType, AuthResponse, Cart, CatalogQuery, GameDetail, GameRequest, GameStatus, GameSummary, Genre,
-  LibraryEntry, Order, OrderSummary, Ownership, PageResponse, PaymentMethod, Review, ReviewRequest, Role, User,
+  AuthResponse, Cart, CatalogQuery, GameDetail, GameRequest, GameStatus, GameSummary, Genre,
+  LibraryEntry, Order, OrderSummary, Ownership, PageResponse, PaymentMethod, RegisterRequest, Review, ReviewRequest, Role,
+  UpdateProfileRequest, User,
   WishlistItem,
 } from './types';
 
@@ -11,13 +12,13 @@ const page = (p = 0, size = 20) => ({ page: p, size });
 export const authApi = {
   login: (login: string, password: string) =>
     api<AuthResponse>('/api/auth/login', { method: 'POST', body: { login, password } }),
-  register: (body: { username: string; email: string; password: string; displayName?: string; accountType: AccountType }) =>
+  register: (body: RegisterRequest) =>
     api<AuthResponse>('/api/auth/register', { method: 'POST', body }),
 };
 
 export const userApi = {
   me: () => api<User>('/api/users/me'),
-  update: (body: { displayName?: string; avatarUrl?: string }) =>
+  update: (body: UpdateProfileRequest) =>
     api<User>('/api/users/me', { method: 'PATCH', body }),
 };
 

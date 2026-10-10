@@ -69,10 +69,12 @@ class OrderServiceTest {
         User user = mock(User.class);
         lenient().when(user.getId()).thenReturn(USER_ID);
         lenient().when(user.getEmail()).thenReturn("player@test.com");
+        lenient().when(user.getLocale()).thenReturn("it");
 
         Game game = new Game("Celeste", "celeste", mock(User.class), new BigDecimal("20.00"));
         ReflectionTestUtils.setField(game, "id", GAME_ID);
         game.setStatus(GameStatus.PUBLISHED);
+        game.setCoverUrl("https://img.test/celeste.jpg");
 
         order = new Order(user);
         order.addItem(game);
@@ -105,8 +107,13 @@ class OrderServiceTest {
         verify(events).publishEvent(event.capture());
         assertThat(event.getValue()).isInstanceOfSatisfying(OrderPaidEvent.class, e -> {
             assertThat(e.email()).isEqualTo("player@test.com");
+            assertThat(e.locale()).isEqualTo("it"); // idioma del usuario, leído dentro de la transacción
             assertThat(e.total()).isEqualByComparingTo("20.00");
-            assertThat(e.gameTitles()).containsExactly("Celeste");
+            assertThat(e.lines()).singleElement().satisfies(line -> {
+                assertThat(line.title()).isEqualTo("Celeste");
+                assertThat(line.coverUrl()).isEqualTo("https://img.test/celeste.jpg");
+                assertThat(line.unitPrice()).isEqualByComparingTo("20.00");
+            });
         });
     }
 
@@ -120,7 +127,12 @@ class OrderServiceTest {
         assertThat(outcome.approved()).isFalse();
         verify(libraryRepository, never()).save(any());
         verify(gameRepository, never()).incrementSalesCount(any());
-        verify(events).publishEvent(any(PaymentFailedEvent.class));
+        ArgumentCaptor<Object> event = ArgumentCaptor.forClass(Object.class);
+        verify(events).publishEvent(event.capture());
+        assertThat(event.getValue()).isInstanceOfSatisfying(PaymentFailedEvent.class, e -> {
+            assertThat(e.reason()).isEqualTo("Tarjeta rechazada");
+            assertThat(e.locale()).isEqualTo("it");
+        });
     }
 
     @Test

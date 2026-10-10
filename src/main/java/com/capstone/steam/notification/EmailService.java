@@ -1,5 +1,6 @@
 package com.capstone.steam.notification;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -12,7 +13,9 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import com.capstone.steam.notification.EmailTemplates.Brand;
 import com.capstone.steam.notification.EmailTemplates.Email;
+import com.capstone.steam.notification.event.OrderPaidEvent;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -23,38 +26,54 @@ import jakarta.mail.internet.MimeMessage;
  *
  * <p>Si no hay credenciales ({@code MAIL_USERNAME} vacío), el correo queda desactivado y solo se
  * registra en el log, para poder desarrollar sin cuenta de Gmail.
+ *
+ * <p>El correo llega con nombre de remitente ({@code MAIL_FROM_NAME}, por defecto «ARCADE») y sus
+ * botones apuntan al frontend ({@code FRONTEND_URL}; si falta, el primer origen de
+ * {@code CORS_ALLOWED_ORIGINS}).
+ *
+ * <p>Cada correo sale en el idioma del destinatario ({@code users.locale}, que viaja en el evento).
  */
 @Service
 public class EmailService {
+
+    static final String DEFAULT_FROM_NAME = "ARCADE";
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
     private final JavaMailSender mailSender;
     private final String from;
+    private final Brand brand;
     private final boolean enabled;
 
     public EmailService(JavaMailSender mailSender,
             @Value("${app.mail.from:}") String from,
+            @Value("${app.mail.from-name:}") String fromName,
+            @Value("${app.mail.store-url:}") String storeUrl,
             @Value("${spring.mail.username:}") String smtpUsername) {
         this.mailSender = mailSender;
-        this.from = from == null || from.isBlank() ? smtpUsername : from; // MAIL_FROM= vacío en .env
+        this.from = from == null || from.isBlank() ? smtpUsername : from.trim(); // MAIL_FROM= vacío o con espacios en .env
+        this.brand = new Brand(
+                fromName == null || fromName.isBlank() ? DEFAULT_FROM_NAME : fromName.trim(), // MAIL_FROM_NAME= vacío
+                firstUrl(storeUrl));
         this.enabled = !smtpUsername.isBlank();
         if (!enabled) {
             log.info("Correo desactivado: MAIL_USERNAME no está configurado (los envíos solo se registran en el log)");
         }
     }
 
-    public void sendWelcome(String to, String displayName) {
-        send(to, EmailTemplates.welcome(displayName));
+    /** {@code locale}: es, en o it (el de {@code users.locale}); cualquier otro valor, o null, sale en español. */
+    public void sendWelcome(String to, String displayName, String locale) {
+        send(to, EmailTemplates.welcome(brand, displayName, locale));
     }
 
     public void sendPurchaseReceipt(String to, String displayName, Long orderId, BigDecimal total,
-            List<String> gameTitles) {
-        send(to, EmailTemplates.purchaseReceipt(displayName, orderId, total, gameTitles));
+            List<OrderPaidEvent.Line> lines, String locale) {
+        send(to, EmailTemplates.purchaseReceipt(brand, displayName, orderId, total, lines, locale));
     }
 
-    public void sendPaymentFailed(String to, String displayName, Long orderId, BigDecimal total, String reason) {
-        send(to, EmailTemplates.paymentFailed(displayName, orderId, total, reason));
+    public void sendPaymentFailed(String to, String displayName, Long orderId, BigDecimal total, String reason,
+            String locale) {
+        send(to, EmailTemplates.paymentFailed(brand, displayName, orderId, total, reason, locale));
     }
 
     private void send(String to, Email email) {
@@ -65,14 +84,31 @@ public class EmailService {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
-            helper.setFrom(from);
+            helper.setFrom(from, brand.name());
             helper.setTo(to);
             helper.setSubject(email.subject());
             helper.setText(email.html(), true);
             mailSender.send(message);
             log.info("Correo enviado: para={} asunto=\"{}\"", to, email.subject());
-        } catch (MailException | MessagingException ex) {
+        } catch (MailException | MessagingException | UnsupportedEncodingException ex) {
             log.error("No se pudo enviar el correo a {} (\"{}\"): {}", to, email.subject(), ex.getMessage());
         }
+    }
+
+    /**
+     * Primera URL http(s) de una lista separada por comas (el formato de {@code CORS_ALLOWED_ORIGINS}),
+     * sin barra final. {@code null} si no hay ninguna: los correos salen entonces sin botones.
+     */
+    static String firstUrl(String value) {
+        if (value == null) {
+            return null;
+        }
+        for (String candidate : value.split(",")) {
+            String url = candidate.trim().replaceAll("/+$", "");
+            if (url.startsWith("http://") || url.startsWith("https://")) {
+                return url;
+            }
+        }
+        return null;
     }
 }

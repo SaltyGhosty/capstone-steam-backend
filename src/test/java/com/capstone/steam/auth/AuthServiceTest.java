@@ -58,7 +58,7 @@ class AuthServiceTest {
         when(jwtService.getExpirationSeconds()).thenReturn(3600L);
 
         AuthResponse response = authService.register(
-                new RegisterRequest("gaben", "Gabe@Valve.com", "secret123", null, AccountType.DEVELOPER));
+                new RegisterRequest("gaben", "Gabe@Valve.com", "secret123", null, AccountType.DEVELOPER, "en"));
 
         ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(saved.capture());
@@ -68,10 +68,15 @@ class AuthServiceTest {
         assertThat(user.hasRole(RoleName.ROLE_USER)).isTrue();
         assertThat(user.hasRole(RoleName.ROLE_DEVELOPER)).isTrue();
         assertThat(user.hasRole(RoleName.ROLE_ADMIN)).isFalse();
+        assertThat(user.getLocale()).isEqualTo("en");
 
-        verify(events).publishEvent(any(UserRegisteredEvent.class));
+        ArgumentCaptor<Object> event = ArgumentCaptor.forClass(Object.class);
+        verify(events).publishEvent(event.capture());
+        assertThat(event.getValue()).isInstanceOfSatisfying(UserRegisteredEvent.class,
+                e -> assertThat(e.locale()).isEqualTo("en")); // el correo de bienvenida sale en su idioma
         assertThat(response.accessToken()).isEqualTo("jwt");
         assertThat(response.tokenType()).isEqualTo("Bearer");
+        assertThat(response.user().locale()).isEqualTo("en");
         assertThat(response.user().roles()).containsExactly("ROLE_DEVELOPER", "ROLE_USER");
     }
 
@@ -82,7 +87,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("taken@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(
-                new RegisterRequest("newname", "TAKEN@test.com", "secret123", null, null)))
+                new RegisterRequest("newname", "TAKEN@test.com", "secret123", null, null, null)))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("email");
 

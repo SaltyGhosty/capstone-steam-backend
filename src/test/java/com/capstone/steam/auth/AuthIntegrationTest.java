@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -83,6 +85,78 @@ class AuthIntegrationTest {
                 .andExpect(jsonPath("$.errors.username").exists())
                 .andExpect(jsonPath("$.errors.email").exists())
                 .andExpect(jsonPath("$.errors.password").exists());
+    }
+
+    @Test
+    void registerStoresRequestedLocaleOrDefaultsToEs() throws Exception {
+        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                {"username":"gordon","email":"gordon@test.com","password":"password123","locale":"en"}"""))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.user.locale").value("en"));
+
+        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                {"username":"barney","email":"barney@test.com","password":"password123"}"""))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.user.locale").value("es"));
+    }
+
+    @Test
+    void registerWithUnsupportedLocaleReturns400() throws Exception {
+        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                {"username":"mossman","email":"mossman@test.com","password":"password123","locale":"fr"}"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.locale").exists());
+    }
+
+    @Test
+    void updateProfileLocaleOnlyAffectsAuthenticatedUser() throws Exception {
+        register("eli", "eli@test.com");
+        register("judith", "judith@test.com");
+        String eliToken = login("eli", "password123");
+        String judithToken = login("judith", "password123");
+
+        mvc.perform(patch("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + eliToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"locale\":\"it\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.locale").value("it"));
+
+        // sin locale en el body no se modifica
+        mvc.perform(patch("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + eliToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"displayName\":\"Eli\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.locale").value("it"));
+
+        mvc.perform(patch("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + eliToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"locale\":\"fr\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.locale").exists());
+
+        // el otro usuario conserva su idioma
+        mvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + judithToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.locale").value("es"));
+    }
+
+    // El @Pattern es estricto: MailTexts.of() tolera mayúsculas y espacios, pero la API solo guarda es|en|it
+    @ParameterizedTest
+    @ValueSource(strings = { "", " ", "EN", "It", " en", "en-US", "es|en" })
+    void malformedLocaleIsRejectedOnRegisterAndOnProfileUpdate(String locale) throws Exception {
+        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"username":"vance","email":"vance@test.com","password":"password123","locale":"%s"}"""
+                        .formatted(locale)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.locale").exists());
+
+        String token = register("alyx", "alyx@test.com");
+        mvc.perform(patch("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"locale\":\"%s\"}".formatted(locale)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.locale").exists());
+
+        // el idioma guardado no cambia tras el 400
+        mvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.locale").value("es"));
     }
 
     @Test

@@ -52,7 +52,8 @@ import jakarta.mail.internet.MimeMessage;
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
         "spring.datasource.url=jdbc:h2:mem:mail_events;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
-        "spring.mail.username=smtp-user@gmail.com" // activa el envío (el sender es un mock)
+        "spring.mail.username=smtp-user@gmail.com", // activa el envío (el sender es un mock)
+        "app.mail.from-name=ARCADE" // el asunto de bienvenida lleva la marca; que no dependa del .env local
 })
 class MailEventIntegrationTest {
 
@@ -78,14 +79,26 @@ class MailEventIntegrationTest {
     void registrationSendsWelcomeMailFromTheMailThreadPoolAfterCommit() throws Exception {
         register(unique("ana"), "PLAYER");
 
-        await().atMost(Duration.ofSeconds(5)).until(() -> sentBy.containsKey("¡Bienvenido a Capstone Steam!"));
-        assertThat(sentBy.get("¡Bienvenido a Capstone Steam!")).startsWith("mail-");
+        await().atMost(Duration.ofSeconds(5)).until(() -> sentBy.containsKey("¡Bienvenido a ARCADE!"));
+        assertThat(sentBy.get("¡Bienvenido a ARCADE!")).startsWith("mail-");
+    }
+
+    @Test
+    void welcomeMailIsSentInTheLanguageChosenAtRegistration() throws Exception {
+        String username = unique("liam");
+        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"username":"%s","email":"%s@test.com","password":"password123","locale":"en"}"""
+                        .formatted(username, username)))
+                .andExpect(status().isCreated());
+
+        await().atMost(Duration.ofSeconds(5)).until(() -> sentBy.containsKey("Welcome to ARCADE!"));
+        assertThat(sentBy.get("Welcome to ARCADE!")).startsWith("mail-");
     }
 
     @Test
     void rolledBackTransactionSendsNoMail() {
         transactionTemplate.executeWithoutResult(tx -> {
-            publisher.publishEvent(new UserRegisteredEvent(999L, "ghost@test.com", "Ghost"));
+            publisher.publishEvent(new UserRegisteredEvent(999L, "ghost@test.com", "Ghost", "es"));
             tx.setRollbackOnly();
         });
 

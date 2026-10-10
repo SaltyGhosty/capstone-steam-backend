@@ -32,5 +32,6 @@ export const demoUser = {
   avatarUrl: null,
   enabled: true,
   roles: ['ROLE_USER'],
+  locale: 'es',
   createdAt: '2026-09-30T10:00:00Z',
 };

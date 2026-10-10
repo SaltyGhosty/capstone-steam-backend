@@ -57,6 +57,9 @@ public class AuthService {
         if (request.displayName() != null && !request.displayName().isBlank()) {
             user.setDisplayName(request.displayName().trim());
         }
+        if (request.locale() != null) {
+            user.setLocale(request.locale());
+        }
 
         user.addRole(role(RoleName.ROLE_USER));
         if (request.accountType() == AccountType.DEVELOPER) {
@@ -65,7 +68,7 @@ public class AuthService {
         userRepository.save(user);
 
         // El correo de bienvenida sale solo si la transacción hace commit (listener AFTER_COMMIT)
-        events.publishEvent(new UserRegisteredEvent(user.getId(), user.getEmail(), user.getDisplayName()));
+        events.publishEvent(new UserRegisteredEvent(user.getId(), user.getEmail(), user.getDisplayName(), user.getLocale()));
 
         return issueToken(user);
     }

@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useLocation, useNavigate } from 'react-router';
 import { ApiError, getToken, setToken, setUnauthorizedHandler } from '@/api/client';
 import { authApi, cartApi, userApi, wishlistApi } from '@/api/endpoints';
-import type { AccountType, Cart, Role, User } from '@/api/types';
+import type { Cart, RegisterRequest, Role, User } from '@/api/types';
 
 type ToastKind = 'success' | 'error';
 interface Toast { id: number; message: string; kind: ToastKind }
@@ -14,7 +14,7 @@ interface StoreValue {
   booting: boolean;
   hasRole: (role: Role) => boolean;
   login: (login: string, password: string) => Promise<void>;
-  register: (data: { username: string; email: string; password: string; displayName?: string; accountType: AccountType }) => Promise<void>;
+  register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
 

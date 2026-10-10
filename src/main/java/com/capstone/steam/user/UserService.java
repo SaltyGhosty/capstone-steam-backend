@@ -38,6 +38,9 @@ public class UserService {
         if (request.avatarUrl() != null) {
             user.setAvatarUrl(request.avatarUrl().isBlank() ? null : request.avatarUrl().trim());
         }
+        if (request.locale() != null) {
+            user.setLocale(request.locale());
+        }
         return UserResponse.from(user);
     }
 

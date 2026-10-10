@@ -4,6 +4,7 @@ import { ApiError } from '@/api/client';
 import type { AccountType } from '@/api/types';
 import { FieldError } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
+import { detectLocale } from '@/lib/locale';
 
 function AuthShell({ eyebrow, title, children, footer }: { eyebrow: string; title: string; children: ReactNode; footer: ReactNode }) {
   return (
@@ -87,7 +88,8 @@ export function Register() {
     setErrors({});
     setError('');
     try {
-      await register({ ...form, displayName: form.displayName.trim() || undefined });
+      // El idioma de los correos se deduce del navegador; se puede cambiar luego en Ajustes
+      await register({ ...form, displayName: form.displayName.trim() || undefined, locale: detectLocale() });
       notify('¡Cuenta creada! Te hemos enviado un correo de bienvenida.');
       navigate(form.accountType === 'DEVELOPER' ? '/developer' : target, { replace: true });
     } catch (err) {

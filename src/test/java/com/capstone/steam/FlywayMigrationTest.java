@@ -13,7 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Verifica que las migraciones V1-V4 se aplican sobre H2 y que las
+ * Verifica que las migraciones V1-V5 se aplican sobre H2 y que las
  * restricciones clave del esquema funcionan.
  */
 @SpringBootTest
@@ -28,10 +28,23 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV4() {
+    void appliesAllMigrationsUpToV5() {
         var applied = flyway.info().applied();
-        assertThat(applied).hasSize(4);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("4");
+        assertThat(applied).hasSize(5);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("5");
+    }
+
+    @Test
+    void userLocaleDefaultsToEsAndRejectsUnknownValues() {
+        long userId = insertUser("localeuser");
+        assertThat(jdbc.queryForObject("SELECT locale FROM users WHERE id = ?", String.class, userId))
+                .isEqualTo("es");
+
+        jdbc.update("UPDATE users SET locale = 'it' WHERE id = ?", userId);
+        assertThatThrownBy(() -> jdbc.update("UPDATE users SET locale = 'fr' WHERE id = ?", userId))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update("UPDATE users SET locale = NULL WHERE id = ?", userId))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test

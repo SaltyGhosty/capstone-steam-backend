@@ -1,15 +1,18 @@
 import { useState, type FormEvent } from 'react';
 import { ApiError } from '@/api/client';
 import { userApi } from '@/api/endpoints';
+import type { Locale } from '@/api/types';
 import Icon from '@/components/Icon';
 import { FieldError, PageHeader } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
 import { formatDate, initials } from '@/lib/format';
+import { LOCALES } from '@/lib/locale';
 
 export default function Settings() {
   const { user, setUser, logout, notify, notifyError } = useStore();
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? '');
+  const [locale, setLocale] = useState<Locale>(user?.locale ?? 'es');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
@@ -24,6 +27,7 @@ export default function Settings() {
       const updated = await userApi.update({
         displayName: displayName.trim() || undefined,
         avatarUrl: avatarUrl.trim() || undefined,
+        locale,
       });
       setUser(updated);
       notify('Perfil actualizado');
@@ -63,6 +67,13 @@ export default function Settings() {
             <span>URL del avatar</span>
             <input type="url" maxLength={500} value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" />
             <FieldError errors={errors} name="avatarUrl" />
+          </label>
+          <label className="field">
+            <span>Idioma de los correos <em>(bienvenida, recibos y pagos rechazados)</em></span>
+            <select value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
+              {LOCALES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+            </select>
+            <FieldError errors={errors} name="locale" />
           </label>
           <div className="form-actions">
             <button className="primary small" disabled={busy}>{busy ? 'Guardando…' : 'Guardar cambios'}</button>

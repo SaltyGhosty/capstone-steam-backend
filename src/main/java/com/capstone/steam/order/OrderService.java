@@ -140,8 +140,12 @@ public class OrderService {
         User user = order.getUser();
         String email = user.getEmail();
         String displayName = user.getDisplayName();
+        String locale = user.getLocale();
         BigDecimal total = order.getTotal();
-        List<String> titles = games.stream().map(Game::getTitle).toList();
+        List<OrderPaidEvent.Line> lines = order.getItems().stream()
+                .map(item -> new OrderPaidEvent.Line(item.getGame().getTitle(), item.getGame().getCoverUrl(),
+                        item.getUnitPrice()))
+                .toList();
 
         Payment payment = paymentRepository.save(new Payment(order, request.method(), paymentGateway.newReference()));
         PaymentResult result = paymentGateway.charge(payment.getProviderRef(), order.getTotal(), request.method(),
@@ -153,14 +157,14 @@ public class OrderService {
                 throw new ConflictException("El pedido ya fue procesado por otra petición");
             }
             fulfil(userId, orderId, gameIds);
-            events.publishEvent(new OrderPaidEvent(orderId, userId, email, displayName, total, titles));
+            events.publishEvent(new OrderPaidEvent(orderId, userId, email, displayName, total, lines, locale));
         } else {
             payment.markFailed(result.failureReason());
             if (orderRepository.closePending(orderId, OrderStatus.FAILED) == 0) {
                 throw new ConflictException("El pedido ya fue procesado por otra petición");
             }
             events.publishEvent(new PaymentFailedEvent(orderId, userId, email, displayName, total,
-                    result.failureReason()));
+                    result.failureReason(), locale));
         }
         return new PaymentOutcome(result.approved(), load(orderId));
     }
