@@ -15,6 +15,13 @@
 	handle /actuator/health* {
 		reverse_proxy localhost:{$BACKEND_PORT:8090}
 	}
+	# Documentación de la API (Swagger UI y OpenAPI JSON); si no, caerían en el index.html de React
+	handle /swagger-ui* {
+		reverse_proxy localhost:{$BACKEND_PORT:8090}
+	}
+	handle /v3/api-docs* {
+		reverse_proxy localhost:{$BACKEND_PORT:8090}
+	}
 
 	# Frontend compilado (npm run build). Cualquier ruta de React (/games/hollow-knight...) carga index.html
 	handle {

@@ -26,6 +26,10 @@ export default defineConfig({
         // backend rechaza con 403 los POST/PUT cuando Vite no corre justo en el 5173.
         configure: (proxy) => proxy.on('proxyReq', (req) => req.removeHeader('origin')),
       },
+      // Swagger UI y el JSON de OpenAPI viven fuera de /api. Sin changeOrigin, el redirect de
+      // /swagger-ui.html a /swagger-ui/index.html vuelve al 5173 y no al puerto del backend.
+      '/swagger-ui': { target: apiTarget },
+      '/v3/api-docs': { target: apiTarget },
     },
   },
   test: {

@@ -6,6 +6,9 @@ import { getLang, t } from '@/i18n';
 const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 const TOKEN_KEY = 'arcade.token';
 
+/** Swagger UI del backend: mismo origen con el proxy (Vite/Caddy) o VITE_API_URL en producción. */
+export const API_DOCS_URL = `${BASE_URL}/swagger-ui/index.html`;
+
 export class ApiError extends Error {
   status: number;
   fieldErrors: Record<string, string>;
