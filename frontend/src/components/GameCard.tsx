@@ -13,10 +13,8 @@ export default function GameCard({ game }: { game: GameSummary }) {
   return (
     <article className="game-card">
       <div className="cover">
-        <Link to={`/games/${game.slug}`} aria-label={game.title}>
-          {game.coverUrl ? <img src={cardImage(game.coverUrl)} alt="" loading="lazy" /> : <div className="cover-fallback">{game.title}</div>}
-        </Link>
-        <button onClick={() => toggleWishlist(game.id, game.title)} className={wished ? 'wish active' : 'wish'}
+        {game.coverUrl ? <img src={cardImage(game.coverUrl)} alt="" loading="lazy" /> : <div className="cover-fallback">{game.title}</div>}
+        <button onClick={(e) => { e.stopPropagation(); toggleWishlist(game.id, game.title); }} className={wished ? 'wish active' : 'wish'}
           aria-label={t(wished ? 'card.removeWish' : 'card.addWish', { title: game.title })}>
           <Icon name="heart" size={18} />
         </button>
@@ -25,10 +23,11 @@ export default function GameCard({ game }: { game: GameSummary }) {
       </div>
       <div className="game-info">
         <div>
-          <h3><Link to={`/games/${game.slug}`}>{game.title}</Link></h3>
+          {/* El ::after de este enlace cubre toda la tarjeta: imagen y título navegan al detalle */}
+          <h3><Link className="card-link" to={`/games/${game.slug}`}>{game.title}</Link></h3>
           <p>{genreLabel(game.genres)}</p>
         </div>
-        <button onClick={() => addToCart(game.id, game.title)} aria-label={t('card.addCart', { title: game.title })}>
+        <button onClick={(e) => { e.stopPropagation(); addToCart(game.id, game.title); }} aria-label={t('card.addCart', { title: game.title })}>
           {game.discountPercent > 0 && <s>{formatMoney(game.price)}</s>}
           {formatMoney(game.finalPrice)}
         </button>

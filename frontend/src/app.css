@@ -56,7 +56,7 @@ h3 a:hover { color: #b7ff3c; }
 .price b { color: #eef1f4; font-size: 14px; }
 .price s { color: #69727f; font-size: 11px; }
 .price-cut, .card-sale { padding: 3px 6px; border-radius: 4px; color: #11160b; background: #b7ff3c; font-size: 10px; font-weight: 800; }
-.card-sale { position: absolute; z-index: 2; top: 12px; left: 11px; }
+.card-sale { position: absolute; z-index: 2; pointer-events: none; top: 12px; left: 11px; }
 .game-info button { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap; }
 .game-info button s { color: #5f6875; font-size: 9px; font-weight: 500; }
 .game-info h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

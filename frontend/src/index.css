@@ -83,16 +83,18 @@ h1 { max-width: 520px; margin: 0; font-size: clamp(38px, 5vw, 67px); line-height
 .view-all { display: flex; align-items: center; gap: 7px; border: 0; color: #8f98a5; background: none; font-size: 10px; }
 .view-all:hover { color: #b7ff3c; }
 .game-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
-.game-card { min-width: 0; overflow: hidden; border: 1px solid #252b33; border-radius: 11px; background: #11151b; transition: transform .25s ease, border-color .25s ease; }
+.game-card { position: relative; min-width: 0; overflow: hidden; border: 1px solid #252b33; border-radius: 11px; background: #11151b; transition: transform .25s ease, border-color .25s ease; }
 .game-card:hover { transform: translateY(-5px); border-color: #414953; }
 .cover { position: relative; aspect-ratio: 1.55; overflow: hidden; background: #1b2028; }
-.cover::after { content: ""; position: absolute; inset: 50% 0 0; background: linear-gradient(transparent, #11151b); }
+.cover::after { content: ""; pointer-events: none; position: absolute; inset: 50% 0 0; background: linear-gradient(transparent, #11151b); }
 .cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .45s ease; }
 .game-card:hover img { transform: scale(1.05); }
+.card-link::after { content: ""; position: absolute; z-index: 1; inset: 0; }
+.game-info button { position: relative; z-index: 2; }
 .wish { position: absolute; z-index: 2; top: 10px; right: 10px; width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.15); border-radius: 50%; color: white; background: rgba(7,10,14,.62); backdrop-filter: blur(8px); }
 .wish.active { color: #151a0d; background: #b7ff3c; border-color: #b7ff3c; }
 .wish.active svg { fill: currentColor; }
-.rating { position: absolute; z-index: 2; left: 11px; bottom: 9px; display: flex; align-items: center; gap: 4px; color: #e9edf0; font-size: 9px; }
+.rating { position: absolute; z-index: 2; pointer-events: none; left: 11px; bottom: 9px; display: flex; align-items: center; gap: 4px; color: #e9edf0; font-size: 9px; }
 .rating svg { color: #b7ff3c; fill: #b7ff3c; }
 .game-info { min-height: 73px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 14px; }
 .game-info h3 { margin: 0 0 6px; color: #e6e9ed; font-size: 13px; }
