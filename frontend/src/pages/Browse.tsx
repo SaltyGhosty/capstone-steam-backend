@@ -5,21 +5,17 @@ import { catalogApi } from '@/api/endpoints';
 import type { GameSort } from '@/api/types';
 import GameCard from '@/components/GameCard';
 import { Empty, ErrorState, Loading, PageHeader, Pagination } from '@/components/ui';
+import { useI18n } from '@/i18n';
+import { genreName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 
-const SORTS: { value: GameSort; label: string }[] = [
-  { value: 'newest', label: 'Más recientes' },
-  { value: 'best_selling', label: 'Más vendidos' },
-  { value: 'top_rated', label: 'Mejor valorados' },
-  { value: 'price_asc', label: 'Precio: menor a mayor' },
-  { value: 'price_desc', label: 'Precio: mayor a menor' },
-  { value: 'title', label: 'Título (A-Z)' },
-];
+const SORTS: GameSort[] = ['newest', 'best_selling', 'top_rated', 'price_asc', 'price_desc', 'title'];
 
 const PAGE_SIZE = 12;
 
 export default function Browse() {
   const [params, setParams] = useSearchParams();
+  const { t } = useI18n();
   const q = params.get('q') ?? '';
   const genres = params.get('genres')?.split(',').filter(Boolean) ?? [];
   const maxPrice = params.get('maxPrice') ?? '';
@@ -64,43 +60,43 @@ export default function Browse() {
 
   return (
     <>
-      <PageHeader eyebrow="CATÁLOGO" title={q ? `Resultados para “${q}”` : 'Explorar juegos'}>
+      <PageHeader eyebrow={t('browse.eyebrow')} title={q ? t('browse.resultsFor', { q }) : t('browse.title')}>
         <label className="select">
-          <span>Ordenar</span>
+          <span>{t('browse.sortBy')}</span>
           <select value={sort} onChange={(e) => update({ sort: e.target.value })}>
-            {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            {SORTS.map((s) => <option key={s} value={s}>{t(`browse.sort.${s}`)}</option>)}
           </select>
         </label>
       </PageHeader>
 
       <div className="browse">
-        <aside className="filters" aria-label="Filtros">
+        <aside className="filters" aria-label={t('browse.filters')}>
           <div className="filter-group">
-            <h4>Géneros</h4>
+            <h4>{t('browse.genres')}</h4>
             <div className="chips">
               {genresRes.data?.map((g) => (
                 <button key={g.id} className={genres.includes(g.slug) ? 'chip active' : 'chip'}
                   aria-pressed={genres.includes(g.slug)} onClick={() => toggleGenre(g.slug)}>
-                  {g.name}
+                  {genreName(g)}
                 </button>
               ))}
             </div>
           </div>
           <div className="filter-group">
-            <h4>Precio máximo</h4>
+            <h4>{t('browse.maxPrice')}</h4>
             <div className="chips">
               {['5', '10', '20', '40'].map((v) => (
                 <button key={v} className={maxPrice === v ? 'chip active' : 'chip'} aria-pressed={maxPrice === v}
                   onClick={() => update({ maxPrice: maxPrice === v ? null : v })}>
-                  Hasta {v} €
+                  {t('browse.upTo', { v })}
                 </button>
               ))}
               <button className={maxPrice === '0' ? 'chip active' : 'chip'} aria-pressed={maxPrice === '0'}
-                onClick={() => update({ maxPrice: maxPrice === '0' ? null : '0' })}>Gratis</button>
+                onClick={() => update({ maxPrice: maxPrice === '0' ? null : '0' })}>{t('common.free')}</button>
             </div>
           </div>
           <div className="filter-group">
-            <h4>Valoración mínima</h4>
+            <h4>{t('browse.minRating')}</h4>
             <div className="chips">
               {['3', '4', '4.5'].map((v) => (
                 <button key={v} className={minRating === v ? 'chip active' : 'chip'} aria-pressed={minRating === v}
@@ -112,11 +108,11 @@ export default function Browse() {
           </div>
           <label className="check">
             <input type="checkbox" checked={onSale} onChange={(e) => update({ onSale: e.target.checked ? 'true' : null })} />
-            Solo juegos en oferta
+            {t('browse.onlySale')}
           </label>
           {hasFilters && (
             <button className="secondary small full" onClick={() => setParams(sort !== 'newest' ? { sort } : {})}>
-              Quitar filtros
+              {t('browse.clear')}
             </button>
           )}
         </aside>
@@ -126,10 +122,10 @@ export default function Browse() {
           {results.error ? <ErrorState error={results.error} onRetry={results.reload} /> : null}
           {data && (
             <>
-              <p className="result-count">{data.totalElements} {data.totalElements === 1 ? 'juego' : 'juegos'}</p>
+              <p className="result-count">{t('common.games', { count: data.totalElements })}</p>
               {data.content.length === 0 ? (
-                <Empty icon="search" title="No hay juegos con estos filtros">
-                  <p>Prueba con otra búsqueda o quita algún filtro.</p>
+                <Empty icon="search" title={t('browse.empty')}>
+                  <p>{t('browse.emptyHint')}</p>
                 </Empty>
               ) : (
                 <div className={results.loading ? 'game-grid three is-loading' : 'game-grid three'}>

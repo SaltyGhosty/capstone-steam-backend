@@ -88,10 +88,7 @@ final class EmailTemplates {
                 layout(brand, t, t.receiptPreheader().formatted(orderId, money(total, t)), body));
     }
 
-    /**
-     * {@code reason} lo genera la pasarela (hoy, el simulador en español) y no se traduce: se muestra
-     * tal cual, escapado.
-     */
+    /** {@code reason} llega ya traducido al idioma del correo y se muestra escapado. */
     static Email paymentFailed(Brand brand, String displayName, Long orderId, BigDecimal total, String reason,
             String locale) {
         MailTexts t = MailTexts.of(locale);
@@ -108,6 +105,34 @@ final class EmailTemplates {
                 + button(t.failedButton(), brand.link("/cart"));
         return new Email(t.failedSubject().formatted(orderId),
                 layout(brand, t, t.failedPreheader().formatted(orderId), body));
+    }
+
+    /** Aviso de oferta de un juego de la wishlist: portada, título y precio antes y ahora. */
+    static Email gameOnSale(Brand brand, String displayName, String title, String slug, String coverUrl,
+            BigDecimal price, BigDecimal finalPrice, int discountPercent, String locale) {
+        MailTexts t = MailTexts.of(locale);
+        String cover = safeImageUrl(coverUrl);
+        String image = cover == null ? "" : """
+                <img src="%s" width="160" alt="%s" border="0" style="display:block;width:160px;max-width:100%%;border:0;border-radius:8px;">"""
+                .formatted(esc(cover), esc(title));
+        String body = eyebrow(t.saleEyebrow().formatted(discountPercent), ACCENT)
+                + heading(t.saleHeading().formatted(esc(title)))
+                + paragraph(greeting(t.failedHello(), displayName, ".") + " " + t.saleBody())
+                + """
+                        <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
+                        <tr>
+                          <td width="172" style="width:172px;padding:0 12px 0 0;vertical-align:middle;">%s</td>
+                          <td style="vertical-align:middle;font:600 16px/1.4 %s;color:%s;">%s<br>
+                            <span style="font:400 14px/1.6 %s;color:%s;text-decoration:line-through;">%s</span>
+                            <span style="font:700 20px/1.4 %s;color:%s;">&nbsp;%s</span>
+                          </td>
+                        </tr>
+                        </table>
+                        """.formatted(image, FONT, TEXT, esc(title), FONT, MUTED, money(price, t), FONT, ACCENT,
+                        money(finalPrice, t))
+                + button(t.saleButton(), brand.link("/games/" + slug));
+        return new Email(t.saleSubject().formatted(title, discountPercent),
+                layout(brand, t, t.salePreheader(), body));
     }
 
     // ------------------------------------------------------------------

@@ -4,7 +4,8 @@ import org.springframework.http.HttpStatus;
 
 public class BadRequestException extends ApiException {
 
-    public BadRequestException(String message) {
-        super(HttpStatus.BAD_REQUEST, message);
+    /** @param code clave de messages*.properties */
+    public BadRequestException(String code, Object... args) {
+        super(HttpStatus.BAD_REQUEST, code, args);
     }
 }

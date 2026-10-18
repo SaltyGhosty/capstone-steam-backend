@@ -1,6 +1,7 @@
 import { Link, Route, Routes } from 'react-router';
 import Layout from '@/components/Layout';
 import { Empty, RequireAuth } from '@/components/ui';
+import { useI18n } from '@/i18n';
 import Admin from '@/pages/Admin';
 import { Login, Register } from '@/pages/Auth';
 import Browse from '@/pages/Browse';
@@ -13,9 +14,10 @@ import { OrderDetail, OrderList } from '@/pages/Orders';
 import Settings from '@/pages/Settings';
 
 function NotFound() {
+  const { t } = useI18n();
   return (
-    <Empty icon="compass" title="Esta página no existe">
-      <Link className="primary small" to="/">Volver al inicio</Link>
+    <Empty icon="compass" title={t('common.notFound')}>
+      <Link className="primary small" to="/">{t('common.backHome')}</Link>
     </Empty>
   );
 }

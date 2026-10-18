@@ -36,6 +36,19 @@ class EmailServiceTest {
     }
 
     @Test
+    void neverSendsToReservedDomainsLikeTheDemoAccounts() {
+        var service = new EmailService(mailSender, "tienda@capstone.test", "ARCADE", STORE, "smtp-user@gmail.com");
+
+        service.sendWelcome("demo_player@demo.capstone-steam.local", "Demo", "es");
+        service.sendWelcome("ana@example.com", "Ana", "es");
+        service.sendWelcome("bob@shop.test", "Bob", "es");
+
+        verifyNoInteractions(mailSender);
+        assertThat(EmailService.isReservedDomain("player@test.com")).isFalse(); // test.com es un dominio real
+        assertThat(EmailService.isReservedDomain("sin-arroba")).isTrue();
+    }
+
+    @Test
     void sendsHtmlReceiptWithEscapedUserData() throws Exception {
         var service = new EmailService(mailSender, "tienda@capstone.test", "ARCADE", STORE, "smtp-user@gmail.com");
 

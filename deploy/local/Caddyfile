@@ -1,0 +1,31 @@
+# Servidor web de ARCADE alojado en este PC. Un solo origen: la web y la API salen por el mismo puerto,
+# así que el navegador no necesita CORS. cloudflared publica este puerto en Internet.
+{
+	admin off
+	auto_https off
+}
+
+:{$WEB_PORT:8088} {
+	encode zstd gzip
+
+	# API y health check -> backend Spring Boot
+	handle /api/* {
+		reverse_proxy localhost:{$BACKEND_PORT:8090}
+	}
+	handle /actuator/health* {
+		reverse_proxy localhost:{$BACKEND_PORT:8090}
+	}
+
+	# Frontend compilado (npm run build). Cualquier ruta de React (/games/hollow-knight...) carga index.html
+	handle {
+		root * "{$WEB_ROOT}" # entre comillas: la ruta puede tener espacios
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Los assets llevan hash en el nombre: se pueden cachear para siempre; index.html nunca
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	@html path / /index.html
+	header @html Cache-Control "no-cache"
+}

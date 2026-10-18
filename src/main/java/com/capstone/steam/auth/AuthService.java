@@ -49,10 +49,10 @@ public class AuthService {
         User user = new User(username, request.email(), passwordEncoder.encode(request.password()));
 
         if (userRepository.existsByUsernameIgnoreCase(username)) {
-            throw new ConflictException("El nombre de usuario ya está en uso");
+            throw new ConflictException("auth.usernameTaken");
         }
         if (userRepository.existsByEmail(user.getEmail())) {
-            throw new ConflictException("El email ya está registrado");
+            throw new ConflictException("auth.emailTaken");
         }
         if (request.displayName() != null && !request.displayName().isBlank()) {
             user.setDisplayName(request.displayName().trim());
@@ -79,7 +79,7 @@ public class AuthService {
                 UsernamePasswordAuthenticationToken.unauthenticated(request.login().trim(), request.password()));
         var principal = (AppUserPrincipal) authentication.getPrincipal();
         User user = userRepository.findWithRolesById(principal.getId())
-                .orElseThrow(() -> NotFoundException.of("Usuario", principal.getId()));
+                .orElseThrow(() -> NotFoundException.of("user", principal.getId()));
         return issueToken(user);
     }
 

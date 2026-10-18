@@ -7,7 +7,7 @@ export type OrderStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
 export type PaymentMethod = 'CREDIT_CARD' | 'PAYPAL' | 'WALLET';
 export type PaymentStatus = 'INITIATED' | 'SUCCEEDED' | 'FAILED';
 export type AccountType = 'PLAYER' | 'DEVELOPER';
-/** Idioma de los correos del usuario (la interfaz web sigue solo en español). */
+/** Idioma de los correos del usuario (la interfaz se elige aparte, con las banderas). */
 export type Locale = 'es' | 'en' | 'it';
 
 export interface PageResponse<T> {
@@ -79,8 +79,14 @@ export interface GameDetail {
   id: number;
   title: string;
   slug: string;
+  /** En el idioma de la interfaz (la española si falta la traducción) */
   description: string | null;
+  /** Las tres versiones tal cual, para el formulario del developer */
+  descriptions: { es: string | null; en: string | null; it: string | null };
   coverUrl: string | null;
+  /** AppID de la tienda de Steam; si lo tiene, precio y descuento vienen de Steam */
+  steamAppId: number | null;
+  priceSyncedAt: string | null;
   price: number;
   discountPercent: number;
   finalPrice: number;
@@ -99,10 +105,13 @@ export interface GameDetail {
 export interface GameRequest {
   title: string;
   description?: string | null;
+  descriptionEn?: string | null;
+  descriptionIt?: string | null;
   price: number;
   discountPercent?: number | null;
   releaseDate?: string | null;
   coverUrl?: string | null;
+  steamAppId?: number | null;
   genreIds?: number[];
   version?: number | null;
 }
@@ -211,4 +220,12 @@ export interface CatalogQuery {
   sort?: GameSort;
   page?: number;
   size?: number;
+}
+
+/** Resultado de sincronizar los precios con Steam. */
+export interface SteamSyncResult {
+  checked: number;
+  updated: number;
+  newSales: number;
+  notified: number;
 }

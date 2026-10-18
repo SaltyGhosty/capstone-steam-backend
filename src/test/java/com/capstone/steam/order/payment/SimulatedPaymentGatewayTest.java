@@ -33,7 +33,7 @@ class SimulatedPaymentGatewayTest {
     void declinesTestCardEndingInDeclinedSuffix() {
         var result = gateway(0.0, 0.5).charge("ref", AMOUNT, PaymentMethod.CREDIT_CARD, "4000000000000000");
         assertThat(result.approved()).isFalse();
-        assertThat(result.failureReason()).contains("rechazada");
+        assertThat(result.failureReason()).isEqualTo("payment.declined.card"); // clave; se traduce al mostrarla
     }
 
     @Test

@@ -29,7 +29,7 @@ public class CatalogService {
     public PageResponse<GameSummaryResponse> search(GameSearchCriteria criteria, GameSort sort, int page, int size) {
         if (criteria.minPrice() != null && criteria.maxPrice() != null
                 && criteria.minPrice().compareTo(criteria.maxPrice()) > 0) {
-            throw new BadRequestException("minPrice no puede ser mayor que maxPrice");
+            throw new BadRequestException("catalog.priceRange");
         }
         var result = gameCriteriaRepository.search(criteria, sort, PageRequest.of(page, size));
         return PageResponse.of(result, GameSummaryResponse::from);
@@ -39,6 +39,6 @@ public class CatalogService {
         return gameRepository.findBySlug(slug)
                 .filter(Game::isPublished)
                 .map(GameDetailResponse::from)
-                .orElseThrow(() -> NotFoundException.of("Juego", slug));
+                .orElseThrow(() -> NotFoundException.of("game", slug));
     }
 }

@@ -6,7 +6,8 @@
 //   node scripts/seed-demo.mjs --api https://mi-api.onrender.com
 //
 // Se puede repetir: lo que ya existe (usuarios, juegos, compras, reseñas…) se salta.
-// Los datos están en scripts/demo-data.json. Las portadas se enlazan desde el CDN de Steam.
+// Los datos están en scripts/demo-data.json. Las portadas se enlazan desde el CDN de Steam y cada juego
+// queda enlazado por su AppID: el backend sincroniza después precio y descuento con la tienda de Steam.
 import { readFile } from 'node:fs/promises';
 
 const apiArg = process.argv.indexOf('--api');
@@ -72,11 +73,23 @@ for (const g of data.games) {
     const missing = g.genres.filter((slug) => !genres[slug]);
     if (missing.length) throw new Error(`Géneros inexistentes en ${g.title}: ${missing.join(', ')}`);
     game = await call('POST', '/api/developer/games', { token, body: {
-      title: g.title, description: g.description, price: g.price, discountPercent: g.discountPercent ?? 0,
-      releaseDate: g.releaseDate, coverUrl: coverUrl(g.steamAppId), genreIds: g.genres.map((slug) => genres[slug]),
+      title: g.title, description: g.description, descriptionEn: g.descriptionEn, descriptionIt: g.descriptionIt,
+      price: g.price, discountPercent: g.discountPercent ?? 0,
+      releaseDate: g.releaseDate, coverUrl: coverUrl(g.steamAppId), steamAppId: g.steamAppId,
+      genreIds: g.genres.map((slug) => genres[slug]),
     } });
     count.games++;
     log(`+ ${g.title}${g.draft ? ' (borrador)' : ''}`);
+  }
+  else if (!game.steamAppId || (!game.descriptions?.en && g.descriptionEn)) {
+    // juego cargado antes de las traducciones o del enlace con Steam: se completan sin tocar el resto
+    game = await call('PUT', `/api/developer/games/${game.id}`, { token, body: {
+      title: game.title, description: game.descriptions?.es ?? g.description,
+      descriptionEn: game.descriptions?.en ?? g.descriptionEn, descriptionIt: game.descriptions?.it ?? g.descriptionIt, price: game.price, discountPercent: game.discountPercent,
+      releaseDate: game.releaseDate, coverUrl: game.coverUrl, steamAppId: g.steamAppId,
+      genreIds: game.genres.map((x) => x.id), version: game.version,
+    } });
+    log(`~ ${g.title}: traducciones y AppID de Steam`);
   }
   if (!g.draft && game.status === 'DRAFT') await call('POST', `/api/developer/games/${game.id}/publish`, { token });
   gameIds[g.key] = game.id;

@@ -11,5 +11,5 @@ import jakarta.validation.constraints.Pattern;
  */
 public record PayRequest(
         @NotNull PaymentMethod method,
-        @Pattern(regexp = "^\\d{12,19}$", message = "debe tener entre 12 y 19 dígitos") String cardNumber) {
+        @Pattern(regexp = "^\\d{12,19}$", message = "{validation.cardNumber}") String cardNumber) {
 }

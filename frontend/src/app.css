@@ -101,6 +101,7 @@ select:focus, .field input:focus, .field textarea:focus, .inline-form input:focu
 .buy-box { margin-top: 24px; }
 .buy-box .price b { font-size: 22px; font-family: "Space Grotesk", sans-serif; }
 .buy-box .price s { font-size: 13px; }
+.buy-box > .hint { display: block; margin-top: 6px; } /* «Precio de Steam · actualizado…», debajo del precio */
 .buy-box .hero-actions { margin-top: 16px; }
 .detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; }
 .review-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }

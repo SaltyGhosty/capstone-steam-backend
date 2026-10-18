@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -21,10 +22,13 @@ import jakarta.validation.constraints.Size;
 public record GameRequest(
         @NotBlank @Size(max = 150) String title,
         @Size(max = 10000) String description,
+        @Size(max = 10000) String descriptionEn,
+        @Size(max = 10000) String descriptionIt,
         @NotNull @DecimalMin("0.00") @Digits(integer = 8, fraction = 2) BigDecimal price,
         @Min(0) @Max(100) Integer discountPercent,
         LocalDate releaseDate,
         @URL @Size(max = 500) String coverUrl,
+        @Positive Integer steamAppId,
         Set<Long> genreIds,
         Long version) {
 }

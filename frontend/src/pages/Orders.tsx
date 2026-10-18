@@ -6,27 +6,29 @@ import type { Order, PaymentMethod } from '@/api/types';
 import Icon from '@/components/Icon';
 import { Empty, ErrorState, FieldError, Loading, PageHeader, Pagination } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
-import { cardImage, formatDateTime, formatMoney, ORDER_STATUS } from '@/lib/format';
+import { useI18n } from '@/i18n';
+import { cardImage, formatDateTime, formatMoney, orderStatus } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 
 export function OrderList() {
   const [page, setPage] = useState(0);
   const orders = useAsync(() => orderApi.list(page, 15), [page]);
+  const { t } = useI18n();
 
   return (
     <>
-      <PageHeader eyebrow="HISTORIAL" title="Mis pedidos" />
+      <PageHeader eyebrow={t('orders.eyebrow')} title={t('nav.myOrders')} />
       {orders.loading && !orders.data && <Loading />}
       {orders.error ? <ErrorState error={orders.error} onRetry={orders.reload} /> : null}
       {orders.data?.content.length === 0 && (
-        <Empty icon="receipt" title="Aún no has hecho ningún pedido">
-          <Link className="primary small" to="/browse">Explorar juegos</Link>
+        <Empty icon="receipt" title={t('orders.empty')}>
+          <Link className="primary small" to="/browse">{t('common.browseGames')}</Link>
         </Empty>
       )}
       {orders.data && orders.data.content.length > 0 && (
         <div className="table-wrap">
           <table className="table">
-            <thead><tr><th>Pedido</th><th>Fecha</th><th>Juegos</th><th>Total</th><th>Estado</th><th /></tr></thead>
+            <thead><tr><th>{t('orders.order')}</th><th>{t('orders.date')}</th><th>{t('orders.games')}</th><th>{t('common.total')}</th><th>{t('orders.status')}</th><th /></tr></thead>
             <tbody>
               {orders.data.content.map((o) => (
                 <tr key={o.id}>
@@ -34,8 +36,8 @@ export function OrderList() {
                   <td>{formatDateTime(o.createdAt)}</td>
                   <td>{o.itemCount}</td>
                   <td>{formatMoney(o.total)}</td>
-                  <td><span className={`badge ${o.status.toLowerCase()}`}>{ORDER_STATUS[o.status]}</span></td>
-                  <td><Link className="view-all" to={`/orders/${o.id}`}>{o.status === 'PENDING' ? 'Pagar' : 'Ver'} <Icon name="chevron" size={14} /></Link></td>
+                  <td><span className={`badge ${o.status.toLowerCase()}`}>{orderStatus(o.status)}</span></td>
+                  <td><Link className="view-all" to={`/orders/${o.id}`}>{o.status === 'PENDING' ? t('orders.pay') : t('orders.view')} <Icon name="chevron" size={14} /></Link></td>
                 </tr>
               ))}
             </tbody>
@@ -47,15 +49,12 @@ export function OrderList() {
   );
 }
 
-const METHODS: { value: PaymentMethod; label: string }[] = [
-  { value: 'CREDIT_CARD', label: 'Tarjeta' },
-  { value: 'PAYPAL', label: 'PayPal' },
-  { value: 'WALLET', label: 'Monedero' },
-];
+const METHODS: PaymentMethod[] = ['CREDIT_CARD', 'PAYPAL', 'WALLET'];
 
 export function OrderDetail() {
   const { id } = useParams();
   const { refreshCart, notify, notifyError } = useStore();
+  const { t } = useI18n();
   const order = useAsync(() => orderApi.get(Number(id)), [id]);
   const [method, setMethod] = useState<PaymentMethod>('CREDIT_CARD');
   const [card, setCard] = useState('');
@@ -73,7 +72,7 @@ export function OrderDetail() {
     e.preventDefault();
     const digits = card.replace(/\s+/g, '');
     if (method === 'CREDIT_CARD' && !/^\d{12,19}$/.test(digits)) {
-      setErrors({ cardNumber: 'Introduce entre 12 y 19 dígitos' });
+      setErrors({ cardNumber: t('orders.cardDigits') });
       return;
     }
     setBusy(true);
@@ -82,8 +81,8 @@ export function OrderDetail() {
       const result = await orderApi.pay(o.id, method, method === 'CREDIT_CARD' ? digits : undefined);
       order.setData(result);
       await refreshCart();
-      if (result.status === 'PAID') notify('¡Pago completado! Tus juegos ya están en la biblioteca.');
-      else notify('El pago ha sido rechazado', 'error');
+      if (result.status === 'PAID') notify(t('orders.paid'));
+      else notify(t('orders.rejected'), 'error');
     } catch (err) {
       if (err instanceof ApiError) setErrors(err.fieldErrors);
       notifyError(err);
@@ -96,7 +95,7 @@ export function OrderDetail() {
   const cancel = async () => {
     try {
       order.setData(await orderApi.cancel(o.id));
-      notify('Pedido cancelado');
+      notify(t('orders.cancelled'));
     } catch (e) {
       notifyError(e);
     }
@@ -104,20 +103,20 @@ export function OrderDetail() {
 
   return (
     <>
-      <PageHeader eyebrow={`PEDIDO #${o.id} · ${formatDateTime(o.createdAt)}`} title={o.status === 'PENDING' ? 'Pagar pedido' : 'Detalle del pedido'}>
-        <span className={`badge large ${o.status.toLowerCase()}`}>{ORDER_STATUS[o.status]}</span>
+      <PageHeader eyebrow={t('orders.orderEyebrow', { id: o.id, date: formatDateTime(o.createdAt) })} title={o.status === 'PENDING' ? t('orders.payTitle') : t('orders.detailTitle')}>
+        <span className={`badge large ${o.status.toLowerCase()}`}>{orderStatus(o.status)}</span>
       </PageHeader>
 
       {o.status === 'PAID' && (
         <div className="banner success">
-          <Icon name="library" /> <div><b>¡Compra completada!</b> Los juegos ya están en tu biblioteca. Te hemos enviado el recibo por correo.</div>
-          <Link className="primary small" to="/library">Ir a la biblioteca</Link>
+          <Icon name="library" /> <div><b>{t('orders.doneTitle')}</b> {t('orders.doneText')}</div>
+          <Link className="primary small" to="/library">{t('orders.goLibrary')}</Link>
         </div>
       )}
       {o.status === 'FAILED' && (
         <div className="banner error">
-          <Icon name="close" /> <div><b>Pago rechazado.</b> {failureText} Los juegos siguen en tu carrito para volver a intentarlo.</div>
-          <Link className="secondary small" to="/cart">Volver al carrito</Link>
+          <Icon name="close" /> <div><b>{t('orders.failTitle')}</b> {failureText} {t('orders.failText')}</div>
+          <Link className="secondary small" to="/cart">{t('orders.backCart')}</Link>
         </div>
       )}
 
@@ -133,31 +132,31 @@ export function OrderDetail() {
         </div>
 
         <aside className="panel summary">
-          <div className="summary-row total"><span>Total</span><b>{formatMoney(o.total)}</b></div>
+          <div className="summary-row total"><span>{t('common.total')}</span><b>{formatMoney(o.total)}</b></div>
           {o.status === 'PENDING' ? (
             <form onSubmit={pay} className="pay-form">
               <div className="segmented">
                 {METHODS.map((m) => (
-                  <button type="button" key={m.value} className={method === m.value ? 'active' : ''} onClick={() => setMethod(m.value)}>{m.label}</button>
+                  <button type="button" key={m} className={method === m ? 'active' : ''} onClick={() => setMethod(m)}>{t(`orders.method.${m}`)}</button>
                 ))}
               </div>
               {method === 'CREDIT_CARD' && (
                 <label className="field">
-                  <span>Número de tarjeta</span>
+                  <span>{t('orders.cardNumber')}</span>
                   <input inputMode="numeric" autoComplete="off" value={card} onChange={(e) => setCard(e.target.value)} placeholder="4242 4242 4242 4242" />
                   <FieldError errors={errors} name="cardNumber" />
-                  <small className="hint">Simulado: cualquier número vale; si termina en 0000, se rechaza. No se guarda.</small>
+                  <small className="hint">{t('orders.cardHint')}</small>
                 </label>
               )}
-              <button className="primary full" disabled={busy}>{busy ? 'Procesando…' : `Pagar ${formatMoney(o.total)}`}</button>
-              <button type="button" className="secondary full" onClick={cancel} disabled={busy}>Cancelar pedido</button>
+              <button className="primary full" disabled={busy}>{busy ? t('orders.processing') : t('orders.payAmount', { amount: formatMoney(o.total) })}</button>
+              <button type="button" className="secondary full" onClick={cancel} disabled={busy}>{t('orders.cancel')}</button>
             </form>
           ) : (
             o.lastPayment && (
               <dl className="facts">
-                <dt>Método</dt><dd>{METHODS.find((m) => m.value === o.lastPayment!.method)?.label}</dd>
-                <dt>Referencia</dt><dd>{o.lastPayment.reference ?? '—'}</dd>
-                <dt>Pagado</dt><dd>{formatDateTime(o.paidAt)}</dd>
+                <dt>{t('orders.method')}</dt><dd>{t(`orders.method.${o.lastPayment.method}`)}</dd>
+                <dt>{t('orders.reference')}</dt><dd>{o.lastPayment.reference ?? '—'}</dd>
+                <dt>{t('orders.paidAt')}</dt><dd>{formatDateTime(o.paidAt)}</dd>
               </dl>
             )
           )}

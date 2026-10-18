@@ -24,6 +24,7 @@ public interface PaymentGateway {
             return new PaymentResult(true, null);
         }
 
+        /** @param reason clave de messages*.properties (payment.declined.*) */
         public static PaymentResult declined(String reason) {
             return new PaymentResult(false, reason);
         }

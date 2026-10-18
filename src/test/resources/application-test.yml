@@ -9,6 +9,9 @@ spring:
     port: 3025
 
 app:
+  steam:
+    sync-enabled: false # los tests nunca llaman a Steam de verdad
+    base-url: http://localhost:1
   jwt:
     secret: dGVzdC1zZWNyZXQtY2Fwc3RvbmUtc3RlYW0tMzItYnl0ZXMtbWluaW11bS0hIQ==
     expiration: PT15M

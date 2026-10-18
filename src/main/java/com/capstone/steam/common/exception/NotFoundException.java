@@ -4,11 +4,13 @@ import org.springframework.http.HttpStatus;
 
 public class NotFoundException extends ApiException {
 
-    public NotFoundException(String message) {
-        super(HttpStatus.NOT_FOUND, message);
+    /** @param code clave de messages*.properties */
+    public NotFoundException(String code, Object... args) {
+        super(HttpStatus.NOT_FOUND, code, args);
     }
 
+    /** @param resource user, game, genre, order o review (clave notFound.{resource}) */
     public static NotFoundException of(String resource, Object id) {
-        return new NotFoundException(resource + " no encontrado: " + id);
+        return new NotFoundException("notFound." + resource, String.valueOf(id));
     }
 }

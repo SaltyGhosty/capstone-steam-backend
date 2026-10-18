@@ -46,7 +46,14 @@ record MailTexts(
         String failedHello,
         String failedIntro,
         String failedRetry,
-        String failedButton) {
+        String failedButton,
+        // Oferta en la wishlist
+        String saleSubject,
+        String salePreheader,
+        String saleEyebrow,
+        String saleHeading,
+        String saleBody,
+        String saleButton) {
 
     static final MailTexts ES = new MailTexts(
             "es",
@@ -74,7 +81,13 @@ record MailTexts(
             "Hola",
             "El pago de %s ha sido rechazado:",
             "Los juegos siguen en tu carrito: puedes volver a intentarlo con otro método de pago.",
-            "Volver al carrito");
+            "Volver al carrito",
+            "%s está en oferta: −%d%%",
+            "Un juego de tu lista de deseos ha bajado de precio.",
+            "Tu lista de deseos · −%d%%",
+            "¡%s está en oferta!",
+            "Uno de los juegos que guardaste en tu lista de deseos acaba de bajar de precio:",
+            "Ver el juego");
 
     static final MailTexts EN = new MailTexts(
             "en",
@@ -101,7 +114,13 @@ record MailTexts(
             "Hi",
             "The payment of %s was declined:",
             "The games are still in your cart: you can try again with another payment method.",
-            "Back to cart");
+            "Back to cart",
+            "%s is on sale: −%d%%",
+            "A game on your wishlist just got cheaper.",
+            "Your wishlist · −%d%%",
+            "%s is on sale!",
+            "One of the games you saved to your wishlist just dropped in price:",
+            "See the game");
 
     static final MailTexts IT = new MailTexts(
             "it",
@@ -129,7 +148,13 @@ record MailTexts(
             "Ciao",
             "Il pagamento di %s è stato rifiutato:",
             "I giochi sono ancora nel tuo carrello: puoi riprovare con un altro metodo di pagamento.",
-            "Torna al carrello");
+            "Torna al carrello",
+            "%s è in offerta: −%d%%",
+            "Un gioco della tua lista dei desideri è sceso di prezzo.",
+            "La tua lista dei desideri · −%d%%",
+            "%s è in offerta!",
+            "Uno dei giochi che hai salvato nella tua lista dei desideri è appena sceso di prezzo:",
+            "Vedi il gioco");
 
     /** Textos del idioma dado. {@code null}, vacío o desconocido ("fr", "en-US"...) → español. */
     static MailTexts of(String locale) {

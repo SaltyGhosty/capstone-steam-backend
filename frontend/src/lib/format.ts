@@ -1,16 +1,31 @@
-const money = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' });
-const date = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-const dateTime = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+import { intlLocale, t } from '@/i18n';
 
-export const formatMoney = (value: number) => (value === 0 ? 'Gratis' : money.format(value));
-export const formatDate = (iso: string | null | undefined) => (iso ? date.format(new Date(iso)) : '—');
-export const formatDateTime = (iso: string | null | undefined) => (iso ? dateTime.format(new Date(iso)) : '—');
+// Los formateadores de Intl se crean una vez por idioma
+const cache = new Map<string, { money: Intl.NumberFormat; date: Intl.DateTimeFormat; dateTime: Intl.DateTimeFormat }>();
+function formatters() {
+  const locale = intlLocale();
+  let f = cache.get(locale);
+  if (!f) {
+    f = {
+      money: new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }),
+      date: new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }),
+      dateTime: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }),
+    };
+    cache.set(locale, f);
+  }
+  return f;
+}
+
+export const formatMoney = (value: number) => (value === 0 ? t('common.free') : formatters().money.format(value));
+export const formatDate = (iso: string | null | undefined) => (iso ? formatters().date.format(new Date(iso)) : '—');
+export const formatDateTime = (iso: string | null | undefined) => (iso ? formatters().dateTime.format(new Date(iso)) : '—');
 
 export function formatPlaytime(minutes: number) {
-  if (minutes === 0) return 'Sin jugar todavía';
-  if (minutes < 60) return `${minutes} min jugados`;
+  if (minutes === 0) return t('format.notPlayed');
+  if (minutes < 60) return t('format.minPlayed', { n: minutes });
   const hours = minutes / 60;
-  return `${hours < 10 ? hours.toFixed(1).replace('.', ',') : Math.round(hours)} h jugadas`;
+  const shown = hours < 10 ? new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(hours) : Math.round(hours);
+  return t('format.hoursPlayed', { n: shown });
 }
 
 export function initials(name: string) {
@@ -47,18 +62,15 @@ export function cardImage(url: string | null | undefined) {
   return steam ? `${steam[1]}/capsule_616x353.jpg` : url;
 }
 
-export const genreLabel =(genres: { name: string }[]) =>
-  genres.map((g) => g.name).join(' · ') || 'Sin género';
+/** Los géneros de serie se traducen por su slug; los que cree un admin se muestran con su nombre. */
+export function genreName(genre: { name: string; slug?: string }) {
+  const key = `genre.${genre.slug}`;
+  const translated = t(key as Parameters<typeof t>[0]);
+  return genre.slug && translated !== key ? translated : genre.name;
+}
 
-export const ORDER_STATUS: Record<string, string> = {
-  PENDING: 'Pendiente',
-  PAID: 'Pagado',
-  FAILED: 'Rechazado',
-  CANCELLED: 'Cancelado',
-};
+export const genreLabel = (genres: { name: string; slug?: string }[]) =>
+  genres.map(genreName).join(' · ') || t('common.noGenre');
 
-export const GAME_STATUS: Record<string, string> = {
-  DRAFT: 'Borrador',
-  PUBLISHED: 'Publicado',
-  DELISTED: 'Retirado',
-};
+export const orderStatus = (status: string) => t(`status.${status}` as Parameters<typeof t>[0]);
+export const gameStatus = (status: string) => t(`gameStatus.${status}` as Parameters<typeof t>[0]);

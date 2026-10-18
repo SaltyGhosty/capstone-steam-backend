@@ -27,6 +27,13 @@ public interface GameRepository extends JpaRepository<Game, Long> {
 
     Page<Game> findByStatus(GameStatus status, Pageable pageable);
 
+    boolean existsBySteamAppId(Integer steamAppId);
+
+    Optional<Game> findBySteamAppId(Integer steamAppId);
+
+    /** Los juegos enlazados con Steam, cuyo precio se sincroniza. */
+    List<Game> findBySteamAppIdIsNotNull();
+
     boolean existsBySlug(String slug);
 
     // ------------------------------------------------------------------

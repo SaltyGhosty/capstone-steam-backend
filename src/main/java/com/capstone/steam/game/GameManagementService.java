@@ -61,7 +61,7 @@ public class GameManagementService {
     public GameDetailResponse update(Long developerId, Long gameId, GameRequest request) {
         Game game = findOwned(developerId, gameId);
         if (request.version() != null && !request.version().equals(game.getVersion())) {
-            throw new ConflictException("El juego fue modificado mientras lo editabas; recarga y reinténtalo");
+            throw new ConflictException("game.modified");
         }
         game.setTitle(request.title().trim());
         game.setPrice(request.price());
@@ -73,10 +73,10 @@ public class GameManagementService {
     public GameDetailResponse publish(Long developerId, Long gameId) {
         Game game = findOwned(developerId, gameId);
         if (game.getStatus() != GameStatus.DRAFT) {
-            throw new ConflictException("Solo se puede publicar un juego en borrador (estado actual: " + game.getStatus() + ")");
+            throw new ConflictException("game.publishOnlyDraft", game.getStatus().name());
         }
         if (game.getGenres().isEmpty()) {
-            throw new BadRequestException("Asigna al menos un género antes de publicar");
+            throw new BadRequestException("game.needsGenre");
         }
         game.setStatus(GameStatus.PUBLISHED);
         return GameDetailResponse.from(gameRepository.saveAndFlush(game));
@@ -85,7 +85,7 @@ public class GameManagementService {
     public GameDetailResponse unpublish(Long developerId, Long gameId) {
         Game game = findOwned(developerId, gameId);
         if (game.getStatus() != GameStatus.PUBLISHED) {
-            throw new ConflictException("El juego no está publicado");
+            throw new ConflictException("game.notPublished");
         }
         game.setStatus(GameStatus.DRAFT);
         return GameDetailResponse.from(gameRepository.saveAndFlush(game));
@@ -95,7 +95,7 @@ public class GameManagementService {
     public void delete(Long developerId, Long gameId) {
         Game game = findOwned(developerId, gameId);
         if (game.getStatus() != GameStatus.DRAFT || game.getSalesCount() > 0) {
-            throw new ConflictException("Solo se pueden borrar juegos en borrador y sin ventas");
+            throw new ConflictException("game.deleteOnlyDraft");
         }
         gameRepository.delete(game);
     }
@@ -114,16 +114,16 @@ public class GameManagementService {
     }
 
     public GameDetailResponse moderate(Long gameId, GameStatus target) {
-        Game game = gameRepository.findWithDetailsById(gameId).orElseThrow(() -> NotFoundException.of("Juego", gameId));
+        Game game = gameRepository.findWithDetailsById(gameId).orElseThrow(() -> NotFoundException.of("game", gameId));
         switch (target) {
             case DELISTED -> game.setStatus(GameStatus.DELISTED);
             case PUBLISHED -> {
                 if (game.getStatus() != GameStatus.DELISTED) {
-                    throw new ConflictException("Un admin solo puede volver a publicar juegos retirados (DELISTED)");
+                    throw new ConflictException("game.republishOnlyDelisted");
                 }
                 game.setStatus(GameStatus.PUBLISHED);
             }
-            case DRAFT -> throw new BadRequestException("Pasar a borrador lo hace el developer (unpublish)");
+            case DRAFT -> throw new BadRequestException("game.draftByDeveloper");
         }
         return GameDetailResponse.from(gameRepository.saveAndFlush(game));
     }
@@ -131,18 +131,25 @@ public class GameManagementService {
     // ------------------------------------------------------------------------
 
     private Game findOwned(Long developerId, Long gameId) {
-        Game game = gameRepository.findWithDetailsById(gameId).orElseThrow(() -> NotFoundException.of("Juego", gameId));
+        Game game = gameRepository.findWithDetailsById(gameId).orElseThrow(() -> NotFoundException.of("game", gameId));
         if (!game.isOwnedBy(developerId)) {
-            throw new ForbiddenException("Solo el developer del juego puede gestionarlo");
+            throw new ForbiddenException("game.notOwner");
         }
         return game;
     }
 
     private void applyChanges(Game game, GameRequest request) {
         game.setDescription(request.description());
+        game.setDescriptionEn(request.descriptionEn());
+        game.setDescriptionIt(request.descriptionIt());
         game.setDiscountPercent(request.discountPercent() == null ? 0 : request.discountPercent());
         game.setReleaseDate(request.releaseDate());
         game.setCoverUrl(request.coverUrl());
+        if (request.steamAppId() != null && !request.steamAppId().equals(game.getSteamAppId())
+                && gameRepository.existsBySteamAppId(request.steamAppId())) {
+            throw new ConflictException("game.steamAppIdTaken", String.valueOf(request.steamAppId()));
+        }
+        game.setSteamAppId(request.steamAppId());
         game.setGenres(genreService.resolve(request.genreIds()));
     }
 

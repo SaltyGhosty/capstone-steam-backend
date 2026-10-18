@@ -1,6 +1,8 @@
 // Cliente HTTP mínimo sobre fetch: añade el Bearer token y convierte los ProblemDetail
 // (RFC 9457) del backend en ApiError con el mensaje y los errores por campo.
 
+import { getLang, t } from '@/i18n';
+
 const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 const TOKEN_KEY = 'arcade.token';
 
@@ -69,7 +71,8 @@ interface RequestOptions {
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, query, acceptStatus = [] } = options;
   const token = getToken();
-  const headers: Record<string, string> = { Accept: 'application/json' };
+  // La API responde (errores, descripciones, motivos de pago) en el idioma de la interfaz
+  const headers: Record<string, string> = { Accept: 'application/json', 'Accept-Language': getLang() };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -81,7 +84,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(0, 'No se pudo conectar con el servidor. ¿Está el backend arrancado?');
+    throw new ApiError(0, t('common.serverDown'));
   }
 
   const text = await res.text();

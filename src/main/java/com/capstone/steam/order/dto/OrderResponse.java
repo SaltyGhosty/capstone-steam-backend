@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
+import org.springframework.context.i18n.LocaleContextHolder;
+
+import com.capstone.steam.common.i18n.Messages;
 import com.capstone.steam.order.Order;
 import com.capstone.steam.order.OrderItem;
 import com.capstone.steam.order.OrderStatus;
@@ -29,12 +32,13 @@ public record OrderResponse(
         }
     }
 
+    /** {@code failureReason} se guarda como clave (payment.declined.*) y sale traducido al idioma de la petición. */
     public record PaymentInfo(PaymentMethod method, PaymentStatus status, String reference, String failureReason,
             Instant createdAt) {
 
         static PaymentInfo from(Payment payment) {
             return new PaymentInfo(payment.getMethod(), payment.getStatus(), payment.getProviderRef(),
-                    payment.getFailureReason(), payment.getCreatedAt());
+                    Messages.getOrSelf(LocaleContextHolder.getLocale(), payment.getFailureReason()), payment.getCreatedAt());
         }
     }
 

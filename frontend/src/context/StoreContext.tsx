@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { ApiError, getToken, setToken, setUnauthorizedHandler } from '@/api/client';
 import { authApi, cartApi, userApi, wishlistApi } from '@/api/endpoints';
 import type { Cart, RegisterRequest, Role, User } from '@/api/types';
+import { t } from '@/i18n';
 
 type ToastKind = 'success' | 'error';
 interface Toast { id: number; message: string; kind: ToastKind }
@@ -52,7 +53,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const notifyError = useCallback(
-    (error: unknown) => notify(error instanceof ApiError ? error.message : 'Algo ha ido mal', 'error'),
+    (error: unknown) => notify(error instanceof ApiError ? error.message : t('common.somethingWrong'), 'error'),
     [notify],
   );
 
@@ -86,7 +87,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       clearSession();
-      notify('Tu sesión ha caducado. Vuelve a iniciar sesión.', 'error');
+      notify(t('toast.sessionExpired'), 'error');
       navigate('/login');
     });
     return () => setUnauthorizedHandler(null);
@@ -140,7 +141,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!requireLogin()) return false;
       try {
         setCart(await cartApi.add(gameId));
-        notify(`${title} añadido al carrito`);
+        notify(t('toast.addedToCart', { title }));
         return true;
       } catch (e) {
         notifyError(e);
@@ -174,7 +175,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           else next.add(gameId);
           return next;
         });
-        notify(inList ? `${title} quitado de tu wishlist` : `${title} añadido a tu wishlist`);
+        notify(t(inList ? 'toast.removedFromWishlist' : 'toast.addedToWishlist', { title }));
       } catch (e) {
         notifyError(e);
       }

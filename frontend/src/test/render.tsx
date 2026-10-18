@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { StoreProvider } from '@/context/StoreContext';
+import { I18nProvider } from '@/i18n';
 
 /** Muestra la ruta actual para poder comprobar las redirecciones. */
 function CurrentPath() {
@@ -13,12 +14,14 @@ function CurrentPath() {
 export function renderRoutes(routes: Record<string, ReactElement>, initialPath: string) {
   const result = render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <StoreProvider>
-        <Routes>
-          {Object.entries(routes).map(([path, element]) => <Route key={path} path={path} element={element} />)}
-        </Routes>
-        <CurrentPath />
-      </StoreProvider>
+      <I18nProvider initial="es">
+        <StoreProvider>
+          <Routes>
+            {Object.entries(routes).map(([path, element]) => <Route key={path} path={path} element={element} />)}
+          </Routes>
+          <CurrentPath />
+        </StoreProvider>
+      </I18nProvider>
     </MemoryRouter>,
   );
   return { ...result, path: () => screen.getByTestId('path').textContent };

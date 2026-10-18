@@ -58,7 +58,7 @@ public class UserService {
         Set<RoleName> roles = EnumSet.copyOf(requested);
         roles.add(RoleName.ROLE_USER); // todo usuario es al menos USER
         if (adminId.equals(userId) && !roles.contains(RoleName.ROLE_ADMIN)) {
-            throw new BadRequestException("No puedes quitarte a ti mismo el rol de administrador");
+            throw new BadRequestException("user.cannotRemoveOwnAdmin");
         }
         User user = findWithRoles(userId);
         user.getRoles().clear();
@@ -69,7 +69,7 @@ public class UserService {
     @Transactional
     public UserResponse setEnabled(Long adminId, Long userId, boolean enabled) {
         if (adminId.equals(userId) && !enabled) {
-            throw new BadRequestException("No puedes desactivar tu propia cuenta");
+            throw new BadRequestException("user.cannotDisableSelf");
         }
         User user = findWithRoles(userId);
         user.setEnabled(enabled);
@@ -77,6 +77,6 @@ public class UserService {
     }
 
     private User findWithRoles(Long userId) {
-        return userRepository.findWithRolesById(userId).orElseThrow(() -> NotFoundException.of("Usuario", userId));
+        return userRepository.findWithRolesById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
     }
 }

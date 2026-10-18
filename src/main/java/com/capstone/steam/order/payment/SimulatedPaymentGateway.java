@@ -46,11 +46,11 @@ public class SimulatedPaymentGateway implements PaymentGateway {
         if (method == PaymentMethod.CREDIT_CARD && cardNumber != null
                 && properties.declinedSuffix() != null && cardNumber.endsWith(properties.declinedSuffix())) {
             log.info("Pago {} rechazado (tarjeta de prueba)", reference);
-            return PaymentResult.declined("Tarjeta rechazada por el emisor");
+            return PaymentResult.declined("payment.declined.card");
         }
         if (random.nextDouble() < properties.failureRate()) {
             log.info("Pago {} rechazado (fallo simulado)", reference);
-            return PaymentResult.declined("El proveedor de pagos no ha podido procesar el cobro");
+            return PaymentResult.declined("payment.declined.provider");
         }
         log.info("Pago {} aprobado: {} con {}", reference, amount, method);
         return PaymentResult.ok();

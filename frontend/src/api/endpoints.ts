@@ -3,7 +3,7 @@ import { api } from './client';
 import type {
   AuthResponse, Cart, CatalogQuery, GameDetail, GameRequest, GameStatus, GameSummary, Genre,
   LibraryEntry, Order, OrderSummary, Ownership, PageResponse, PaymentMethod, RegisterRequest, Review, ReviewRequest, Role,
-  UpdateProfileRequest, User,
+  SteamSyncResult, UpdateProfileRequest, User,
   WishlistItem,
 } from './types';
 
@@ -77,6 +77,8 @@ export const developerApi = {
   unpublish: (id: number) => api<GameDetail>(`/api/developer/games/${id}/unpublish`, { method: 'POST' }),
   discountAll: (percent: number) =>
     api<{ updated: number }>('/api/developer/games/discount', { method: 'POST', body: { percent } }),
+  importFromSteam: (steamAppId: number) =>
+    api<GameDetail>('/api/developer/games/import', { method: 'POST', body: { steamAppId } }),
 };
 
 export const adminApi = {
@@ -93,4 +95,5 @@ export const adminApi = {
   createGenre: (name: string) => api<Genre>('/api/admin/genres', { method: 'POST', body: { name } }),
   updateGenre: (id: number, name: string) => api<Genre>(`/api/admin/genres/${id}`, { method: 'PUT', body: { name } }),
   deleteGenre: (id: number) => api<void>(`/api/admin/genres/${id}`, { method: 'DELETE' }),
+  syncSteam: () => api<SteamSyncResult>('/api/admin/steam/sync', { method: 'POST' }),
 };

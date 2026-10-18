@@ -4,6 +4,7 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,8 @@ public class EmailService {
     static final String DEFAULT_FROM_NAME = "ARCADE";
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+    private static final List<String> RESERVED_TLDS = List.of("local", "test", "example", "invalid", "localhost");
+    private static final List<String> RESERVED_DOMAINS = List.of("example.com", "example.net", "example.org");
 
     private final JavaMailSender mailSender;
     private final String from;
@@ -76,9 +79,19 @@ public class EmailService {
         send(to, EmailTemplates.paymentFailed(brand, displayName, orderId, total, reason, locale));
     }
 
+    public void sendGameOnSale(String to, String displayName, String title, String slug, String coverUrl,
+            BigDecimal price, BigDecimal finalPrice, int discountPercent, String locale) {
+        send(to, EmailTemplates.gameOnSale(brand, displayName, title, slug, coverUrl, price, finalPrice,
+                discountPercent, locale));
+    }
+
     private void send(String to, Email email) {
         if (!enabled) {
             log.info("[correo desactivado] para={} asunto=\"{}\"", to, email.subject());
+            return;
+        }
+        if (isReservedDomain(to)) {
+            log.info("[correo no enviado: dominio reservado] para={} asunto=\"{}\"", to, email.subject());
             return;
         }
         try {
@@ -93,6 +106,20 @@ public class EmailService {
         } catch (MailException | MessagingException | UnsupportedEncodingException ex) {
             log.error("No se pudo enviar el correo a {} (\"{}\"): {}", to, email.subject(), ex.getMessage());
         }
+    }
+
+    /**
+     * Dominios que nunca reciben correo (RFC 2606 y 6761): las cuentas del catálogo demo usan
+     * {@code @demo.capstone-steam.local}. Enviarles nada solo genera rebotes en el buzón de Gmail.
+     */
+    static boolean isReservedDomain(String to) {
+        int at = to == null ? -1 : to.lastIndexOf('@');
+        if (at < 0) {
+            return true;
+        }
+        String domain = to.substring(at + 1).toLowerCase(Locale.ROOT);
+        return RESERVED_TLDS.stream().anyMatch(tld -> domain.equals(tld) || domain.endsWith("." + tld))
+                || RESERVED_DOMAINS.stream().anyMatch(d -> domain.equals(d) || domain.endsWith("." + d));
     }
 
     /**

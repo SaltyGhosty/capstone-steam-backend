@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 import org.hibernate.annotations.CreationTimestamp;
@@ -44,8 +45,15 @@ public class Game {
     @Column(nullable = false, unique = true, length = 170)
     private String slug;
 
+    /** En español; también es el respaldo de las traducciones que falten. */
     @Column(length = 10000)
     private String description;
+
+    @Column(name = "description_en", length = 10000)
+    private String descriptionEn;
+
+    @Column(name = "description_it", length = 10000)
+    private String descriptionIt;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "developer_id", nullable = false)
@@ -62,6 +70,13 @@ public class Game {
 
     @Column(name = "cover_url", length = 500)
     private String coverUrl;
+
+    /** AppID de la tienda de Steam; con él se sincronizan precio y descuento. */
+    @Column(name = "steam_app_id", unique = true)
+    private Integer steamAppId;
+
+    @Column(name = "price_synced_at")
+    private Instant priceSyncedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -156,6 +171,32 @@ public class Game {
         this.description = description;
     }
 
+    public String getDescriptionEn() {
+        return descriptionEn;
+    }
+
+    public void setDescriptionEn(String descriptionEn) {
+        this.descriptionEn = descriptionEn;
+    }
+
+    public String getDescriptionIt() {
+        return descriptionIt;
+    }
+
+    public void setDescriptionIt(String descriptionIt) {
+        this.descriptionIt = descriptionIt;
+    }
+
+    /** Descripción en el idioma pedido (es, en, it); si no está traducida, la española. */
+    public String getDescription(Locale locale) {
+        String translated = switch (locale.getLanguage()) {
+            case "en" -> descriptionEn;
+            case "it" -> descriptionIt;
+            default -> null;
+        };
+        return translated == null || translated.isBlank() ? description : translated;
+    }
+
     public User getDeveloper() {
         return developer;
     }
@@ -190,6 +231,25 @@ public class Game {
 
     public void setCoverUrl(String coverUrl) {
         this.coverUrl = coverUrl;
+    }
+
+    public Integer getSteamAppId() {
+        return steamAppId;
+    }
+
+    public void setSteamAppId(Integer steamAppId) {
+        this.steamAppId = steamAppId;
+    }
+
+    public Instant getPriceSyncedAt() {
+        return priceSyncedAt;
+    }
+
+    /** Precio y descuento tal como los tiene Steam ahora mismo. */
+    public void applySteamPrice(BigDecimal price, int discountPercent, Instant syncedAt) {
+        this.price = price;
+        this.discountPercent = discountPercent;
+        this.priceSyncedAt = syncedAt;
     }
 
     public GameStatus getStatus() {

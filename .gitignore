@@ -29,3 +29,7 @@ backups/
 
 # Instrucciones personales de Claude Code (rutas de este equipo)
 CLAUDE.local.md
+
+# Alojamiento en este PC (deploy/local): configuración, logs y PIDs
+deploy/local/host.env
+deploy/local/run/

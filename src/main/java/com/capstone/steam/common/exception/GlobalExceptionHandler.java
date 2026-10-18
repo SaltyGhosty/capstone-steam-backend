@@ -22,9 +22,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.capstone.steam.common.i18n.Messages;
+
 /**
  * Todos los errores de la API salen como ProblemDetail (RFC 9457).
  * Las excepciones estándar de Spring MVC las resuelve ResponseEntityExceptionHandler.
+ * Los textos salen en el idioma de la petición (cabecera Accept-Language), ver {@link Messages}.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -33,35 +36,35 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     ProblemDetail handleApi(ApiException ex) {
-        return problem(ex.getStatus(), ex.getMessage());
+        return problem(ex.getStatus(), ex.getLocalizedMessage());
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     ProblemDetail handleBadCredentials(BadCredentialsException ex) {
-        return problem(HttpStatus.UNAUTHORIZED, "Usuario o contraseña incorrectos");
+        return problem(HttpStatus.UNAUTHORIZED, Messages.get("error.badCredentials"));
     }
 
     @ExceptionHandler(DisabledException.class)
     ProblemDetail handleDisabled(DisabledException ex) {
-        return problem(HttpStatus.FORBIDDEN, "La cuenta está desactivada");
+        return problem(HttpStatus.FORBIDDEN, Messages.get("error.disabled"));
     }
 
     /** Denegaciones de @PreAuthorize (las de las reglas de URL las gestiona RestAccessDeniedHandler). */
     @ExceptionHandler(AccessDeniedException.class)
     ProblemDetail handleAccessDenied(AccessDeniedException ex) {
-        return problem(HttpStatus.FORBIDDEN, "No tienes permiso para realizar esta acción");
+        return problem(HttpStatus.FORBIDDEN, Messages.get("error.forbiddenAction"));
     }
 
     /** Red de seguridad: una restricción UNIQUE/CHECK de la BD que el service no validó antes. */
     @ExceptionHandler(DataIntegrityViolationException.class)
     ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
         log.warn("Violación de integridad: {}", ex.getMostSpecificCause().getMessage());
-        return problem(HttpStatus.CONFLICT, "La operación entra en conflicto con datos existentes");
+        return problem(HttpStatus.CONFLICT, Messages.get("error.dataConflict"));
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
     ProblemDetail handleOptimisticLock(OptimisticLockingFailureException ex) {
-        return problem(HttpStatus.CONFLICT, "El recurso fue modificado por otra petición; recarga y reinténtalo");
+        return problem(HttpStatus.CONFLICT, Messages.get("error.optimisticLock"));
     }
 
     @Override
@@ -71,7 +74,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         for (FieldError fe : ex.getBindingResult().getFieldErrors()) {
             errors.putIfAbsent(fe.getField(), fe.getDefaultMessage());
         }
-        ProblemDetail body = problem(HttpStatus.BAD_REQUEST, "La petición contiene campos no válidos");
+        ProblemDetail body = problem(HttpStatus.BAD_REQUEST, Messages.get("error.invalidFields"));
         body.setProperty("errors", errors);
         return ResponseEntity.badRequest().body(body);
     }
@@ -79,7 +82,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(Exception.class)
     ProblemDetail handleUnexpected(Exception ex) {
         log.error("Error no controlado", ex);
-        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor");
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, Messages.get("error.internal"));
     }
 
     private static ProblemDetail problem(HttpStatus status, String detail) {

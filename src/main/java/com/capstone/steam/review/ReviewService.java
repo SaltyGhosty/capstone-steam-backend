@@ -47,7 +47,7 @@ public class ReviewService {
     public PageResponse<ReviewResponse> listForGame(String slug, Pageable pageable) {
         Game game = gameRepository.findBySlug(slug)
                 .filter(Game::isPublished)
-                .orElseThrow(() -> NotFoundException.of("Juego", slug));
+                .orElseThrow(() -> NotFoundException.of("game", slug));
         var page = reviewRepository.findByGameId(game.getId(),
                 PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), NEWEST_FIRST));
         return PageResponse.of(page, ReviewResponse::from);
@@ -56,15 +56,15 @@ public class ReviewService {
     @Transactional
     public ReviewResponse create(Long userId, ReviewRequest request) {
         if (request.gameId() == null) {
-            throw new BadRequestException("gameId es obligatorio");
+            throw new BadRequestException("review.gameRequired");
         }
         Game game = gameRepository.findById(request.gameId())
-                .orElseThrow(() -> NotFoundException.of("Juego", request.gameId()));
+                .orElseThrow(() -> NotFoundException.of("game", request.gameId()));
         if (!libraryRepository.existsByUserIdAndGameId(userId, game.getId())) {
-            throw new ForbiddenException("Solo puedes reseñar juegos que tienes en tu biblioteca");
+            throw new ForbiddenException("review.ownersOnly");
         }
         if (reviewRepository.existsByUserIdAndGameId(userId, game.getId())) {
-            throw new ConflictException("Ya has reseñado este juego; edita tu reseña existente");
+            throw new ConflictException("review.alreadyReviewed");
         }
 
         Review review = reviewRepository.saveAndFlush(new Review(userRepository.getReferenceById(userId), game,
@@ -79,7 +79,7 @@ public class ReviewService {
     public ReviewResponse update(Long userId, Long reviewId, ReviewRequest request) {
         Review review = findReview(reviewId);
         if (!review.getUser().getId().equals(userId)) {
-            throw new ForbiddenException("Solo el autor puede editar la reseña");
+            throw new ForbiddenException("review.authorOnlyEdit");
         }
         int ratingDelta = request.rating() - review.getRating();
 
@@ -99,7 +99,7 @@ public class ReviewService {
     public void delete(Long userId, boolean isAdmin, Long reviewId) {
         Review review = findReview(reviewId);
         if (!isAdmin && !review.getUser().getId().equals(userId)) {
-            throw new ForbiddenException("Solo el autor o un administrador pueden borrar la reseña");
+            throw new ForbiddenException("review.authorOrAdminDelete");
         }
         Long gameId = review.getGame().getId();
         int rating = review.getRating();
@@ -108,7 +108,7 @@ public class ReviewService {
     }
 
     private Review findReview(Long reviewId) {
-        return reviewRepository.findById(reviewId).orElseThrow(() -> NotFoundException.of("Reseña", reviewId));
+        return reviewRepository.findById(reviewId).orElseThrow(() -> NotFoundException.of("review", reviewId));
     }
 
     private static String trimToNull(String value) {

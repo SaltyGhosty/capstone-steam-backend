@@ -22,12 +22,12 @@ public class StorefrontRules {
     public Game requireAcquirable(Long userId, Long gameId) {
         Game game = gameRepository.findById(gameId)
                 .filter(Game::isPublished)
-                .orElseThrow(() -> NotFoundException.of("Juego", gameId));
+                .orElseThrow(() -> NotFoundException.of("game", gameId));
         if (game.isOwnedBy(userId)) {
-            throw new ConflictException("No puedes adquirir un juego que has desarrollado tú");
+            throw new ConflictException("store.ownGame");
         }
         if (libraryRepository.existsByUserIdAndGameId(userId, gameId)) {
-            throw new ConflictException("Ya tienes este juego en tu biblioteca");
+            throw new ConflictException("store.alreadyOwned");
         }
         return game;
     }

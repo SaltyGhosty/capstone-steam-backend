@@ -19,7 +19,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 3. [Puesta en marcha](#puesta-en-marcha)
 4. [Frontend](#frontend)
 5. [Arquitectura](#arquitectura)
-6. [Base de datos (Flyway V1 a V5)](#base-de-datos-flyway-v1-a-v5)
+6. [Base de datos (Flyway V1 a V7)](#base-de-datos-flyway-v1-a-v7)
 7. [API](#api)
 8. [Tests](#tests)
 9. [Despliegue](#despliegue)
@@ -60,7 +60,7 @@ Los pagos son **simulados**: una tarjeta terminada en `0000` siempre se rechaza,
 | Spring Security + JWT stateless | [SecurityConfig](src/main/java/com/capstone/steam/security/SecurityConfig.java), [JwtService](src/main/java/com/capstone/steam/security/JwtService.java) (HS256, jjwt 0.13) y [JwtAuthFilter](src/main/java/com/capstone/steam/security/JwtAuthFilter.java) |
 | **Criteria API** para los filtros del catálogo | [GameCriteriaRepository](src/main/java/com/capstone/steam/game/search/GameCriteriaRepository.java): 9 filtros opcionales y 6 órdenes, con un subquery para los géneros y paginación en la base de datos |
 | **UPDATE atómicos escritos a mano** | [GameRepository](src/main/java/com/capstone/steam/game/GameRepository.java) (`incrementSalesCount`, `applyRatingDelta`, `bulkDiscountForDeveloper`), [OrderRepository](src/main/java/com/capstone/steam/order/OrderRepository.java) (`markPaid`, `closePending`) y [LibraryRepository](src/main/java/com/capstone/steam/library/LibraryRepository.java) (`addPlaytime`) |
-| Flyway V1 a V4 (y V5) | [db/migration](src/main/resources/db/migration) (ver [abajo](#base-de-datos-flyway-v1-a-v5)) |
+| Flyway V1 a V4 (y V5 a V7) | [db/migration](src/main/resources/db/migration) (ver [abajo](#base-de-datos-flyway-v1-a-v7)) |
 | Spring Mail + Gmail SMTP | [EmailService](src/main/java/com/capstone/steam/notification/EmailService.java), [EmailTemplates](src/main/java/com/capstone/steam/notification/EmailTemplates.java) y [MailTexts](src/main/java/com/capstone/steam/notification/MailTexts.java) (textos en es, en e it) |
 | Spring Events **AFTER_COMMIT** + `@Async` con **pool propio** | [MailListener](src/main/java/com/capstone/steam/notification/MailListener.java) y [AsyncConfig](src/main/java/com/capstone/steam/config/AsyncConfig.java) (`mailExecutor`, hilos `mail-*`) |
 | JUnit 5 + Mockito + H2 | [src/test](src/test/java/com/capstone/steam): tests unitarios, de repositorio, de integración HTTP y de concurrencia |
@@ -97,6 +97,8 @@ cp .env.example .env    # y rellena los valores
 | `FRONTEND_URL` | Opcional | URL de la tienda para los botones de los correos. Si falta, se usa el primer origen de `CORS_ALLOWED_ORIGINS` |
 | `SERVER_PORT` | Opcional | Por defecto `PORT` (lo fija Render) o 8080 (`.env.example` usa 8081) |
 | `PAYMENT_FAILURE_RATE` | Opcional | Probabilidad de rechazo aleatorio en las demos (0.0 a 1.0, por defecto 0) |
+| `STEAM_SYNC_ENABLED` | Opcional | Sincroniza precio y descuento con la API pública de Steam al arrancar y cada 6 h (por defecto `true`); el admin también puede lanzarlo a mano |
+| `STEAM_SYNC_CRON` | Opcional | Frecuencia de la sincronización con Steam (cron de Spring, por defecto `0 0 */6 * * *`) |
 | `CORS_ALLOWED_ORIGINS` | Opcional | URL del frontend (por defecto `http://localhost:5173`) |
 
 ### 3. Arrancar
@@ -161,7 +163,7 @@ La respuesta HTTP no espera al SMTP. Si la transacción hace rollback, no se env
 
 **El idioma de los correos** sale de `users.locale`. Los textos de cada idioma están en el record `MailTexts` (una constante por idioma), así el compilador obliga a que ninguno se quede sin traducir. Los tres eventos llevan el `locale`, leído del usuario dentro de la transacción. Si falta o no se reconoce, el correo sale en español.
 
-## Base de datos (Flyway V1 a V5)
+## Base de datos (Flyway V1 a V7)
 
 | Migración | Contenido |
 |---|---|
@@ -170,8 +172,10 @@ La respuesta HTTP no espera al SMTP. Si la transacción hace rollback, no se env
 | **V3** `orders_payments` | `orders` (PENDING, PAID, FAILED o CANCELLED), `order_items` (precio congelado), `payments` y `library_entries.order_id` |
 | **V4** `catalog_indexes` | Índices del catálogo. En PostgreSQL: **trigramas `pg_trgm` (GIN)** sobre `lower(title)` para `LIKE '%texto%'` y un índice parcial para "más vendidos" |
 | **V5** `user_locale` | `users.locale` (idioma de los correos): `es` por defecto, con un `CHECK` que solo admite `es`, `en` o `it` |
+| **V6** `game_description_translations` | `games.description_en` y `description_it`: la descripción en inglés e italiano (la de siempre es la española y hace de respaldo) |
+| **V7** `steam_link` | `games.steam_app_id` (único) y `price_synced_at`: enlace con la tienda de Steam para sincronizar precio y descuento |
 
-El enunciado pide V1 a V4; V5 se añadió después para el idioma de los correos. V1 a V3 y V5 son SQL portable. V4 tiene dos versiones ([postgresql](src/main/resources/db/migration/postgresql) y [h2](src/main/resources/db/migration/h2)), porque H2 no soporta los índices por trigramas ni los parciales. Flyway elige la adecuada con `locations: …/common, …/{vendor}`.
+El enunciado pide V1 a V4; V5 a V7 se añadieron después (idioma de los correos, traducciones y Steam). V1 a V3 y V5 a V7 son SQL portable. V4 tiene dos versiones ([postgresql](src/main/resources/db/migration/postgresql) y [h2](src/main/resources/db/migration/h2)), porque H2 no soporta los índices por trigramas ni los parciales. Flyway elige la adecuada con `locations: …/common, …/{vendor}`.
 
 Las reglas de integridad también las garantiza la base de datos, no solo el código Java: `CHECK` (precio ≥ 0, descuento 0 a 100, nota 1 a 5, estados válidos), `UNIQUE` y claves foráneas con `ON DELETE` pensado caso por caso.
 
@@ -263,6 +267,22 @@ El repositorio incluye todo lo necesario; solo faltan las cuentas.
 4. Carga el catálogo demo en la base de datos nueva: `node scripts/seed-demo.mjs --api https://<tu-servicio>.onrender.com`.
 
 En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda unos 30-60 s en despertarlo.
+
+### Alternativa: alojarlo en tu propio PC
+
+[`deploy/local`](deploy/local) publica la tienda desde este equipo, sin pagar hosting: **Caddy** sirve la web compilada y reenvía `/api` al backend, y un **túnel de Cloudflare** la publica en tu dominio con HTTPS sin abrir puertos del router. Usa una base de datos propia (`arcade`), separada de la de desarrollo.
+
+```
+navegador ──HTTPS──▶ Cloudflare ──túnel──▶ cloudflared ──▶ Caddy :8088 ─┬─ web (frontend/dist)
+                                                                       └─ /api ──▶ Spring Boot :8090 ──▶ PostgreSQL (arcade)
+```
+
+1. Copia `deploy/local/host.env.example` como `host.env` y pon tu dominio de Cloudflare en `PUBLIC_HOST` (p. ej. `arcade.tudominio.com`). Los secretos siguen en el `.env` de la raíz.
+2. Una sola vez: `deploy\local\setup-host.cmd`. Instala Caddy y cloudflared (winget), crea la base de datos y el túnel, y apunta el dominio a este PC (abre el navegador para iniciar sesión en Cloudflare).
+3. Arrancar: `deploy\local\start-arcade.cmd -Build -Seed` la primera vez; luego basta `start-arcade.cmd` (`-Build` solo tras cambiar código). Para probar sin dominio, `-NoTunnel` lo deja en `http://localhost:8088`.
+4. Parar: `deploy\local\stop-arcade.cmd`. Los logs quedan en `deploy/local/run/logs`.
+
+La web solo está en línea mientras el PC esté encendido y el script en marcha.
 
 ## Datos demo y créditos
 

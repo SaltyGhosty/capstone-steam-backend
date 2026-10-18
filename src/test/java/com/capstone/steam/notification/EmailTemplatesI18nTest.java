@@ -144,4 +144,27 @@ class EmailTemplatesI18nTest {
     private static String nbsp(String text) {
         return text.replace(' ', ' ').replace(' ', ' ');
     }
+
+    // ------------------------------------------------------------------ oferta en la wishlist
+
+    @Test
+    void gameOnSaleInItalianLinksToTheGameAndEscapesTheTitle() {
+        Email email = EmailTemplates.gameOnSale(BRAND, "Ana", "Tom & <Jerry>", "tom-jerry",
+                "https://cdn.test/cover.jpg", new BigDecimal("18.99"), new BigDecimal("4.74"), 75, "it");
+
+        assertThat(email.subject()).isEqualTo("Tom & <Jerry> è in offerta: −75%");
+        assertThat(email.html()).contains("<html lang=\"it\">", "Tom &amp; &lt;Jerry&gt; è in offerta!",
+                "La tua lista dei desideri &middot; &minus;75%", "https://arcade.test/games/tom-jerry", "4,74",
+                "https://cdn.test/cover.jpg")
+                .doesNotContain("<Jerry>");
+    }
+
+    @Test
+    void gameOnSaleFallsBackToSpanish() {
+        Email email = EmailTemplates.gameOnSale(BRAND, null, "Celeste", "celeste", "javascript:alert(1)",
+                new BigDecimal("18.99"), new BigDecimal("4.74"), 75, "fr");
+
+        assertThat(email.subject()).isEqualTo("Celeste está en oferta: −75%");
+        assertThat(email.html()).contains("Ver el juego").doesNotContain("javascript:");
+    }
 }

@@ -5,11 +5,13 @@ import type { Locale } from '@/api/types';
 import Icon from '@/components/Icon';
 import { FieldError, PageHeader } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
+import { useI18n } from '@/i18n';
 import { formatDate, initials } from '@/lib/format';
 import { LOCALES } from '@/lib/locale';
 
 export default function Settings() {
   const { user, setUser, logout, notify, notifyError } = useStore();
+  const { t } = useI18n();
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? '');
   const [locale, setLocale] = useState<Locale>(user?.locale ?? 'es');
@@ -30,7 +32,7 @@ export default function Settings() {
         locale,
       });
       setUser(updated);
-      notify('Perfil actualizado');
+      notify(t('settings.updated'));
     } catch (err) {
       if (err instanceof ApiError) setErrors(err.fieldErrors);
       notifyError(err);
@@ -43,7 +45,7 @@ export default function Settings() {
 
   return (
     <>
-      <PageHeader eyebrow="TU CUENTA" title="Ajustes" />
+      <PageHeader eyebrow={t('settings.eyebrow')} title={t('nav.settings')} />
       <div className="settings-grid">
         <aside className="panel profile-card">
           {user.avatarUrl ? <img className="avatar big" src={user.avatarUrl} alt="" /> : <span className="avatar big">{initials(name)}</span>}
@@ -51,32 +53,32 @@ export default function Settings() {
           <p>@{user.username}</p>
           <div className="hero-tags">{user.roles.map((r) => <span key={r}>{r.replace('ROLE_', '')}</span>)}</div>
           <dl className="facts">
-            <dt>Email</dt><dd>{user.email}</dd>
-            <dt>Miembro desde</dt><dd>{formatDate(user.createdAt)}</dd>
+            <dt>{t('common.email')}</dt><dd>{user.email}</dd>
+            <dt>{t('settings.memberSince')}</dt><dd>{formatDate(user.createdAt)}</dd>
           </dl>
-          <button className="secondary full" onClick={logout}><Icon name="logout" size={16} /> Cerrar sesión</button>
+          <button className="secondary full" onClick={logout}><Icon name="logout" size={16} /> {t('nav.logout')}</button>
         </aside>
         <form className="panel form" onSubmit={submit}>
-          <h3>Perfil público</h3>
+          <h3>{t('settings.publicProfile')}</h3>
           <label className="field">
-            <span>Nombre visible</span>
+            <span>{t('auth.displayName')}</span>
             <input maxLength={100} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
             <FieldError errors={errors} name="displayName" />
           </label>
           <label className="field">
-            <span>URL del avatar</span>
+            <span>{t('settings.avatarUrl')}</span>
             <input type="url" maxLength={500} value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" />
             <FieldError errors={errors} name="avatarUrl" />
           </label>
           <label className="field">
-            <span>Idioma de los correos <em>(bienvenida, recibos y pagos rechazados)</em></span>
+            <span>{t('settings.emailLang')} <em>{t('settings.emailLangHint')}</em></span>
             <select value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
               {LOCALES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
             </select>
             <FieldError errors={errors} name="locale" />
           </label>
           <div className="form-actions">
-            <button className="primary small" disabled={busy}>{busy ? 'Guardando…' : 'Guardar cambios'}</button>
+            <button className="primary small" disabled={busy}>{busy ? t('common.saving') : t('common.saveChanges')}</button>
           </div>
         </form>
       </div>

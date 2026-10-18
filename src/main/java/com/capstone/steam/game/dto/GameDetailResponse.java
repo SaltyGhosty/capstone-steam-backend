@@ -5,17 +5,26 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.context.i18n.LocaleContextHolder;
+
 import com.capstone.steam.game.Game;
 import com.capstone.steam.game.GameStatus;
 import com.capstone.steam.genre.dto.GenreResponse;
 
-/** Ficha completa del juego; {@code version} se reenvía en el PUT para el bloqueo optimista. */
+/**
+ * Ficha completa del juego; {@code version} se reenvía en el PUT para el bloqueo optimista.
+ * {@code description} va en el idioma de la petición; {@code descriptions} trae las tres tal cual
+ * (las usa el formulario del developer).
+ */
 public record GameDetailResponse(
         Long id,
         String title,
         String slug,
         String description,
+        Descriptions descriptions,
         String coverUrl,
+        Integer steamAppId,
+        Instant priceSyncedAt,
         BigDecimal price,
         int discountPercent,
         BigDecimal finalPrice,
@@ -33,13 +42,19 @@ public record GameDetailResponse(
     public record DeveloperInfo(Long id, String displayName) {
     }
 
+    public record Descriptions(String es, String en, String it) {
+    }
+
     public static GameDetailResponse from(Game game) {
         return new GameDetailResponse(
                 game.getId(),
                 game.getTitle(),
                 game.getSlug(),
-                game.getDescription(),
+                game.getDescription(LocaleContextHolder.getLocale()),
+                new Descriptions(game.getDescription(), game.getDescriptionEn(), game.getDescriptionIt()),
                 game.getCoverUrl(),
+                game.getSteamAppId(),
+                game.getPriceSyncedAt(),
                 game.getPrice(),
                 game.getDiscountPercent(),
                 game.getFinalPrice(),

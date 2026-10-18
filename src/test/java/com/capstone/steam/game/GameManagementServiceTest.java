@@ -83,6 +83,6 @@ class GameManagementServiceTest {
     }
 
     private static GameRequest request(Long version) {
-        return new GameRequest("Portal 2", null, new BigDecimal("19.99"), 0, null, null, Set.of(), version);
+        return new GameRequest("Portal 2", null, null, null, new BigDecimal("19.99"), 0, null, null, null, Set.of(), version);
     }
 }

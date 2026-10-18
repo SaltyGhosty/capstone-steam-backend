@@ -65,7 +65,7 @@ public class LibraryService {
     @Transactional
     public LibraryEntryResponse play(Long userId, Long gameId, int minutes) {
         if (libraryRepository.addPlaytime(userId, gameId, minutes) == 0) {
-            throw new NotFoundException("No tienes este juego en tu biblioteca");
+            throw new NotFoundException("library.notOwned");
         }
         // clearAutomatically separó las entidades: se vuelve a leer la fila ya actualizada
         return libraryRepository.findByUserIdAndGameId(userId, gameId)
@@ -76,10 +76,10 @@ public class LibraryService {
     /** Alta manual (regalo/soporte) por un admin: sin pedido asociado. */
     @Transactional
     public LibraryEntryResponse grant(Long userId, Long gameId) {
-        User user = userRepository.findById(userId).orElseThrow(() -> NotFoundException.of("Usuario", userId));
-        Game game = gameRepository.findById(gameId).orElseThrow(() -> NotFoundException.of("Juego", gameId));
+        User user = userRepository.findById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
+        Game game = gameRepository.findById(gameId).orElseThrow(() -> NotFoundException.of("game", gameId));
         if (libraryRepository.existsByUserIdAndGameId(userId, gameId)) {
-            throw new ConflictException("El usuario ya tiene este juego");
+            throw new ConflictException("library.userHasGame");
         }
         LibraryEntry entry = libraryRepository.saveAndFlush(new LibraryEntry(user, game, null));
         // igual que tras una compra: ya no tiene sentido en el carrito ni en la wishlist

@@ -4,10 +4,12 @@ import { Navigate, useLocation } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { Role } from '@/api/types';
 import { useStore } from '@/context/StoreContext';
+import { useI18n } from '@/i18n';
 import { formatMoney } from '@/lib/format';
 import Icon from './Icon';
 
 export function Price({ price, finalPrice, discountPercent }: { price: number; finalPrice: number; discountPercent: number }) {
+  useI18n(); // se vuelve a pintar al cambiar de idioma (formato de moneda)
   if (discountPercent > 0) {
     return (
       <span className="price">
@@ -21,8 +23,9 @@ export function Price({ price, finalPrice, discountPercent }: { price: number; f
 }
 
 export function Stars({ value, size = 14 }: { value: number; size?: number }) {
+  const { t } = useI18n();
   return (
-    <span className="stars" aria-label={`${value} de 5`}>
+    <span className="stars" aria-label={t('common.ofFive', { value })}>
       {[1, 2, 3, 4, 5].map((n) => (
         <span key={n} className={n <= Math.round(value) ? 'on' : ''}><Icon name="star" size={size} /></span>
       ))}
@@ -39,16 +42,18 @@ export function PageHeader({ eyebrow, title, children }: { eyebrow: string; titl
   );
 }
 
-export function Loading({ label = 'Cargando…' }: { label?: string }) {
-  return <div className="state"><span className="spinner" />{label}</div>;
+export function Loading({ label }: { label?: string }) {
+  const { t } = useI18n();
+  return <div className="state"><span className="spinner" />{label ?? t('common.loading')}</div>;
 }
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
-  const message = error instanceof ApiError ? error.message : 'No se pudo cargar el contenido.';
+  const { t } = useI18n();
+  const message = error instanceof ApiError ? error.message : t('common.loadError');
   return (
     <div className="state error">
       <p>{message}</p>
-      {onRetry && <button className="secondary small" onClick={onRetry}>Reintentar</button>}
+      {onRetry && <button className="secondary small" onClick={onRetry}>{t('common.retry')}</button>}
     </div>
   );
 }
@@ -64,12 +69,13 @@ export function Empty({ icon, title, children }: { icon: Parameters<typeof Icon>
 }
 
 export function Pagination({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {
+  const { t } = useI18n();
   if (totalPages <= 1) return null;
   return (
     <div className="pagination">
-      <button disabled={page === 0} onClick={() => onChange(page - 1)} aria-label="Página anterior">‹</button>
+      <button disabled={page === 0} onClick={() => onChange(page - 1)} aria-label={t('common.prevPage')}>‹</button>
       <span>{page + 1} / {totalPages}</span>
-      <button disabled={page >= totalPages - 1} onClick={() => onChange(page + 1)} aria-label="Página siguiente">›</button>
+      <button disabled={page >= totalPages - 1} onClick={() => onChange(page + 1)} aria-label={t('common.nextPage')}>›</button>
     </div>
   );
 }

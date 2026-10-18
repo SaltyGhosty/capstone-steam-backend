@@ -1,11 +1,13 @@
 import { Link } from 'react-router';
 import type { GameSummary } from '@/api/types';
 import { useStore } from '@/context/StoreContext';
+import { useI18n } from '@/i18n';
 import { cardImage, formatMoney, genreLabel } from '@/lib/format';
 import Icon from './Icon';
 
 export default function GameCard({ game }: { game: GameSummary }) {
   const { wishlistIds, toggleWishlist, addToCart } = useStore();
+  const { t } = useI18n();
   const wished = wishlistIds.has(game.id);
 
   return (
@@ -15,7 +17,7 @@ export default function GameCard({ game }: { game: GameSummary }) {
           {game.coverUrl ? <img src={cardImage(game.coverUrl)} alt="" loading="lazy" /> : <div className="cover-fallback">{game.title}</div>}
         </Link>
         <button onClick={() => toggleWishlist(game.id, game.title)} className={wished ? 'wish active' : 'wish'}
-          aria-label={wished ? `Quitar ${game.title} de la wishlist` : `Añadir ${game.title} a la wishlist`}>
+          aria-label={t(wished ? 'card.removeWish' : 'card.addWish', { title: game.title })}>
           <Icon name="heart" size={18} />
         </button>
         {game.ratingCount > 0 && <div className="rating"><Icon name="star" size={13} /> {game.averageRating.toFixed(1)}</div>}
@@ -26,7 +28,7 @@ export default function GameCard({ game }: { game: GameSummary }) {
           <h3><Link to={`/games/${game.slug}`}>{game.title}</Link></h3>
           <p>{genreLabel(game.genres)}</p>
         </div>
-        <button onClick={() => addToCart(game.id, game.title)} aria-label={`Añadir ${game.title} al carrito`}>
+        <button onClick={() => addToCart(game.id, game.title)} aria-label={t('card.addCart', { title: game.title })}>
           {game.discountPercent > 0 && <s>{formatMoney(game.price)}</s>}
           {formatMoney(game.finalPrice)}
         </button>

@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 public record RegisterRequest(
         @NotBlank
         @Size(min = 3, max = 50)
-        @Pattern(regexp = "^[A-Za-z0-9_.-]+$", message = "solo letras, números, '_', '.' y '-'")
+        @Pattern(regexp = "^[A-Za-z0-9_.-]+$", message = "{validation.username.pattern}")
         String username,
 
         @NotBlank @Email @Size(max = 255)
@@ -25,6 +25,6 @@ public record RegisterRequest(
         AccountType accountType,
 
         /** Opcional; idioma de los correos. Null = "es". */
-        @Pattern(regexp = "^(es|en|it)$", message = "debe ser es, en o it")
+        @Pattern(regexp = "^(es|en|it)$", message = "{validation.locale}")
         String locale) {
 }

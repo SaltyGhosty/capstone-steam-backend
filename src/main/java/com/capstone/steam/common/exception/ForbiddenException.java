@@ -4,7 +4,8 @@ import org.springframework.http.HttpStatus;
 
 public class ForbiddenException extends ApiException {
 
-    public ForbiddenException(String message) {
-        super(HttpStatus.FORBIDDEN, message);
+    /** @param code clave de messages*.properties */
+    public ForbiddenException(String code, Object... args) {
+        super(HttpStatus.FORBIDDEN, code, args);
     }
 }

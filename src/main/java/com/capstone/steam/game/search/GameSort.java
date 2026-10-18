@@ -24,7 +24,7 @@ public enum GameSort {
         return Arrays.stream(values())
                 .filter(s -> s.param.equalsIgnoreCase(value))
                 .findFirst()
-                .orElseThrow(() -> new BadRequestException("Orden no válido: '" + value + "'. Valores: "
-                        + Arrays.stream(values()).map(s -> s.param).collect(Collectors.joining(", "))));
+                .orElseThrow(() -> new BadRequestException("catalog.invalidSort", value,
+                        Arrays.stream(values()).map(s -> s.param).collect(Collectors.joining(", "))));
     }
 }

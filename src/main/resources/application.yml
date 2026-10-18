@@ -7,6 +7,15 @@ spring:
     import: optional:file:.env[.properties]
   profiles:
     default: dev
+  # Textos de la API en messages*.properties (es por defecto, en, it); el idioma sale de Accept-Language
+  messages:
+    basename: messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+    always-use-message-format: true
+  web:
+    locale: es
+    locale-resolver: accept-header
   jpa:
     open-in-view: false
     hibernate:
@@ -50,6 +59,14 @@ app:
   payments:
     failure-rate: ${PAYMENT_FAILURE_RATE:0.0} # rechazo aleatorio para demos (0.0-1.0)
     declined-suffix: "0000"                  # tarjeta terminada en 0000 = rechazada siempre
+  steam:
+    # Precios de la API pública de la tienda de Steam (sin clave). Se sincronizan al arrancar y cada 6 h;
+    # el admin también puede lanzarlo a mano. STEAM_SYNC_ENABLED=false lo desactiva.
+    sync-enabled: ${STEAM_SYNC_ENABLED:true}
+    sync-cron: ${STEAM_SYNC_CRON:0 0 */6 * * *}
+    country: es # euros
+    base-url: https://store.steampowered.com
+    timeout: 10s
   admin:
     username: ${ADMIN_USERNAME:admin}
     email: ${ADMIN_EMAIL:admin@capstone-steam.local}

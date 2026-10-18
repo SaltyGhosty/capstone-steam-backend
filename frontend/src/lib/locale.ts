@@ -1,10 +1,10 @@
-// Idioma de los correos (bienvenida, recibo, pago rechazado). La interfaz web sigue solo en español.
+// Idiomas de la interfaz y de los correos (bienvenida, recibo, pago rechazado).
 import type { Locale } from '@/api/types';
 
 export const LOCALES: { value: Locale; label: string }[] = [
   { value: 'es', label: 'Español' },
-  { value: 'en', label: 'English' },
   { value: 'it', label: 'Italiano' },
+  { value: 'en', label: 'English' },
 ];
 
 const isLocale = (value: string): value is Locale => LOCALES.some((l) => l.value === value);

@@ -5,6 +5,7 @@ import { libraryApi, wishlistApi } from '@/api/endpoints';
 import Icon from '@/components/Icon';
 import { Empty, ErrorState, Loading, PageHeader, Pagination, Price } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
+import { useI18n } from '@/i18n';
 import { cardImage, formatDate, formatPlaytime } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 
@@ -13,6 +14,7 @@ const randomSession = () => 30 + Math.floor(Math.random() * 61);
 
 export function Library() {
   const { notify, notifyError } = useStore();
+  const { t } = useI18n();
   const [page, setPage] = useState(0);
   const [playing, setPlaying] = useState<number | null>(null);
   const library = useAsync(() => libraryApi.list(page, 24), [page]);
@@ -27,7 +29,7 @@ export function Library() {
         ...prev,
         content: prev.content.map((e) => (e.gameId === gameId ? updated : e)),
       });
-      notify(`Has jugado ${minutes} min a ${title}`);
+      notify(t('library.played', { minutes, title }));
     } catch (e) {
       notifyError(e);
     } finally {
@@ -37,15 +39,15 @@ export function Library() {
 
   return (
     <>
-      <PageHeader eyebrow="TU COLECCIÓN" title="Biblioteca">
-        {data && <span className="result-count">{data.totalElements} {data.totalElements === 1 ? 'juego' : 'juegos'}</span>}
+      <PageHeader eyebrow={t('library.eyebrow')} title={t('nav.library')}>
+        {data && <span className="result-count">{t('common.games', { count: data.totalElements })}</span>}
       </PageHeader>
       {library.loading && !data && <Loading />}
       {library.error ? <ErrorState error={library.error} onRetry={library.reload} /> : null}
       {data?.content.length === 0 && (
-        <Empty icon="library" title="Tu biblioteca está vacía">
-          <p>Los juegos que compres aparecerán aquí.</p>
-          <Link className="primary small" to="/browse">Explorar juegos</Link>
+        <Empty icon="library" title={t('library.empty')}>
+          <p>{t('library.emptyHint')}</p>
+          <Link className="primary small" to="/browse">{t('common.browseGames')}</Link>
         </Empty>
       )}
       <div className="library-grid">
@@ -56,10 +58,10 @@ export function Library() {
             </Link>
             <div className="library-info">
               <h3><Link to={`/games/${entry.slug}`}>{entry.title}</Link></h3>
-              <p>{entry.orderId ? `Comprado el ${formatDate(entry.acquiredAt)}` : `Regalo · ${formatDate(entry.acquiredAt)}`}</p>
+              <p>{t(entry.orderId ? 'library.bought' : 'library.gift', { date: formatDate(entry.acquiredAt) })}</p>
               <p>{formatPlaytime(entry.playtimeMinutes)}</p>
               <button className="primary small full-width" onClick={() => play(entry.gameId, entry.title)} disabled={playing === entry.gameId}>
-                <Icon name="play" size={14} /> {playing === entry.gameId ? 'Jugando…' : 'Jugar'}
+                <Icon name="play" size={14} /> {playing === entry.gameId ? t('library.playing') : t('library.play')}
               </button>
             </div>
           </article>
@@ -72,6 +74,7 @@ export function Library() {
 
 export function Wishlist() {
   const { toggleWishlist, addToCart, cart } = useStore();
+  const { t } = useI18n();
   const [page, setPage] = useState(0);
   const wishlist = useAsync(() => wishlistApi.list(page, 24), [page]);
   const data = wishlist.data;
@@ -84,13 +87,13 @@ export function Wishlist() {
 
   return (
     <>
-      <PageHeader eyebrow="TU COLECCIÓN" title="Wishlist" />
+      <PageHeader eyebrow={t('library.eyebrow')} title={t('nav.wishlist')} />
       {wishlist.loading && !data && <Loading />}
       {wishlist.error ? <ErrorState error={wishlist.error} onRetry={wishlist.reload} /> : null}
       {data?.content.length === 0 && (
-        <Empty icon="heart" title="Tu wishlist está vacía">
-          <p>Pulsa el corazón de cualquier juego para guardarlo aquí y ver cuándo se rebaja.</p>
-          <Link className="primary small" to="/browse">Explorar juegos</Link>
+        <Empty icon="heart" title={t('wishlist.empty')}>
+          <p>{t('wishlist.emptyHint')}</p>
+          <Link className="primary small" to="/browse">{t('common.browseGames')}</Link>
         </Empty>
       )}
       <div className="line-list">
@@ -99,16 +102,16 @@ export function Wishlist() {
             <Link to={`/games/${item.slug}`} className="line-cover">{item.coverUrl && <img src={cardImage(item.coverUrl)} alt="" />}</Link>
             <div className="line-info">
               <h3><Link to={`/games/${item.slug}`}>{item.title}</Link></h3>
-              <p>Añadido el {formatDate(item.addedAt)}</p>
-              {item.onSale && item.available && <span className="badge paid">¡En oferta!</span>}
-              {!item.available && <p className="warn">Ya no está a la venta</p>}
+              <p>{t('wishlist.added', { date: formatDate(item.addedAt) })}</p>
+              {item.onSale && item.available && <span className="badge paid">{t('wishlist.onSale')}</span>}
+              {!item.available && <p className="warn">{t('common.unavailable')}</p>}
             </div>
             <Price price={item.price} finalPrice={item.finalPrice} discountPercent={item.discountPercent} />
             <div className="line-actions">
               {item.available && (inCart.has(item.gameId)
-                ? <Link className="secondary small" to="/cart">En el carrito</Link>
-                : <button className="primary small" onClick={() => addToCart(item.gameId, item.title)}><Icon name="cart" size={15} /> Al carrito</button>)}
-              <button className="icon-button" onClick={() => remove(item.gameId, item.title)} aria-label={`Quitar ${item.title} de la wishlist`}>
+                ? <Link className="secondary small" to="/cart">{t('wishlist.inCart')}</Link>
+                : <button className="primary small" onClick={() => addToCart(item.gameId, item.title)}><Icon name="cart" size={15} /> {t('wishlist.toCart')}</button>)}
+              <button className="icon-button" onClick={() => remove(item.gameId, item.title)} aria-label={t('card.removeWish', { title: item.title })}>
                 <Icon name="close" size={16} />
               </button>
             </div>

@@ -88,17 +88,17 @@ public class OrderService {
     public OrderResponse createFromCart(Long userId) {
         List<CartItem> cart = cartItemRepository.findByUserIdWithGame(userId);
         if (cart.isEmpty()) {
-            throw new BadRequestException("El carrito está vacío");
+            throw new BadRequestException("order.cartEmpty");
         }
         List<Game> games = cart.stream().map(CartItem::getGame).toList();
 
         List<String> unavailable = games.stream().filter(g -> !g.isPublished()).map(Game::getTitle).toList();
         if (!unavailable.isEmpty()) {
-            throw new ConflictException("Estos juegos ya no están a la venta; quítalos del carrito: " + unavailable);
+            throw new ConflictException("order.unavailableInCart", String.valueOf(unavailable));
         }
         List<String> owned = titlesOf(games, libraryRepository.findOwnedGameIds(userId, ids(games)));
         if (!owned.isEmpty()) {
-            throw new ConflictException("Ya tienes estos juegos; quítalos del carrito: " + owned);
+            throw new ConflictException("order.ownedInCart", String.valueOf(owned));
         }
 
         Order order = new Order(userRepository.getReferenceById(userId));
@@ -117,22 +117,22 @@ public class OrderService {
     @Transactional
     public PaymentOutcome pay(Long userId, Long orderId, PayRequest request) {
         if (request.method() == PaymentMethod.CREDIT_CARD && request.cardNumber() == null) {
-            throw new BadRequestException("cardNumber es obligatorio para pagar con tarjeta");
+            throw new BadRequestException("order.cardRequired");
         }
         Order order = findOwnOrder(userId, orderId);
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new ConflictException("El pedido no se puede pagar: está " + order.getStatus());
+            throw new ConflictException("order.notPayable", order.getStatus().name());
         }
 
         List<Game> games = order.getItems().stream().map(OrderItem::getGame).toList();
         List<Long> gameIds = ids(games);
         List<String> notForSale = games.stream().filter(g -> !g.isPublished()).map(Game::getTitle).toList();
         if (!notForSale.isEmpty()) {
-            throw new ConflictException("Estos juegos ya no están a la venta; cancela el pedido: " + notForSale);
+            throw new ConflictException("order.unavailableCancel", String.valueOf(notForSale));
         }
         List<String> alreadyOwned = titlesOf(games, libraryRepository.findOwnedGameIds(userId, gameIds));
         if (!alreadyOwned.isEmpty()) {
-            throw new ConflictException("Ya tienes estos juegos (¿otro pedido?); cancela este: " + alreadyOwned);
+            throw new ConflictException("order.ownedCancel", String.valueOf(alreadyOwned));
         }
 
         // Datos para el evento, leídos antes de que los UPDATE atómicos limpien el contexto
@@ -154,14 +154,14 @@ public class OrderService {
         if (result.approved()) {
             payment.markSucceeded();
             if (orderRepository.markPaid(orderId, Instant.now()) == 0) {
-                throw new ConflictException("El pedido ya fue procesado por otra petición");
+                throw new ConflictException("order.alreadyProcessed");
             }
             fulfil(userId, orderId, gameIds);
             events.publishEvent(new OrderPaidEvent(orderId, userId, email, displayName, total, lines, locale));
         } else {
             payment.markFailed(result.failureReason());
             if (orderRepository.closePending(orderId, OrderStatus.FAILED) == 0) {
-                throw new ConflictException("El pedido ya fue procesado por otra petición");
+                throw new ConflictException("order.alreadyProcessed");
             }
             events.publishEvent(new PaymentFailedEvent(orderId, userId, email, displayName, total,
                     result.failureReason(), locale));
@@ -186,7 +186,7 @@ public class OrderService {
     public OrderResponse cancel(Long userId, Long orderId) {
         findOwnOrder(userId, orderId);
         if (orderRepository.closePending(orderId, OrderStatus.CANCELLED) == 0) {
-            throw new ConflictException("Solo se pueden cancelar pedidos pendientes");
+            throw new ConflictException("order.cancelOnlyPending");
         }
         return load(orderId);
     }
@@ -209,7 +209,7 @@ public class OrderService {
     }
 
     private OrderResponse load(Long orderId) {
-        Order order = orderRepository.findWithItemsById(orderId).orElseThrow(() -> NotFoundException.of("Pedido", orderId));
+        Order order = orderRepository.findWithItemsById(orderId).orElseThrow(() -> NotFoundException.of("order", orderId));
         List<Payment> payments = paymentRepository.findByOrderIdOrderByCreatedAtAsc(orderId);
         return OrderResponse.from(order, payments.isEmpty() ? null : payments.getLast());
     }
@@ -218,7 +218,7 @@ public class OrderService {
     private Order findOwnOrder(Long userId, Long orderId) {
         return orderRepository.findWithItemsById(orderId)
                 .filter(o -> o.getUser().getId().equals(userId))
-                .orElseThrow(() -> NotFoundException.of("Pedido", orderId));
+                .orElseThrow(() -> NotFoundException.of("order", orderId));
     }
 
     private static List<Long> ids(List<Game> games) {

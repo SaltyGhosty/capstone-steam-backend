@@ -36,9 +36,9 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) ->
-                                problemWriter.write(req, res, HttpStatus.UNAUTHORIZED, "Se requiere un token válido"))
+                                problemWriter.write(req, res, HttpStatus.UNAUTHORIZED, "error.tokenRequired"))
                         .accessDeniedHandler((req, res, e) ->
-                                problemWriter.write(req, res, HttpStatus.FORBIDDEN, "No tienes permiso para acceder a este recurso")))
+                                problemWriter.write(req, res, HttpStatus.FORBIDDEN, "error.forbiddenResource")))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/games/**", "/api/genres/**").permitAll()

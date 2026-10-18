@@ -6,26 +6,24 @@ import type { GameStatus, Genre, Role, User } from '@/api/types';
 import Icon from '@/components/Icon';
 import { ErrorState, Loading, PageHeader } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
-import { formatDate, formatMoney, GAME_STATUS } from '@/lib/format';
+import { useI18n } from '@/i18n';
+import { formatDate, formatMoney, gameStatus } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 
-const TABS = [
-  { id: 'games', label: 'Juegos' },
-  { id: 'users', label: 'Usuarios' },
-  { id: 'genres', label: 'Géneros' },
-] as const;
+const TABS = ['games', 'users', 'genres'] as const;
 
 export default function Admin() {
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') ?? 'games';
+  const { t } = useI18n();
 
   return (
     <>
-      <PageHeader eyebrow="ADMINISTRACIÓN" title="Moderación" />
+      <PageHeader eyebrow={t('admin.eyebrow')} title={t('nav.moderation')} />
       <div className="tabs" role="tablist">
-        {TABS.map((t) => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'active' : ''}
-            onClick={() => setParams({ tab: t.id })}>{t.label}</button>
+        {TABS.map((id) => (
+          <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'active' : ''}
+            onClick={() => setParams({ tab: id })}>{t(`admin.tab.${id}`)}</button>
         ))}
       </div>
       {tab === 'games' && <GamesTab />}
@@ -37,13 +35,28 @@ export default function Admin() {
 
 function GamesTab() {
   const { notify, notifyError } = useStore();
+  const { t } = useI18n();
   const [status, setStatus] = useState<GameStatus | ''>('');
   const games = useAsync(() => adminApi.games(status || undefined, 0, 100), [status]);
+  const [syncing, setSyncing] = useState(false);
+
+  const syncSteam = async () => {
+    setSyncing(true);
+    try {
+      const r = await adminApi.syncSteam();
+      notify(t('steam.synced', { checked: r.checked, updated: r.updated, sales: r.newSales, notified: r.notified }));
+      games.reload();
+    } catch (e) {
+      notifyError(e);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const moderate = async (id: number, title: string, next: GameStatus) => {
     try {
       await adminApi.moderate(id, next);
-      notify(next === 'DELISTED' ? `${title} retirado de la tienda` : `${title} vuelve a estar publicado`);
+      notify(t(next === 'DELISTED' ? 'admin.delisted' : 'admin.republished', { title }));
       games.reload();
     } catch (e) {
       notifyError(e);
@@ -54,15 +67,18 @@ function GamesTab() {
     <>
       <div className="chips toolbar">
         {(['', 'PUBLISHED', 'DRAFT', 'DELISTED'] as const).map((s) => (
-          <button key={s} className={status === s ? 'chip active' : 'chip'} onClick={() => setStatus(s)}>{s ? GAME_STATUS[s] : 'Todos'}</button>
+          <button key={s} className={status === s ? 'chip active' : 'chip'} onClick={() => setStatus(s)}>{s ? gameStatus(s) : t('admin.all')}</button>
         ))}
+        <button className="secondary small" onClick={syncSteam} disabled={syncing}>
+          {syncing ? t('steam.syncing') : t('steam.sync')}
+        </button>
       </div>
       {games.loading && !games.data && <Loading />}
       {games.error ? <ErrorState error={games.error} onRetry={games.reload} /> : null}
       {games.data && (
         <div className="table-wrap">
           <table className="table">
-            <thead><tr><th>Juego</th><th>Estudio</th><th>Estado</th><th>Precio</th><th>Ventas</th><th /></tr></thead>
+            <thead><tr><th>{t('dev.game')}</th><th>{t('admin.studio')}</th><th>{t('admin.status')}</th><th>{t('dev.price')}</th><th>{t('dev.sales')}</th><th /></tr></thead>
             <tbody>
               {games.data.content.map((g) => (
                 <tr key={g.id}>
@@ -71,18 +87,18 @@ function GamesTab() {
                     {g.status === 'PUBLISHED' ? <Link to={`/games/${g.slug}`}>{g.title}</Link> : <span>{g.title}</span>}
                   </div></td>
                   <td>{g.developer.displayName}</td>
-                  <td><span className={`badge ${g.status.toLowerCase()}`}>{GAME_STATUS[g.status]}</span></td>
+                  <td><span className={`badge ${g.status.toLowerCase()}`}>{gameStatus(g.status)}</span></td>
                   <td>{formatMoney(g.finalPrice)}</td>
                   <td>{g.salesCount}</td>
                   <td className="row-actions">
-                    {g.status === 'PUBLISHED' && <button className="secondary small danger" onClick={() => moderate(g.id, g.title, 'DELISTED')}>Retirar</button>}
-                    {g.status === 'DELISTED' && <button className="secondary small" onClick={() => moderate(g.id, g.title, 'PUBLISHED')}>Republicar</button>}
+                    {g.status === 'PUBLISHED' && <button className="secondary small danger" onClick={() => moderate(g.id, g.title, 'DELISTED')}>{t('admin.delist')}</button>}
+                    {g.status === 'DELISTED' && <button className="secondary small" onClick={() => moderate(g.id, g.title, 'PUBLISHED')}>{t('admin.republish')}</button>}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {games.data.content.length === 0 && <p className="hint">No hay juegos con este estado.</p>}
+          {games.data.content.length === 0 && <p className="hint">{t('admin.noGames')}</p>}
         </div>
       )}
     </>
@@ -97,6 +113,7 @@ const ROLES: { value: Role; label: string }[] = [
 
 function UsersTab() {
   const { user: me, notify, notifyError } = useStore();
+  const { t } = useI18n();
   const users = useAsync(() => adminApi.users(0, 100), []);
   const games = useAsync(() => catalogApi.search({ sort: 'title', size: 100 }), []);
   const [gift, setGift] = useState<Record<number, string>>({});
@@ -106,10 +123,10 @@ function UsersTab() {
 
   const toggleRole = async (u: User, role: Role) => {
     const roles = u.roles.includes(role) ? u.roles.filter((r) => r !== role) : [...u.roles, role];
-    if (!roles.length) return notifyError(new Error('Un usuario necesita al menos un rol'));
+    if (!roles.length) return notifyError(new Error(t('admin.needRole')));
     try {
       replace(await adminApi.setRoles(u.id, roles));
-      notify(`Roles de ${u.username} actualizados (se aplican cuando renueve su sesión)`);
+      notify(t('admin.rolesUpdated', { user: u.username }));
     } catch (e) {
       notifyError(e);
     }
@@ -118,7 +135,7 @@ function UsersTab() {
   const toggleEnabled = async (u: User) => {
     try {
       replace(await adminApi.setEnabled(u.id, !u.enabled));
-      notify(u.enabled ? `${u.username} desactivado` : `${u.username} reactivado`);
+      notify(t(u.enabled ? 'admin.disabled' : 'admin.enabled', { user: u.username }));
     } catch (e) {
       notifyError(e);
     }
@@ -130,7 +147,7 @@ function UsersTab() {
     if (!gameId) return;
     try {
       const entry = await adminApi.grantGame(u.id, gameId);
-      notify(`${entry.title} regalado a ${u.username}`);
+      notify(t('admin.gifted', { title: entry.title, user: u.username }));
       setGift((g) => ({ ...g, [u.id]: '' }));
     } catch (err) {
       notifyError(err);
@@ -143,7 +160,7 @@ function UsersTab() {
   return (
     <div className="table-wrap">
       <table className="table">
-        <thead><tr><th>Usuario</th><th>Alta</th><th>Roles</th><th>Estado</th><th>Regalar juego</th></tr></thead>
+        <thead><tr><th>{t('admin.user')}</th><th>{t('admin.joined')}</th><th>{t('admin.roles')}</th><th>{t('admin.status')}</th><th>{t('admin.giftGame')}</th></tr></thead>
         <tbody>
           {users.data.content.map((u) => (
             <tr key={u.id}>
@@ -159,17 +176,17 @@ function UsersTab() {
               </td>
               <td>
                 <button className={u.enabled ? 'badge paid' : 'badge failed'} disabled={u.id === me?.id} onClick={() => toggleEnabled(u)}
-                  title={u.enabled ? 'Desactivar cuenta' : 'Reactivar cuenta'}>
-                  {u.enabled ? 'Activo' : 'Desactivado'}
+                  title={u.enabled ? t('admin.disable') : t('admin.enable')}>
+                  {u.enabled ? t('admin.active') : t('admin.inactive')}
                 </button>
               </td>
               <td>
                 <form className="inline-form" onSubmit={(e) => grant(e, u)}>
-                  <select value={gift[u.id] ?? ''} onChange={(e) => setGift((g) => ({ ...g, [u.id]: e.target.value }))} aria-label={`Juego para ${u.username}`}>
-                    <option value="">Elige…</option>
+                  <select value={gift[u.id] ?? ''} onChange={(e) => setGift((g) => ({ ...g, [u.id]: e.target.value }))} aria-label={t('admin.gameFor', { user: u.username })}>
+                    <option value="">{t('admin.choose')}</option>
                     {games.data?.content.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
                   </select>
-                  <button className="icon-button" disabled={!gift[u.id]} aria-label="Regalar"><Icon name="gift" size={16} /></button>
+                  <button className="icon-button" disabled={!gift[u.id]} aria-label={t('admin.gift')}><Icon name="gift" size={16} /></button>
                 </form>
               </td>
             </tr>
@@ -182,6 +199,7 @@ function UsersTab() {
 
 function GenresTab() {
   const { notify, notifyError } = useStore();
+  const { t } = useI18n();
   const genres = useAsync(() => catalogApi.genres(), []);
   const [name, setName] = useState('');
   const [editing, setEditing] = useState<Genre | null>(null);
@@ -191,7 +209,7 @@ function GenresTab() {
     if (!name.trim()) return;
     try {
       await adminApi.createGenre(name.trim());
-      notify(`Género ${name.trim()} creado`);
+      notify(t('admin.genreCreated', { name: name.trim() }));
       setName('');
       genres.reload();
     } catch (err) {
@@ -204,7 +222,7 @@ function GenresTab() {
     if (!editing) return;
     try {
       await adminApi.updateGenre(editing.id, editing.name.trim());
-      notify('Género renombrado');
+      notify(t('admin.genreRenamed'));
       setEditing(null);
       genres.reload();
     } catch (err) {
@@ -213,10 +231,10 @@ function GenresTab() {
   };
 
   const remove = async (g: Genre) => {
-    if (!window.confirm(`¿Borrar el género ${g.name}?`)) return;
+    if (!window.confirm(t('admin.confirmDeleteGenre', { name: g.name }))) return;
     try {
       await adminApi.deleteGenre(g.id);
-      notify('Género borrado');
+      notify(t('admin.genreDeleted'));
       genres.reload();
     } catch (err) {
       notifyError(err);
@@ -226,8 +244,8 @@ function GenresTab() {
   return (
     <>
       <form className="inline-form toolbar" onSubmit={create}>
-        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} placeholder="Nuevo género" aria-label="Nombre del nuevo género" />
-        <button className="primary small" disabled={!name.trim()}><Icon name="plus" size={15} /> Añadir</button>
+        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} placeholder={t('admin.newGenre')} aria-label={t('admin.newGenreName')} />
+        <button className="primary small" disabled={!name.trim()}><Icon name="plus" size={15} /> {t('admin.add')}</button>
       </form>
       {genres.loading && !genres.data && <Loading />}
       {genres.error ? <ErrorState error={genres.error} onRetry={genres.reload} /> : null}
@@ -235,15 +253,15 @@ function GenresTab() {
         {genres.data?.map((g) =>
           editing?.id === g.id ? (
             <form key={g.id} className="panel genre-row" onSubmit={save}>
-              <input autoFocus value={editing.name} maxLength={50} onChange={(e) => setEditing({ ...editing, name: e.target.value })} aria-label="Nombre del género" />
-              <button className="primary small">Guardar</button>
-              <button type="button" className="secondary small" onClick={() => setEditing(null)}>Cancelar</button>
+              <input autoFocus value={editing.name} maxLength={50} onChange={(e) => setEditing({ ...editing, name: e.target.value })} aria-label={t('admin.genreName')} />
+              <button className="primary small">{t('common.save')}</button>
+              <button type="button" className="secondary small" onClick={() => setEditing(null)}>{t('common.cancel')}</button>
             </form>
           ) : (
             <div key={g.id} className="panel genre-row">
               <div><b>{g.name}</b><small className="muted"> /{g.slug}</small></div>
-              <button className="icon-button" onClick={() => setEditing(g)} aria-label={`Renombrar ${g.name}`}><Icon name="edit" size={16} /></button>
-              <button className="icon-button danger" onClick={() => remove(g)} aria-label={`Borrar ${g.name}`}><Icon name="trash" size={16} /></button>
+              <button className="icon-button" onClick={() => setEditing(g)} aria-label={t('admin.rename', { name: g.name })}><Icon name="edit" size={16} /></button>
+              <button className="icon-button danger" onClick={() => remove(g)} aria-label={t('admin.deleteName', { name: g.name })}><Icon name="trash" size={16} /></button>
             </div>
           ),
         )}
