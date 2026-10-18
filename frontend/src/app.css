@@ -257,7 +257,7 @@ td.row-actions > * { display: inline-flex; vertical-align: middle; margin-left: 
 @media (max-width: 1050px) {
   .browse, .detail-grid, .checkout-grid, .settings-grid, .game-form { grid-template-columns: 1fr; }
   .filters, .summary, .cover-preview { position: static; }
-  .cover-preview, .detail-cover, .ghost-link { display: none; }
+  .cover-preview, .detail-cover { display: none; }
   /* barra lateral contraída: el diseño oculta los textos del menú pero no el de Ajustes */
   .sidebar .settings { font-size: 0; }
 }

@@ -141,6 +141,7 @@ export default function Layout() {
           <NavLink to="/browse"><Icon name="compass" /> {t('nav.browse')}</NavLink>
           <NavLink to="/library"><Icon name="library" /> {t('nav.library')}</NavLink>
           <NavLink to="/wishlist"><Icon name="heart" /> {t('nav.wishlist')}</NavLink>
+          <NavLink to="/orders"><Icon name="receipt" /> {t('nav.orders')}</NavLink>
           <NavLink to="/settings"><Icon name="settings" /> {t('nav.settings')}</NavLink>
         </nav>
 
