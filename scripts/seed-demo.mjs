@@ -65,6 +65,7 @@ for (const s of data.studios) {
 }
 
 const gameIds = {};
+const gameSlugs = {};
 for (const g of data.games) {
   const token = studioTokens[g.studio];
   const own = (await call('GET', '/api/developer/games?size=100', { token })).content;
@@ -93,6 +94,7 @@ for (const g of data.games) {
   }
   if (!g.draft && game.status === 'DRAFT') await call('POST', `/api/developer/games/${game.id}/publish`, { token });
   gameIds[g.key] = game.id;
+  gameSlugs[g.key] = game.slug;
 }
 
 // ---------------------------------------------------------------- jugadores
@@ -153,7 +155,17 @@ for (const r of data.reviews) {
     } });
     count.reviews++;
   } catch (e) {
-    if (e.status !== 409) throw e; // ya la había escrito
+    if (e.status !== 409) throw e;
+    // ya la había escrito: se actualiza el texto por si cambió (p. ej. al traducir los datos demo)
+    const author = data.players.find((p) => p.username === r.player)?.displayName;
+    const existing = (await call('GET', `/api/games/${gameSlugs[r.game]}/reviews?size=100`)).content
+      .find((x) => x.author.displayName === author);
+    if (existing && existing.body !== r.body) {
+      await call('PUT', `/api/reviews/${existing.id}`, { token: playerTokens[r.player], body: {
+        gameId: gameIds[r.game], rating: r.rating, recommended: r.recommended, body: r.body,
+      } });
+      count.reviews++;
+    }
   }
 }
 
