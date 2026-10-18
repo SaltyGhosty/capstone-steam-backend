@@ -28,6 +28,12 @@ h3 a:hover { color: #b7ff3c; }
 .menu a, .menu button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px; border: 0; border-radius: 7px; color: #c3c9d1; background: none; font-size: 12px; text-decoration: none; text-align: left; }
 .menu a:hover, .menu button:hover { color: white; background: #1b2028; }
 .mobile-nav { display: none; }
+.site-footer { max-width: 1420px; margin: 0 auto; padding: 26px 40px 34px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 28px; border-top: 1px solid #20252d; color: #68717e; font-size: 11px; }
+.site-footer nav { display: flex; flex-wrap: wrap; gap: 6px 22px; }
+.site-footer nav a { color: #c9ced5; font-weight: 600; text-decoration: none; }
+.site-footer nav a:hover { color: #b7ff3c; }
+.site-footer p { margin: 0; }
+.footer-brand { display: flex; align-items: center; gap: 11px; color: white; text-decoration: none; letter-spacing: .13em; font-size: 14px; }
 
 /* Estados de carga, vacío y error */
 .state { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 70px 20px; color: #7d8693; font-size: 13px; text-align: center; }
@@ -266,6 +272,7 @@ td.row-actions > * { display: inline-flex; vertical-align: middle; margin-left: 
   .mobile-nav { display: flex; justify-content: space-around; padding: 8px 6px; border-bottom: 1px solid #20252d; background: rgba(9,12,17,.96); }
   .mobile-nav a { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 8px; border-radius: 7px; color: #8a929e; font-size: 9px; text-decoration: none; }
   .mobile-nav a.active { color: #c8ff68; }
+  .site-footer { padding: 22px 18px 30px; flex-direction: column; align-items: flex-start; }
   .game-grid.three, .review-list { grid-template-columns: 1fr; }
   .line { flex-wrap: wrap; }
   .line-cover { width: 90px; }

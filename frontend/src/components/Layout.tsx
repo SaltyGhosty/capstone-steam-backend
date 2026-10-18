@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { API_DOCS_URL } from '@/api/client';
 import { useStore } from '@/context/StoreContext';
 import { useI18n } from '@/i18n';
 import { initials } from '@/lib/format';
@@ -21,6 +22,23 @@ function Brand({ className }: { className: string }) {
     <Link className={className} to="/" aria-label={t('nav.home')}>
       <span className="brand-mark"><span /></span><b>ARCADE</b>
     </Link>
+  );
+}
+
+const GITHUB_URL = 'https://github.com/SaltyGhosty/capstone-steam-backend';
+const LINKEDIN_URL = import.meta.env.VITE_LINKEDIN_URL || 'https://www.linkedin.com/';
+
+function Footer() {
+  return (
+    <footer className="site-footer">
+      <Brand className="footer-brand" />
+      <nav aria-label="Footer">
+        <a href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
+        <a href={LINKEDIN_URL} target="_blank" rel="noreferrer">LinkedIn</a>
+        <a href={API_DOCS_URL} target="_blank" rel="noreferrer">API Docs</a>
+      </nav>
+      <p>Capstone Project · EPICODE FS0226IT</p>
+    </footer>
   );
 }
 
@@ -148,6 +166,7 @@ export default function Layout() {
         <div className="content">
           <Outlet />
         </div>
+        <Footer />
       </main>
 
       {toast && (
