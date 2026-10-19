@@ -13,7 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Verifica que las migraciones V1-V10 se aplican sobre H2 y que las
+ * Verifica que las migraciones V1-V11 se aplican sobre H2 y que las
  * restricciones clave del esquema funcionan.
  */
 @SpringBootTest
@@ -28,10 +28,10 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV10() {
+    void appliesAllMigrationsUpToV11() {
         var applied = flyway.info().applied();
-        assertThat(applied).hasSize(10);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
+        assertThat(applied).hasSize(11);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("11");
     }
 
     @Test
@@ -52,6 +52,27 @@ class FlywayMigrationTest {
         assertThatThrownBy(() -> jdbc.update(sql, high, low, low, high))
                 .isInstanceOf(DataIntegrityViolationException.class);
         assertThat(jdbc.queryForObject("SELECT profile_public FROM users WHERE id = ?", Boolean.class, a)).isFalse();
+    }
+
+    @Test
+    void friendshipsPairMustMatchRequesterAndAddressee() {
+        // los ids de identidad crecen: x < y < z
+        long x = insertUser("par_x");
+        long y = insertUser("par_y");
+        long z = insertUser("par_z");
+        assertThat(x).isLessThan(y);
+        assertThat(y).isLessThan(z);
+        String sql = "INSERT INTO friendships (requester_id, addressee_id, user_low_id, user_high_id, status) "
+                + "VALUES (?, ?, ?, ?, 'PENDING')";
+
+        // low/high ordenados y distintos, pero de otra pareja: solo lo frena ck_friendships_pair
+        assertThatThrownBy(() -> jdbc.update(sql, x, y, x, z))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update(sql, x, y, y, z))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        // coherente, con el solicitante como el mayor
+        assertThat(jdbc.update(sql, y, x, x, y)).isEqualTo(1);
     }
 
     @Test
