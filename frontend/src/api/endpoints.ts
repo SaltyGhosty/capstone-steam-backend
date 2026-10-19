@@ -1,7 +1,7 @@
 // Una función por endpoint del backend. La colección de Postman es el contrato de referencia.
 import { api } from './client';
 import type {
-  AuthResponse, Cart, CatalogQuery, GameDetail, GameRequest, GameStatus, GameSummary, Genre,
+  AuthResponse, Cart, CatalogQuery, ChatMessage, ChatResponse, GameDetail, GameRequest, GameStatus, GameSummary, Genre,
   LibraryEntry, Locale, Order, OrderSummary, Ownership, PageResponse, PaymentMethod, RegisterRequest, Review, ReviewRequest, Role,
   FriendRequest, FriendRequests, FriendResponse, PublicProfile, SearchHit, SteamSyncResult, UpdateProfileRequest, User,
   WishlistItem,
@@ -36,6 +36,12 @@ export const friendsApi = {
   reject: (id: number) => api<void>(`/api/friends/requests/${id}/reject`, { method: 'POST' }),
   cancel: (id: number) => api<void>(`/api/friends/requests/${id}`, { method: 'DELETE' }),
   remove: (username: string) => api<void>(`/api/friends/${encodeURIComponent(username)}`, { method: 'DELETE' }),
+};
+
+export const assistantApi = {
+  /** Los últimos mensajes (máx. 10); el último tiene que ser del usuario. El idioma sale de Accept-Language. */
+  chat: (messages: ChatMessage[]) =>
+    api<ChatResponse>('/api/recommendations/chat', { method: 'POST', body: { messages } }),
 };
 
 export const catalogApi = {

@@ -447,6 +447,17 @@ const es = {
   'cover.saveFirst': 'Guarda el juego antes de subir una portada',
   'cover.tooLarge': 'La portada no puede pesar más de 5 MB',
   'cover.invalidType': 'La portada tiene que ser una imagen JPEG, PNG o WebP',
+  // Bloque D
+  'assistant.open': 'Abrir el asistente',
+  'assistant.title': 'Asistente de recomendaciones',
+  'assistant.placeholder': 'Oscuro, difícil, con buena historia…',
+  'assistant.inputLabel': 'Escribe tu mensaje',
+  'assistant.send': 'Enviar',
+  'assistant.thinking': 'Pensando…',
+  'assistant.close': 'Cerrar el asistente',
+  'assistant.greeting': 'Dime qué te apetece: oscuro, relajante, para jugar con amigos…',
+  'assistant.unavailableUi': 'El asistente no está disponible ahora',
+  'assistant.rateLimitedUi': 'Has enviado demasiados mensajes. Inténtalo de nuevo más tarde.',
 };
 
 export type MessageKey = keyof typeof es;
@@ -881,6 +892,17 @@ const en: Messages = {
   'cover.saveFirst': 'Save the game before uploading a cover',
   'cover.tooLarge': 'The cover cannot be larger than 5 MB',
   'cover.invalidType': 'The cover must be a JPEG, PNG or WebP image',
+  // Bloque D
+  'assistant.open': 'Open the assistant',
+  'assistant.title': 'Recommendation assistant',
+  'assistant.placeholder': 'Dark, hard, with a great story…',
+  'assistant.inputLabel': 'Type your message',
+  'assistant.send': 'Send',
+  'assistant.thinking': 'Thinking…',
+  'assistant.close': 'Close the assistant',
+  'assistant.greeting': 'Tell me what you feel like: dark, relaxing, to play with friends…',
+  'assistant.unavailableUi': 'The assistant is not available right now',
+  'assistant.rateLimitedUi': 'You have sent too many messages. Try again later.',
 };
 
 const it: Messages = {
@@ -1312,6 +1334,17 @@ const it: Messages = {
   'cover.saveFirst': 'Salva il gioco prima di caricare una copertina',
   'cover.tooLarge': 'La copertina non può superare i 5 MB',
   'cover.invalidType': 'La copertina deve essere un’immagine JPEG, PNG o WebP',
+  // Bloque D
+  'assistant.open': 'Apri l’assistente',
+  'assistant.title': 'Assistente di consigli',
+  'assistant.placeholder': 'Scuro, difficile, con una bella storia…',
+  'assistant.inputLabel': 'Scrivi il tuo messaggio',
+  'assistant.send': 'Invia',
+  'assistant.thinking': 'Sto pensando…',
+  'assistant.close': 'Chiudi l’assistente',
+  'assistant.greeting': 'Dimmi cosa ti va: oscuro, rilassante, da giocare con gli amici…',
+  'assistant.unavailableUi': 'L’assistente non è disponibile in questo momento',
+  'assistant.rateLimitedUi': 'Hai inviato troppi messaggi. Riprova più tardi.',
 };
 
 export const MESSAGES = { es, en, it } as const;

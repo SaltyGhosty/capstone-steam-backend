@@ -294,3 +294,14 @@ export interface PublicProfile {
   library: ProfileGame[] | null;
   friends: FriendResponse[] | null;
 }
+
+/** Un mensaje del chat del asistente; role en minúscula, como en el backend. */
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatResponse {
+  reply: string;
+  games: GameSummary[];
+}
