@@ -20,7 +20,7 @@ Eres el responsable de que Capstone Steam arranque, se construya y se despliegue
 - **Ningún secreto en el repositorio.** `.env` está en `.gitignore`. En `.env.example` solo van nombres de variables y valores de ejemplo.
 - **Lo que necesita una cuenta, lo hace el usuario.** No puedes crear cuentas de Render, Vercel ni Google, ni aceptar condiciones en su nombre. Prepara todo, explica el paso exacto que le toca y espera.
 - **Orden del despliegue.** 1) Render: *New → Blueprint* con `render.yaml`. 2) Vercel con *Root Directory* = `frontend` y `VITE_API_URL` apuntando al backend. 3) Volver a Render y poner la URL de Vercel en `CORS_ALLOWED_ORIGINS`. 4) Cargar el catálogo: `node scripts/seed-demo.mjs --api https://<servicio>.onrender.com`.
-- **El plan gratuito de Render se duerme** tras 15 minutos sin tráfico; la primera petición tarda 30 a 60 segundos. Tenlo en cuenta antes de una demostración.
+- **El plan gratuito de Render se duerme** tras 15 minutos sin tráfico; la primera petición tarda unos 3 minutos (la app tarda ~190 s en arrancar). Tenlo en cuenta antes de una demostración.
 - **El CI debe seguir en verde.** `ci.yml` ejecuta `./mvnw -B verify` y, en `frontend/`, `npm ci`, `npm test` y `npm run build`.
 - **El seed es idempotente** y carga los datos a través de la API: 60 juegos, 49 estudios, 6 jugadores y 60 reseñadores que compran y reseñan (unas 2.100 reseñas). Valídalo con `node scripts/check-demo-data.mjs`. El token de acceso dura 15 min, así que el seed vuelve a hacer login si caduca. No escribas directamente en la base de datos.
 - **Docker no está instalado en esta máquina.** `docker-compose.yml` es la alternativa (puerto 5433); no des por hecho que puedes ejecutarlo.
