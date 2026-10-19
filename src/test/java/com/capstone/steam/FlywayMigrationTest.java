@@ -28,10 +28,23 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV7() {
-        var applied = flyway.info().applied();
-        assertThat(applied).hasSize(7);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("7");
+    void appliesAllMigrationsUpToV10() {
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
+    }
+
+    @Test
+    void refreshTokenHashIsUniqueAndTokensDieWithTheirUser() {
+        long userId = insertUser("refresher");
+        jdbc.update("""
+                INSERT INTO refresh_tokens (user_id, token_hash, family_id, expires_at)
+                VALUES (?, 'h1', 'f1', CURRENT_TIMESTAMP)""", userId);
+        assertThatThrownBy(() -> jdbc.update("""
+                INSERT INTO refresh_tokens (user_id, token_hash, family_id, expires_at)
+                VALUES (?, 'h1', 'f2', CURRENT_TIMESTAMP)""", userId))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        jdbc.update("DELETE FROM users WHERE id = ?", userId);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM refresh_tokens", Integer.class)).isZero();
     }
 
     @Test

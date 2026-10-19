@@ -15,6 +15,7 @@ app:
   jwt:
     secret: dGVzdC1zZWNyZXQtY2Fwc3RvbmUtc3RlYW0tMzItYnl0ZXMtbWluaW11bS0hIQ==
     expiration: PT15M
+    refresh-expiration: P7D
   admin:
     username: admin
     email: admin@test.local
