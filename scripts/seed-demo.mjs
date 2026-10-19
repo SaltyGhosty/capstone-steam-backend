@@ -53,20 +53,20 @@ async function call(method, path, { token, body, accept = [] } = {}) {
   return json;
 }
 
-/** Registra la cuenta o, si ya existe, inicia sesión. Devuelve el token. */
+/** Inicia sesión y, si la cuenta no existe (401), la registra. Devuelve token, id y el usuario. */
 async function account(username, displayName, accountType) {
   try {
-    const res = await call('POST', '/api/auth/register', { body: {
-      username, displayName, accountType, password: data.password, email: `${username}@demo.capstone-steam.local`,
-    } });
-    sessionUser.set(res.accessToken, username);
-    return { token: res.accessToken, created: true, id: res.user.id };
-  } catch (e) {
-    if (e.status !== 409) throw e;
     const res = await call('POST', '/api/auth/login', { body: { login: username, password: data.password } });
     sessionUser.set(res.accessToken, username);
-    return { token: res.accessToken, created: false, id: res.user.id };
+    return { token: res.accessToken, created: false, id: res.user.id, user: res.user };
+  } catch (e) {
+    if (e.status !== 401) throw e;
   }
+  const res = await call('POST', '/api/auth/register', { body: {
+    username, displayName, accountType, password: data.password, email: `${username}@demo.capstone-steam.local`,
+  } });
+  sessionUser.set(res.accessToken, username);
+  return { token: res.accessToken, created: true, id: res.user.id, user: res.user };
 }
 
 const count = { studios: 0, games: 0, orders: 0, reviews: 0, reviewers: 0, generated: 0 };
@@ -84,10 +84,12 @@ for (const s of data.studios) {
 
 const gameIds = {};
 const gameSlugs = {};
+const ownGames = {}; // estudio -> sus juegos (una sola lectura por estudio)
 const gameStatus = {}; // key -> estado real en la BD (un admin pudo retirar un juego)
 for (const g of data.games) {
   const token = studioTokens[g.studio];
-  const own = (await call('GET', '/api/developer/games?size=100', { token })).content;
+  ownGames[g.studio] ??= (await call('GET', '/api/developer/games?size=100', { token })).content;
+  const own = ownGames[g.studio];
   let game = own.find((x) => x.title === g.title);
   if (!game) {
     const missing = g.genres.filter((slug) => !genres[slug]);
@@ -98,6 +100,7 @@ for (const g of data.games) {
       releaseDate: g.releaseDate, coverUrl: coverUrl(g.steamAppId), steamAppId: g.steamAppId,
       genreIds: g.genres.map((slug) => genres[slug]),
     } });
+    own.push(game);
     count.games++;
     log(`+ ${g.title}${g.draft ? ' (borrador)' : ''}`);
   }
@@ -193,24 +196,30 @@ for (const [player, minutesByGame] of Object.entries(data.playtime)) {
   }
 }
 
+// Índice de las reseñas que ya hay (una lectura por juego publicado, paginada): evita los POST que darían 409.
+const reviewIndex = new Map(); // `${idAutor}:${idJuego}` -> reseña
+const reviewKey = (userId, gameId) => `${userId}:${gameId}`;
+for (const g of data.games) {
+  if (!live(g.key)) continue;
+  for (let page = 0, pages = 1; page < pages; page++) {
+    const res = await call('GET', `/api/games/${gameSlugs[g.key]}/reviews?size=100&page=${page}`);
+    pages = res.totalPages;
+    for (const x of res.content) reviewIndex.set(reviewKey(x.author.id, x.gameId), x);
+  }
+}
+
 for (const r of data.reviews) {
   if (!live(r.game)) continue;
-  try {
-    await call('POST', '/api/reviews', { token: playerTokens[r.player], body: {
-      gameId: gameIds[r.game], recommended: r.recommended, body: r.body, language: r.language,
-    } });
+  const body = { gameId: gameIds[r.game], recommended: r.recommended, body: r.body, language: r.language };
+  const key = reviewKey(playerIds[r.player], gameIds[r.game]);
+  const existing = reviewIndex.get(key);
+  if (!existing) {
+    reviewIndex.set(key, await call('POST', '/api/reviews', { token: playerTokens[r.player], body }));
     count.reviews++;
-  } catch (e) {
-    if (e.status !== 409) throw e;
+  } else if (existing.body !== r.body || existing.language !== r.language || existing.recommended !== r.recommended) {
     // ya la había escrito: se actualiza si cambió el texto, el idioma o el voto (p. ej. al traducir los datos demo)
-    const existing = (await call('GET', `/api/games/${gameSlugs[r.game]}/reviews?size=100`)).content
-      .find((x) => x.author.id === playerIds[r.player]);
-    if (existing && (existing.body !== r.body || existing.language !== r.language || existing.recommended !== r.recommended)) {
-      await call('PUT', `/api/reviews/${existing.id}`, { token: playerTokens[r.player], body: {
-        gameId: gameIds[r.game], recommended: r.recommended, body: r.body, language: r.language,
-      } });
-      count.reviews++;
-    }
+    reviewIndex.set(key, await call('PUT', `/api/reviews/${existing.id}`, { token: playerTokens[r.player], body }));
+    count.reviews++;
   }
 }
 
@@ -240,13 +249,14 @@ for (const g of published) {
 }
 
 for (const r of reviewers) {
-  const { token, created } = await account(r.username, r.displayName, 'PLAYER');
+  const { token, created, id, user } = await account(r.username, r.displayName, 'PLAYER');
   if (created) count.reviewers++;
-  await call('PATCH', '/api/users/me', { token, body: { locale: r.lang } });
-  const assigned = plan[r.username] ?? [];
+  if (user.locale !== r.lang) await call('PATCH', '/api/users/me', { token, body: { locale: r.lang } });
+  const missing = (plan[r.username] ?? []).filter((a) => !reviewIndex.has(reviewKey(id, gameIds[a.game.key])));
+  if (!missing.length) continue; // relanzamiento: ya está todo
 
   const library = new Set((await call('GET', '/api/library?size=100', { token })).content.map((e) => e.gameId));
-  const pending = assigned.filter((a) => !library.has(gameIds[a.game.key]));
+  const pending = missing.filter((a) => !library.has(gameIds[a.game.key]));
   let bought = 0;
   if (pending.length) {
     if (!(await buyPaid(token, pending.map((a) => a.game.key), r.username))) {
@@ -256,20 +266,14 @@ for (const r of reviewers) {
     bought = pending.length;
   }
 
-  let reviewed = 0;
-  for (const { game, recommended, text } of assigned) {
-    try {
-      await call('POST', '/api/reviews', { token, body: {
-        gameId: gameIds[game.key], recommended, language: r.lang,
-        body: text,
-      } });
-      reviewed++;
-    } catch (e) {
-      if (e.status !== 409) throw e; // ya existe: las generadas no se reescriben
-    }
+  for (const { game, recommended, text } of missing) {
+    const review = await call('POST', '/api/reviews', { token, body: {
+      gameId: gameIds[game.key], recommended, language: r.lang, body: text,
+    } });
+    reviewIndex.set(reviewKey(id, gameIds[game.key]), review);
   }
-  count.generated += reviewed;
-  if (bought || reviewed) log(`${r.username}: compra ${bought}, reseña ${reviewed}`);
+  count.generated += missing.length;
+  log(`${r.username}: compra ${bought}, reseña ${missing.length}`);
 }
 
 console.log(`Listo: ${count.studios} estudios, ${count.games} juegos, ${count.orders} pedidos y ${count.reviews} reseñas nuevos.`);
