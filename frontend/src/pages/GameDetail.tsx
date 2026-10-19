@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import { catalogApi, libraryApi, reviewApi } from '@/api/endpoints';
@@ -107,6 +107,8 @@ function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Owners
     () => catalogApi.reviews(game.slug, page, 6, allLanguages ? undefined : lang),
     [game.slug, page, allLanguages, lang, game.reviewCount, game.positivePercent],
   );
+  // Otro idioma de interfaz es otra lista: se vuelve a la primera página
+  useEffect(() => setPage(0), [lang]);
   const languageName = LOCALES.find((l) => l.value === lang)?.label ?? lang;
   const pickScope = (all: boolean) => { setAllLanguages(all); setPage(0); };
 
@@ -118,6 +120,7 @@ function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Owners
       await reviewApi.remove(review.id);
       notify(t('review.deleted'));
       onChanged();
+      reviews.reload();
     } catch (e) {
       notifyError(e);
     }
@@ -158,7 +161,7 @@ function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Owners
         {reviews.data?.content.map((r) =>
           editing?.id === r.id ? (
             <ReviewForm key={r.id} gameId={game.id} review={r}
-              onSaved={() => { setEditing(null); onChanged(); }} onCancel={() => setEditing(null)} />
+              onSaved={() => { setEditing(null); onChanged(); reviews.reload(); }} onCancel={() => setEditing(null)} />
           ) : (
             <article key={r.id} className="review">
               <header>
@@ -206,7 +209,7 @@ function ReviewForm({ gameId, review, onSaved, onCancel }: { gameId: number; rev
     setSaving(true);
     setErrors({});
     try {
-      const payload = { gameId, recommended, body: body.trim() || undefined, language: getLang() };
+      const payload = { gameId, recommended, body: body.trim() || undefined, language: review?.language ?? getLang() };
       if (review) await reviewApi.update(review.id, payload);
       else await reviewApi.create(payload);
       notify(review ? t('review.updated') : t('review.thanks'));
