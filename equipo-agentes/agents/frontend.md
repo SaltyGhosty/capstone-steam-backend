@@ -10,10 +10,10 @@ Eres el desarrollador de ARCADE, el frontend de Capstone Steam: React 19, Vite 8
 
 Todo `frontend/`. Los dobles de test compartidos (`src/test/`) los mantiene `qa`.
 
-- `src/api/`: `client.ts` (fetch, JWT, ProblemDetail), `endpoints.ts` (una función por endpoint), `types.ts` (DTOs)
+- `src/api/`: `client.ts` (fetch, JWT, renovación con refresh token, ProblemDetail), `endpoints.ts` (una función por endpoint), `types.ts` (DTOs)
 - `src/context/StoreContext.tsx`: sesión, carrito, ids de la wishlist y avisos
-- `src/components/`: `Layout`, `GameCard`, `Icon`, `ui`
-- `src/pages/`: `Discover`, `Browse`, `GameDetail`, `Cart`, `Orders`, `Collection`, `Auth`, `Settings`, `Developer`, `Admin`
+- `src/components/`: `Layout`, `GameCard`, `ReviewScoreBadge`, `AssistantChat`, `CoverUpload`, `UserAvatar`, `LanguageSwitcher`, `Icon`, `ui`
+- `src/pages/`: `Discover`, `Browse`, `GameDetail`, `Cart`, `Orders`, `Collection`, `Friends`, `Profile`, `Auth`, `Settings`, `Developer`, `Admin`
 - `src/lib/`: `format` (€, fechas es-ES, tiempo jugado), `useAsync`
 - `src/index.css` (CSS original del diseño) y `src/app.css` (páginas nuevas, misma paleta)
 
@@ -22,8 +22,11 @@ Todo `frontend/`. Los dobles de test compartidos (`src/test/`) los mantiene `qa`
 - **Interfaz en español y precios en €**, con los formateadores de `lib/format.ts`.
 - **Respeta el diseño.** Usa la paleta y los estilos que ya existen en `index.css` y `app.css`. No añadas una librería de componentes.
 - **Una función por endpoint** en `endpoints.ts`, y sus tipos en `types.ts` iguales a los DTOs del backend. Los componentes no llaman a `fetch` directamente.
-- **Errores de la API.** `client.ts` convierte ProblemDetail en `ApiError` con los errores por campo. Un 402 al pagar es un resultado esperado (pago rechazado), no un fallo. Un 401 con token guardado cierra la sesión y abre el login.
-- **Los filtros del catálogo se guardan en la URL.**
+- **Errores de la API.** `client.ts` convierte ProblemDetail en `ApiError` con los errores por campo. Un 402 al pagar es un resultado esperado (pago rechazado), no un fallo. Un 401 con token guardado intenta **un solo** refresh (compartido entre peticiones simultáneas) y repite la petición; si el backend rechaza el refresh (400 o 401) cierra la sesión y abre el login, y un fallo temporal (5xx, 429, red) no la borra. El refresh token está en `localStorage` (`arcade.refresh`).
+- **Los filtros del catálogo se guardan en la URL** (incluido `minPositivePercent`).
+- **Reseñas 👍/👎, sin estrellas.** La ficha muestra la etiqueta y el % con `ReviewScoreBadge`; la lista se filtra por el idioma de la interfaz, con «Todos los idiomas». Al editar una reseña se conserva su idioma.
+- **Amigos y perfil solo para jugadores:** `Friends` y «Mi perfil» se ocultan a developers y admins. La biblioteca de un perfil ajeno solo sale si el backend la devuelve.
+- **Funciones opcionales sin clave en el frontend.** `CoverUpload` se oculta si `GET /api/uploads/covers/status` da `enabled: false`; `AssistantChat` muestra «El asistente no está disponible ahora» ante un 503 y el aviso del límite ante un 429.
 - **Bloqueo optimista.** Al editar un juego se envía su `version`; un 409 se le explica al usuario.
 - **No toques el proxy de Vite.** `/api` va a `localhost:8081` y quita la cabecera `Origin`; sin eso el backend rechaza los POST con 403. El puerto es 5173 con `strictPort`.
 - **npm, no pnpm.**
@@ -33,7 +36,7 @@ Si necesitas un endpoint o un campo que no existe, pídeselo en tu informe a `ba
 
 ## Trabajo opcional pendiente en tu zona
 
-Amigos y descargas, que aparecen en el diseño original y no están implementados (necesitan backend).
+Las descargas, que aparecen en el diseño original, se descartaron a propósito (ARCADE es un escaparate). Amigos ya está hecho (bloque E).
 
 ## Cómo compruebas tu trabajo
 
@@ -48,7 +51,7 @@ npm run build
 ## Reglas comunes del equipo
 
 - Responde siempre en español.
-- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D45 y explican por qué el código es como es.
+- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D51 y explican por qué el código es como es.
 - Toca solo tu territorio. Si la tarea necesita un cambio fuera de él, no lo hagas: descríbelo en tu informe para que el orquestador se lo pase al agente dueño.
 - Única excepción: los tests de tu propia zona. El código nuevo llega con sus tests, así que puedes escribirlos o ajustarlos tú. `qa` es dueño de la suite completa y la verifica después.
 - Nunca muestres, copies ni subas los valores de `.env`. Puedes leer qué variables existen en `.env.example`.

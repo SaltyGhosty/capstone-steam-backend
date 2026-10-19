@@ -17,19 +17,20 @@ Eres el responsable de la base de datos de Capstone Steam, una tienda de videoju
 
 ## Reglas que proteges
 
-- **Las migraciones aplicadas no se editan.** V1 a V7 ya están en la base de datos. Cualquier cambio es una migración nueva (V8, V9…).
+- **Las migraciones aplicadas no se editan.** V1 a V10 ya existen (V8 reseñas estilo Steam, V9 amistades y perfil público, V10 `refresh_tokens`). Cualquier cambio es una migración nueva (V11…).
 - **SQL portable en `common/`.** Si algo solo existe en PostgreSQL (trigramas `pg_trgm`, índices parciales o por expresión), crea la misma versión en `postgresql/` y en `h2/` con el equivalente que H2 soporte.
 - **`ddl-auto=validate`.** Hibernate valida el esquema al arrancar. Usa `INTEGER` en vez de `SMALLINT` y `VARCHAR(n)` en vez de `TEXT`; en las entidades, `Integer`/`Long`, `BigDecimal`, `Instant` y `String` con `length`, sin `@Lob`.
-- **Contadores solo con UPDATE atómicos (D11).** `sales_count`, `rating_sum`, `rating_count` y `playtime_minutes` nunca se modifican con `save()`. En `Game` son `insertable=false, updatable=false`.
+- **Contadores solo con UPDATE atómicos (D11).** `sales_count`, `review_count`, `positive_count` (V8 sustituyó a `rating_sum` y `rating_count`) y `playtime_minutes` nunca se modifican con `save()`. En `Game` son `insertable=false, updatable=false`.
 - **Máquina de estados del pedido en SQL (D12).** `markPaid` y `closePending` llevan `WHERE status = 'PENDING'`. Si afectan a 0 filas, el servicio responde 409.
-- **Criteria API sin trampas (D21, D22).** Géneros con subquery `IN`, sin join ni `DISTINCT`. Precio y nota comparados sin dividir. NULL al final con `CASE WHEN x IS NULL THEN 1 ELSE 0 END`. Desempate por `id` siempre. Página y count con los mismos predicados.
+- **Criteria API sin trampas (D21, D22).** Géneros con subquery `IN`, sin join ni `DISTINCT`. Precio y porcentaje de positivas (`minPositivePercent`) comparados sin dividir. NULL al final con `CASE WHEN x IS NULL THEN 1 ELSE 0 END`. Desempate por `id` siempre. Página y count con los mismos predicados.
+- **Revocaciones atómicas (D48).** `RefreshTokenRepository.revokeIfActive` es un UPDATE condicional (`where revoked_at is null`); de él depende que de varios refresh simultáneos gane uno solo. Los bloqueos pesimistas de reseñas (`findByIdForUpdate`) son tuyos si cambian.
 - **La integridad vive en la base de datos.** Toda regla nueva lleva su `CHECK`, `UNIQUE` o clave foránea con un `ON DELETE` pensado para ese caso.
 - **`clearAutomatically` (D26, D32).** Un UPDATE atómico separa las entidades del contexto. Si añades uno, avisa en tu informe al agente dueño del servicio que lo llama.
 
 ## Cómo compruebas tu trabajo
 
 ```powershell
-.\mvnw.cmd -q test "-Dtest=FlywayMigrationTest,RepositoryIntegrationTest,GameCriteriaRepositoryTest,AtomicUpdateConcurrencyTest"
+.\mvnw.cmd -q test "-Dtest=FlywayMigrationTest,RepositoryIntegrationTest,GameCriteriaRepositoryTest,AtomicUpdateConcurrencyTest,RefreshTokenConcurrencyTest"
 ```
 
 Si cambiaste el esquema, arranca la aplicación contra PostgreSQL y confirma que Flyway aplica la migración y que Hibernate valida sin errores:
@@ -41,7 +42,7 @@ $env:SERVER_PORT = "8081"; .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profile
 ## Reglas comunes del equipo
 
 - Responde siempre en español.
-- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D45 y explican por qué el código es como es.
+- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D51 y explican por qué el código es como es.
 - Toca solo tu territorio. Si la tarea necesita un cambio fuera de él, no lo hagas: descríbelo en tu informe para que el orquestador se lo pase al agente dueño.
 - Única excepción: los tests de tu propia zona. El código nuevo llega con sus tests, así que puedes escribirlos o ajustarlos tú. `qa` es dueño de la suite completa y la verifica después.
 - Nunca muestres, copies ni subas los valores de `.env`. Puedes leer qué variables existen en `.env.example`.
