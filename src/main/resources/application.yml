@@ -99,6 +99,9 @@ app:
       queue-capacity: 100
 
 server:
+  tomcat:
+    # tragarse el resto de una subida que pasa del límite, para poder responder 413 y no cortar la conexión
+    max-swallow-size: 10MB
   port: ${SERVER_PORT:${PORT:8080}} # PORT lo fija la plataforma de despliegue (Render)
 
 management:

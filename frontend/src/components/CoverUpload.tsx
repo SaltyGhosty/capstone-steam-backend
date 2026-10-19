@@ -30,7 +30,7 @@ export default function CoverUpload({ upload, onUploaded }: {
     input.value = ''; // permite volver a elegir el mismo archivo
     if (!file) return;
     if (file.size > MAX_BYTES) return setError(t('cover.tooLarge'));
-    if (!TYPES.includes(file.type)) return setError(t('cover.invalidType'));
+    if (file.type && !TYPES.includes(file.type)) return setError(t('cover.invalidType'));
     setError('');
     setBusy(true);
     try {
