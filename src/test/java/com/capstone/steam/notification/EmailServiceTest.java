@@ -88,10 +88,17 @@ class EmailServiceTest {
     }
 
     @Test
-    void uppercaseHttpSchemeIsAccepted() throws Exception {
-        receipt(List.of(line("Celeste", "HTTP://img.test/c.jpg", "15.00")), "15.00");
+    void uppercaseHttpsSchemeIsAccepted() throws Exception {
+        receipt(List.of(line("Celeste", "HTTPS://img.test/c.jpg", "15.00")), "15.00");
 
-        assertThat((String) sentMessage().getContent()).contains("<img src=\"HTTP://img.test/c.jpg\"");
+        assertThat((String) sentMessage().getContent()).contains("<img src=\"HTTPS://img.test/c.jpg\"");
+    }
+
+    @Test
+    void receiptDropsPlainHttpCover() throws Exception {
+        receipt(List.of(line("Celeste", "http://img.test/c.jpg", "15.00")), "15.00");
+
+        assertThat((String) sentMessage().getContent()).doesNotContain("<img");
     }
 
     @Test
@@ -117,8 +124,9 @@ class EmailServiceTest {
     }
 
     @Test
-    void safeImageUrlOnlyAcceptsHttpAndHttps() {
+    void safeImageUrlOnlyAcceptsHttps() {
         assertThat(EmailTemplates.safeImageUrl("https://a.test/x.png")).isEqualTo("https://a.test/x.png");
+        assertThat(EmailTemplates.safeImageUrl("http://a.test/x.png")).isNull();
         assertThat(EmailTemplates.safeImageUrl(" HtTpS://a.test/x.png ")).isEqualTo("HtTpS://a.test/x.png");
         assertThat(EmailTemplates.safeImageUrl("javascript:alert(1)")).isNull();
         assertThat(EmailTemplates.safeImageUrl("//a.test/x.png")).isNull();
@@ -166,7 +174,7 @@ class EmailServiceTest {
         assertThat(EmailTemplates.safeImageUrl("https//a.test/x.png")).isNull();
         assertThat(EmailTemplates.safeImageUrl("httpsx://a.test/x.png")).isNull();
         assertThat(EmailTemplates.safeImageUrl("   ")).isNull();
-        assertThat(EmailTemplates.safeImageUrl("http://a.test/x.png")).isEqualTo("http://a.test/x.png");
+        assertThat(EmailTemplates.safeImageUrl("http://a.test/x.png")).isNull();
     }
 
     @Test

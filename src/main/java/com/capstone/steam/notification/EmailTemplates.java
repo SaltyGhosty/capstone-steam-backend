@@ -168,15 +168,15 @@ final class EmailTemplates {
 
     /**
      * La portada la escribe un developer y llega al correo de otro usuario: solo se acepta una URL
-     * http(s). Cualquier otra cosa ({@code javascript:}, {@code data:}, rutas relativas...) se descarta.
+     * https. Sin TLS, la petición de la imagen viaja en claro. Cualquier otra cosa ({@code http:},
+     * {@code javascript:}, {@code data:}, rutas relativas...) se descarta.
      */
     static String safeImageUrl(String url) {
         if (url == null || url.isBlank()) {
             return null;
         }
         String trimmed = url.trim();
-        String lower = trimmed.toLowerCase(Locale.ROOT);
-        return lower.startsWith("http://") || lower.startsWith("https://") ? trimmed : null;
+        return trimmed.toLowerCase(Locale.ROOT).startsWith("https://") ? trimmed : null;
     }
 
     /** "¡Hola, Ana!" o, si el usuario no tiene nombre visible, "¡Hola!". El nombre sale escapado. */
