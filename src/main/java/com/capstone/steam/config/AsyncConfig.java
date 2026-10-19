@@ -2,6 +2,7 @@ package com.capstone.steam.config;
 
 import java.util.Arrays;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,10 +42,14 @@ public class AsyncConfig implements AsyncConfigurer {
         return executor;
     }
 
-    /** Red de seguridad para métodos @Async void: sin esto, una excepción se perdería en silencio. */
+    /**
+     * Red de seguridad para métodos @Async void: sin esto, una excepción se perdería en silencio.
+     * Solo se registra el tipo de cada parámetro: los eventos de correo llevan emails.
+     */
     @Override
     public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
         return (ex, method, params) -> log.error("Error en tarea asíncrona {}({})", method.getName(),
-                Arrays.toString(params), ex);
+                Arrays.stream(params).map(p -> p == null ? "null" : p.getClass().getSimpleName())
+                        .collect(Collectors.joining(", ")), ex);
     }
 }
