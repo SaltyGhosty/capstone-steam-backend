@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 296 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 65 tests en 14 archivos · CI en GitHub Actions |
+| **Tests** | Backend: 311 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 69 tests en 14 archivos · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 72 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -132,6 +132,7 @@ cp .env.example .env    # y rellena los valores
 | `CLOUDINARY_URL` | Opcional | `cloudinary://<api_key>:<api_secret>@<cloud_name>`, de una cuenta gratuita de Cloudinary. Si está vacía, la subida de portadas se desactiva sola (se pueden seguir pegando URLs) |
 | `OPENROUTER_API_KEY` | Opcional | Clave de [openrouter.ai/keys](https://openrouter.ai/keys). Si está vacía, el asistente se desactiva solo y responde 503 sin hacer ninguna llamada de red |
 | `OPENROUTER_MODEL` | Opcional | Modelo del asistente (por defecto `google/gemma-4-31b-it:free`). Los modelos `:free` exigen activar una opción de privacidad en la cuenta de OpenRouter |
+| `app.openrouter.global-per-hour` / `cooldown` | En `application.yml` | Tope de mensajes por hora entre todos los usuarios (200) y la pausa tras un 429 de OpenRouter (5 min), para no agotar el cupo gratuito |
 
 ### 3. Arrancar
 ```bash
@@ -291,7 +292,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 296 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 311 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
@@ -306,7 +307,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 
 Los tests usan H2 en modo PostgreSQL **con las mismas migraciones de Flyway** que producción; no hay `ddl-auto=create`.
 
-**Frontend** (`cd frontend && npm test`): 65 tests en 14 archivos, con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402, y la renovación de la sesión con refresh token), los formateadores, la detección del idioma del navegador y los flujos de login, registro, checkout (pedido → pago aprobado o rechazado), ajustes, la ficha del juego (reseñas 👍/👎 y filtro por idioma), amigos y perfil, la subida de portadas y el chat del asistente sobre las páginas reales con `fetch` simulado, además de la traducción de la interfaz (mismas claves en los tres idiomas, banderas y `Accept-Language`).
+**Frontend** (`cd frontend && npm test`): 69 tests en 14 archivos, con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402, y la renovación de la sesión con refresh token), los formateadores, la detección del idioma del navegador y los flujos de login, registro, checkout (pedido → pago aprobado o rechazado), ajustes, la ficha del juego (reseñas 👍/👎 y filtro por idioma), amigos y perfil, la subida de portadas y el chat del asistente sobre las páginas reales con `fetch` simulado, además de la traducción de la interfaz (mismas claves en los tres idiomas, banderas y `Accept-Language`).
 
 **CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta `./mvnw verify` y los tests y el build del frontend en cada push a `main`.
 

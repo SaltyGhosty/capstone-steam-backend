@@ -73,7 +73,7 @@ src/
 
 ## Tests
 
-`npm test`: 65 tests en 14 archivos.
+`npm test`: 69 tests en 14 archivos.
 
 | Archivo | Qué comprueba |
 |---|---|
