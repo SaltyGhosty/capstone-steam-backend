@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { setToken } from '@/api/client';
 import { mockFetch, page, type Routes } from '@/test/http';
+import { t, useI18n } from '@/i18n';
 import { demoUser, renderRoutes } from '@/test/render';
 import GameDetail from './GameDetail';
 
@@ -20,7 +21,13 @@ const review = {
   author: { id: 3, displayName: 'Ana' }, createdAt: '2026-02-01T10:00:00Z', updatedAt: '2026-02-01T10:00:00Z',
 };
 
+function LangSwitch() {
+  const { setLang } = useI18n();
+  return <button onClick={() => setLang('it')}>cambiar-a-it</button>;
+}
+
 const routes = { '/games/:slug': <GameDetail /> };
+const routesWithSwitch = { '/games/:slug': <><LangSwitch /><GameDetail /></> };
 
 function setup(extra: Routes = {}, loggedIn = false) {
   if (loggedIn) setToken('jwt-demo');
@@ -118,5 +125,24 @@ describe('ficha del juego', () => {
 
     expect(await screen.findByText('Texto nuevo')).toBeInTheDocument();
     expect(reviewCalls(fetchMock).length).toBeGreaterThan(before);
+  });
+
+  it('editar una reseña conserva su idioma aunque la interfaz esté en otro', async () => {
+    const fetchMock = setup({
+      'GET /api/games/neon-drift/reviews': { body: page([{ ...review, author: { id: 7, displayName: 'Demo Player' } }]) },
+      'GET /api/library/status/13': { body: { gameId: 13, owned: true, inCart: false, inWishlist: false, reviewed: true } },
+      'PUT /api/reviews/1': { body: review },
+    }, true);
+    renderRoutes(routesWithSwitch, '/games/neon-drift');
+
+    expect(await screen.findByText('Muy divertido')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'cambiar-a-it' }));
+    await userEvent.click(await screen.findByRole('button', { name: t('common.edit') }));
+    const form = screen.getByRole('heading', { name: t('review.editYours') }).closest('form')!;
+    await userEvent.click(within(form).getByRole('button', { name: t('common.saveChanges') }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(true));
+    const call = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')!;
+    expect(JSON.parse(String(call[1]!.body)).language).toBe('es');
   });
 });

@@ -207,7 +207,7 @@ function ReviewForm({ gameId, review, onSaved, onCancel }: { gameId: number; rev
     setSaving(true);
     setErrors({});
     try {
-      const payload = { gameId, recommended, body: body.trim() || undefined, language: getLang() };
+      const payload = { gameId, recommended, body: body.trim() || undefined, language: review?.language ?? getLang() };
       if (review) await reviewApi.update(review.id, payload);
       else await reviewApi.create(payload);
       notify(review ? t('review.updated') : t('review.thanks'));
