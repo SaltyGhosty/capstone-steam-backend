@@ -145,4 +145,19 @@ describe('ficha del juego', () => {
     const call = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')!;
     expect(JSON.parse(String(call[1]!.body)).language).toBe('es');
   });
+
+  it('al cambiar el idioma de la interfaz las reseñas vuelven a la página 0', async () => {
+    const fetchMock = setup({
+      'GET /api/games/neon-drift/reviews': { body: { ...page([review]), totalPages: 3, last: false } },
+    });
+    renderRoutes(routesWithSwitch, '/games/neon-drift');
+
+    expect(await screen.findByText('Muy divertido')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Página siguiente' }));
+    await waitFor(() => expect(reviewCalls(fetchMock).at(-1)!.searchParams.get('page')).toBe('1'));
+
+    await userEvent.click(screen.getByRole('button', { name: 'cambiar-a-it' }));
+    await waitFor(() => expect(reviewCalls(fetchMock).at(-1)!.searchParams.get('language')).toBe('it'));
+    expect(reviewCalls(fetchMock).at(-1)!.searchParams.get('page')).toBe('0');
+  });
 });

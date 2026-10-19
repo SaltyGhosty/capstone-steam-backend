@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import { catalogApi, libraryApi, reviewApi } from '@/api/endpoints';
@@ -107,6 +107,8 @@ function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Owners
     () => catalogApi.reviews(game.slug, page, 6, allLanguages ? undefined : lang),
     [game.slug, page, allLanguages, lang, game.reviewCount, game.positivePercent],
   );
+  // Otro idioma de interfaz es otra lista: se vuelve a la primera página
+  useEffect(() => setPage(0), [lang]);
   const languageName = LOCALES.find((l) => l.value === lang)?.label ?? lang;
   const pickScope = (all: boolean) => { setAllLanguages(all); setPage(0); };
 
