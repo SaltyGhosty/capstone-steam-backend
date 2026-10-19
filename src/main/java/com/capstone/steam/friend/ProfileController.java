@@ -4,10 +4,12 @@ import java.util.List;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.capstone.steam.friend.dto.PublicProfileResponse;
 import com.capstone.steam.friend.dto.SearchHit;
 import com.capstone.steam.security.AppUserPrincipal;
 
@@ -26,5 +28,11 @@ public class ProfileController {
     public List<SearchHit> search(@AuthenticationPrincipal AppUserPrincipal principal,
             @RequestParam(required = false) String q) {
         return friendService.search(principal.getId(), q);
+    }
+
+    @GetMapping("/{username}/profile")
+    public PublicProfileResponse profile(@AuthenticationPrincipal AppUserPrincipal principal,
+            @PathVariable String username) {
+        return friendService.profile(principal.getId(), username);
     }
 }

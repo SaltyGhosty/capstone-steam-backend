@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,8 @@ import com.capstone.steam.friend.dto.FriendRequestResponse;
 import com.capstone.steam.friend.dto.FriendRequestsResponse;
 import com.capstone.steam.friend.dto.FriendResponse;
 import com.capstone.steam.friend.dto.Relation;
+import com.capstone.steam.friend.dto.ProfileGame;
+import com.capstone.steam.friend.dto.PublicProfileResponse;
 import com.capstone.steam.friend.dto.SearchHit;
 import com.capstone.steam.friend.dto.UserCard;
 import com.capstone.steam.library.LibraryRepository;
@@ -33,6 +36,7 @@ public class FriendService {
 
     static final int MIN_QUERY_LENGTH = 2;
     static final int MAX_SEARCH_RESULTS = 20;
+    static final int PROFILE_LIBRARY_LIMIT = 100;
 
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
@@ -159,6 +163,39 @@ public class FriendService {
                 .filter(f -> f.getStatus() == FriendshipStatus.PENDING)
                 .filter(f -> (asAddressee ? f.getAddressee() : f.getRequester()).getId().equals(userId))
                 .orElseThrow(() -> NotFoundException.of("friendRequest", requestId));
+    }
+
+    // ------------------------------ Perfil ------------------------------
+
+    /**
+     * Perfil de un jugador. Biblioteca y amigos solo salen si quien mira es el propio usuario, un amigo
+     * o el perfil es público; si no, van a null. La regla vive aquí, no en el frontend.
+     */
+    @Transactional(readOnly = true)
+    public PublicProfileResponse profile(Long viewerId, String username) {
+        String name = username == null ? "" : username.trim();
+        User target = userRepository.findWithRolesByUsernameIgnoreCase(name)
+                .filter(FriendService::isPlayer)
+                .orElseThrow(() -> NotFoundException.of("user", name));
+
+        Friendship friendship = null;
+        Relation relation = Relation.SELF;
+        if (!target.getId().equals(viewerId)) {
+            friendship = friendshipRepository.findByPair(
+                    Math.min(viewerId, target.getId()), Math.max(viewerId, target.getId())).orElse(null);
+            relation = relation(viewerId, friendship);
+        }
+        boolean visible = relation == Relation.SELF || relation == Relation.FRIENDS || target.isProfilePublic();
+
+        List<ProfileGame> library = null;
+        List<FriendResponse> friends = null;
+        if (visible) {
+            library = libraryRepository.findByUserId(target.getId(), PageRequest.of(0, PROFILE_LIBRARY_LIMIT,
+                    Sort.by(Sort.Direction.DESC, "acquiredAt"))).map(ProfileGame::from).getContent();
+            friends = friends(target.getId());
+        }
+        return new PublicProfileResponse(UserCard.from(target), target.getCreatedAt(), target.isProfilePublic(),
+                relation, pendingId(friendship), visible, library, friends);
     }
 
     // ------------------------------ Utilidades ------------------------------

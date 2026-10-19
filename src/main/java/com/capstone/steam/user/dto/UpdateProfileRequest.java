@@ -9,5 +9,6 @@ import jakarta.validation.constraints.Size;
 public record UpdateProfileRequest(
         @Size(min = 1, max = 100) String displayName,
         @URL(regexp = "(?i)^(https?://.+)?$") @Size(max = 500) String avatarUrl,
-        @Pattern(regexp = "^(es|en|it)$", message = "{validation.locale}") String locale) {
+        @Pattern(regexp = "^(es|en|it)$", message = "{validation.locale}") String locale,
+        Boolean profilePublic) {
 }

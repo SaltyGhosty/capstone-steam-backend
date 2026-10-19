@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -221,7 +223,147 @@ class FriendIntegrationTest {
         mvc.perform(get("/api/friends/requests")).andExpect(status().isUnauthorized());
     }
 
+    // ------------------------------ Perfil ------------------------------
+
+    @Test
+    void privateProfileHidesLibraryAndFriendsFromStrangers() throws Exception {
+        mvc.perform(auth(get("/api/users/leo/profile"), ana))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.username").value("leo"))
+                .andExpect(jsonPath("$.profilePublic").value(false))
+                .andExpect(jsonPath("$.relation").value("NONE"))
+                .andExpect(jsonPath("$.visible").value(false))
+                .andExpect(jsonPath("$.memberSince").exists())
+                .andExpect(jsonPath("$.library").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.friends").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    void publicProfileIsVisibleToAnyLoggedUser() throws Exception {
+        mvc.perform(auth(patch("/api/users/me"), leo).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"profilePublic\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.profilePublic").value(true));
+        // otro PATCH sin el campo no lo cambia
+        mvc.perform(auth(patch("/api/users/me"), leo).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Leo L\"}"))
+                .andExpect(jsonPath("$.profilePublic").value(true));
+
+        mvc.perform(auth(get("/api/users/leo/profile"), ana))
+                .andExpect(jsonPath("$.visible").value(true))
+                .andExpect(jsonPath("$.profilePublic").value(true))
+                .andExpect(jsonPath("$.relation").value("NONE"))
+                .andExpect(jsonPath("$.library.length()").value(0))
+                .andExpect(jsonPath("$.friends.length()").value(0));
+    }
+
+    @Test
+    void friendsSeeAPrivateProfileAndItShowsFriends() throws Exception {
+        befriend(ana, "leo", leo);
+        befriend(sam, "leo", leo);
+
+        mvc.perform(auth(get("/api/users/leo/profile"), ana))
+                .andExpect(jsonPath("$.relation").value("FRIENDS"))
+                .andExpect(jsonPath("$.visible").value(true))
+                .andExpect(jsonPath("$.friends.length()").value(2))
+                .andExpect(jsonPath("$.friends[0].user.username").exists());
+        mvc.perform(auth(get("/api/users/ana/profile"), leo))
+                .andExpect(jsonPath("$.relation").value("FRIENDS"))
+                .andExpect(jsonPath("$.visible").value(true));
+    }
+
+    @Test
+    void pendingRequestDoesNotUnlockThePrivateProfile() throws Exception {
+        mvc.perform(sendRequest(ana, "leo")).andExpect(status().isCreated());
+        mvc.perform(auth(get("/api/users/leo/profile"), ana))
+                .andExpect(jsonPath("$.relation").value("REQUEST_SENT"))
+                .andExpect(jsonPath("$.requestId").exists())
+                .andExpect(jsonPath("$.visible").value(false))
+                .andExpect(jsonPath("$.library").value(org.hamcrest.Matchers.nullValue()));
+        mvc.perform(auth(get("/api/users/ana/profile"), leo))
+                .andExpect(jsonPath("$.relation").value("REQUEST_RECEIVED"))
+                .andExpect(jsonPath("$.visible").value(false));
+    }
+
+    @Test
+    void ownProfileIsAlwaysVisible() throws Exception {
+        mvc.perform(auth(get("/api/users/ana/profile"), ana))
+                .andExpect(jsonPath("$.relation").value("SELF"))
+                .andExpect(jsonPath("$.visible").value(true))
+                .andExpect(jsonPath("$.library").isArray());
+    }
+
+    @Test
+    void profileNeverExposesEmail() throws Exception {
+        mvc.perform(auth(patch("/api/users/me"), leo).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"profilePublic\":true}")).andExpect(status().isOk());
+        befriend(ana, "leo", leo);
+        mvc.perform(auth(get("/api/users/leo/profile"), ana)).andExpect(jsonPath("$..email").doesNotExist());
+        mvc.perform(auth(get("/api/users/ana/profile"), ana)).andExpect(jsonPath("$..email").doesNotExist());
+    }
+
+    @Test
+    void developersAdminsDisabledAndUnknownUsersHaveNoProfile() throws Exception {
+        mvc.perform(auth(get("/api/users/studio/profile"), ana)).andExpect(status().isNotFound());
+        mvc.perform(auth(get("/api/users/admin/profile"), ana)).andExpect(status().isNotFound());
+        mvc.perform(auth(get("/api/users/nadie/profile"), ana)).andExpect(status().isNotFound());
+
+        mvc.perform(auth(patch("/api/admin/users/" + leoId + "/enabled"), adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
+                .andExpect(status().isOk());
+        mvc.perform(auth(get("/api/users/leo/profile"), ana)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void libraryShowsPlaytimeMostRecentFirst() throws Exception {
+        long gameA = publishGame("Celeste");
+        long gameB = publishGame("Hades");
+        grant(leoId, gameA);
+        grant(leoId, gameB);
+        mvc.perform(auth(post("/api/library/" + gameA + "/play"), leo).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"minutes\":90}")).andExpect(status().isOk());
+        mvc.perform(auth(patch("/api/users/me"), leo).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"profilePublic\":true}")).andExpect(status().isOk());
+
+        String body = mvc.perform(auth(get("/api/users/leo/profile"), ana))
+                .andExpect(jsonPath("$.visible").value(true))
+                .andExpect(jsonPath("$.library.length()").value(2))
+                .andReturn().getResponse().getContentAsString();
+        List<Integer> minutes = JsonPath.read(body, "$.library[?(@.slug=='celeste')].playtimeMinutes");
+        org.assertj.core.api.Assertions.assertThat(minutes).containsExactly(90);
+        List<String> titles = JsonPath.read(body, "$.library[*].title");
+        org.assertj.core.api.Assertions.assertThat(titles).containsExactlyInAnyOrder("Celeste", "Hades");
+        mvc.perform(auth(get("/api/users/leo/profile"), ana))
+                .andExpect(jsonPath("$.library[0].gameId").exists())
+                .andExpect(jsonPath("$.library[0].slug").exists())
+                .andExpect(jsonPath("$..email").doesNotExist());
+    }
+
+    @Test
+    void profileEndpointRequiresSession() throws Exception {
+        mvc.perform(get("/api/users/leo/profile")).andExpect(status().isUnauthorized());
+    }
+
+
     // ------------------------------ Utilidades ------------------------------
+
+    private long publishGame(String title) throws Exception {
+        List<Integer> genreIds = JsonPath.read(mvc.perform(get("/api/genres")).andReturn().getResponse()
+                .getContentAsString(), "$[?(@.slug=='indie')].id");
+        String created = mvc.perform(auth(post("/api/developer/games"), studio).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"%s","price":20.00,"discountPercent":0,"genreIds":[%d]}"""
+                                .formatted(title, genreIds.getFirst())))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        int id = JsonPath.read(created, "$.id");
+        mvc.perform(auth(post("/api/developer/games/" + id + "/publish"), studio)).andExpect(status().isOk());
+        return id;
+    }
+
+    private void grant(long userId, long gameId) throws Exception {
+        mvc.perform(auth(post("/api/admin/users/" + userId + "/library/" + gameId), adminToken))
+                .andExpect(status().isCreated());
+    }
 
     private void befriend(String requesterToken, String addresseeUsername, String addresseeToken) throws Exception {
         int id = idOf(sendRequest(requesterToken, addresseeUsername));
