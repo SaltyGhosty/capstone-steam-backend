@@ -151,7 +151,7 @@ for (const [player, minutesByGame] of Object.entries(data.playtime)) {
 for (const r of data.reviews) {
   try {
     await call('POST', '/api/reviews', { token: playerTokens[r.player], body: {
-      gameId: gameIds[r.game], rating: r.rating, recommended: r.recommended, body: r.body,
+      gameId: gameIds[r.game], recommended: r.recommended, body: r.body, language: r.language,
     } });
     count.reviews++;
   } catch (e) {
@@ -162,7 +162,7 @@ for (const r of data.reviews) {
       .find((x) => x.author.displayName === author);
     if (existing && existing.body !== r.body) {
       await call('PUT', `/api/reviews/${existing.id}`, { token: playerTokens[r.player], body: {
-        gameId: gameIds[r.game], rating: r.rating, recommended: r.recommended, body: r.body,
+        gameId: gameIds[r.game], recommended: r.recommended, body: r.body, language: r.language,
       } });
       count.reviews++;
     }
