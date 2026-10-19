@@ -210,6 +210,11 @@ class AuthIntegrationTest {
         mvc.perform(patch("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"avatarUrl\":\"ftp://a.test/a.png\"}"))
                 .andExpect(status().isBadRequest());
+        for (String spaced : new String[] {" https://a.test/a.png", "https://a.test/a.png "}) {
+            mvc.perform(patch("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"avatarUrl\":\"" + spaced + "\"}"))
+                    .andExpect(status().isBadRequest());
+        }
         mvc.perform(patch("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"avatarUrl\":\"https://a.test/a.png\"}"))
                 .andExpect(status().isOk());
