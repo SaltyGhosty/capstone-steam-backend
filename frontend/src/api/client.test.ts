@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mockFetch } from '@/test/http';
-import { api, ApiError, setToken, setUnauthorizedHandler } from './client';
+import { api, ApiError, getRefreshToken, getToken, setRefreshToken, setToken, setUnauthorizedHandler } from './client';
 
 describe('cliente de la API', () => {
   it('envía el token y serializa los filtros del catálogo en la query', async () => {
@@ -50,6 +50,93 @@ describe('cliente de la API', () => {
     await expect(api('/api/cart')).rejects.toBeInstanceOf(ApiError);
     expect(onUnauthorized).toHaveBeenCalledOnce();
     setUnauthorizedHandler(null);
+  });
+
+  describe('renovación de la sesión', () => {
+    const renewed = { accessToken: 'nuevo', tokenType: 'Bearer', expiresIn: 900, refreshToken: 'refresh-2' };
+
+    it('ante un 401 con refresh guardado renueva los tokens y repite la petición', async () => {
+      setToken('caducado');
+      setRefreshToken('refresh-1');
+      const sent: string[] = [];
+      const fetchMock = mockFetch({
+        'GET /api/cart': (init) => {
+          const auth = (init.headers as Record<string, string>).Authorization;
+          sent.push(auth);
+          return auth === 'Bearer nuevo' ? { body: { items: [] } } : { status: 401, body: { detail: 'caducado' } };
+        },
+        'POST /api/auth/refresh': (init) => {
+          expect(JSON.parse(String(init.body))).toEqual({ refreshToken: 'refresh-1' });
+          return { body: renewed };
+        },
+      });
+
+      const cart = await api<{ items: unknown[] }>('/api/cart');
+
+      expect(cart).toEqual({ items: [] });
+      expect(sent).toEqual(['Bearer caducado', 'Bearer nuevo']);
+      expect(getToken()).toBe('nuevo');
+      expect(getRefreshToken()).toBe('refresh-2');
+      expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/auth/refresh')).toHaveLength(1);
+    });
+
+    it('dos peticiones simultáneas con 401 hacen un solo refresh y las dos se repiten', async () => {
+      setToken('caducado');
+      setRefreshToken('refresh-1');
+      const fetchMock = mockFetch({
+        'GET /api/cart': (init) =>
+          (init.headers as Record<string, string>).Authorization === 'Bearer nuevo'
+            ? { body: { ok: 'cart' } }
+            : { status: 401, body: {} },
+        'GET /api/wishlist': (init) =>
+          (init.headers as Record<string, string>).Authorization === 'Bearer nuevo'
+            ? { body: { ok: 'wishlist' } }
+            : { status: 401, body: {} },
+        'POST /api/auth/refresh': { body: renewed },
+      });
+
+      const [cart, wishlist] = await Promise.all([api('/api/cart'), api('/api/wishlist')]);
+
+      expect(cart).toEqual({ ok: 'cart' });
+      expect(wishlist).toEqual({ ok: 'wishlist' });
+      expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/auth/refresh')).toHaveLength(1);
+    });
+
+    it('si el refresh falla borra los dos tokens y avisa una sola vez', async () => {
+      const onUnauthorized = vi.fn();
+      setUnauthorizedHandler(onUnauthorized);
+      setToken('caducado');
+      setRefreshToken('refresh-malo');
+      const fetchMock = mockFetch({
+        'GET /api/cart': { status: 401, body: { detail: 'caducado' } },
+        'GET /api/wishlist': { status: 401, body: { detail: 'caducado' } },
+        'POST /api/auth/refresh': { status: 401, body: { detail: 'La sesión ha caducado' } },
+      });
+
+      const results = await Promise.allSettled([api('/api/cart'), api('/api/wishlist')]);
+
+      expect(results.map((r) => r.status)).toEqual(['rejected', 'rejected']);
+      expect(getToken()).toBeNull();
+      expect(getRefreshToken()).toBeNull();
+      expect(onUnauthorized).toHaveBeenCalledOnce();
+      // sin bucle: un solo refresh, y las peticiones originales no se repiten
+      expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/auth/refresh')).toHaveLength(1);
+      expect(fetchMock.mock.calls).toHaveLength(3);
+      setUnauthorizedHandler(null);
+    });
+
+    it('un 401 de /api/auth/login no intenta refrescar', async () => {
+      setToken('viejo');
+      setRefreshToken('refresh-1');
+      const fetchMock = mockFetch({
+        'POST /api/auth/login': { status: 401, body: { detail: 'Usuario o contraseña incorrectos' } },
+      });
+
+      await expect(api('/api/auth/login', { method: 'POST', body: {} })).rejects.toThrow('Usuario o contraseña incorrectos');
+
+      expect(fetchMock).toHaveBeenCalledOnce();
+      expect(getRefreshToken()).toBe('refresh-1');
+    });
   });
 
   it('da un mensaje claro si el backend no responde', async () => {

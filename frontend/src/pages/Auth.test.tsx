@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { getToken } from '@/api/client';
+import { getRefreshToken, getToken } from '@/api/client';
 import { mockFetch, page } from '@/test/http';
 import { demoUser, renderRoutes } from '@/test/render';
 import { Login, Register } from './Auth';
@@ -11,7 +11,7 @@ const emptyCart = { items: [], itemCount: 0, total: 0 };
 describe('login y registro', () => {
   it('inicia sesión, guarda el token y vuelve a la página de la que venía', async () => {
     const fetchMock = mockFetch({
-      'POST /api/auth/login': { body: { accessToken: 'jwt-demo', tokenType: 'Bearer', expiresIn: 7200, user: demoUser } },
+      'POST /api/auth/login': { body: { accessToken: 'jwt-demo', tokenType: 'Bearer', expiresIn: 900, refreshToken: 'refresh-demo', user: demoUser } },
       'GET /api/cart': { body: emptyCart },
       'GET /api/wishlist': { body: page([]) },
     });
@@ -23,6 +23,7 @@ describe('login y registro', () => {
 
     await waitFor(() => expect(path()).toBe('/'));
     expect(getToken()).toBe('jwt-demo');
+    expect(getRefreshToken()).toBe('refresh-demo');
     const body = JSON.parse(String(fetchMock.mock.calls[0]![1]!.body));
     expect(body).toEqual({ login: 'demo_player', password: 'password123' });
   });

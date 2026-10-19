@@ -13,6 +13,7 @@ import com.capstone.steam.auth.dto.LoginRequest;
 import com.capstone.steam.auth.dto.RegisterRequest;
 import com.capstone.steam.common.exception.ConflictException;
 import com.capstone.steam.common.exception.NotFoundException;
+import com.capstone.steam.common.exception.UnauthorizedException;
 import com.capstone.steam.notification.event.UserRegisteredEvent;
 import com.capstone.steam.security.AppUserPrincipal;
 import com.capstone.steam.security.JwtService;
@@ -32,15 +33,18 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final ApplicationEventPublisher events;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder,
-            AuthenticationManager authenticationManager, JwtService jwtService, ApplicationEventPublisher events) {
+            AuthenticationManager authenticationManager, JwtService jwtService, ApplicationEventPublisher events,
+            RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.events = events;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Transactional
@@ -73,7 +77,7 @@ public class AuthService {
         return issueToken(user);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional // guarda el refresh token
     public AuthResponse login(LoginRequest request) {
         var authentication = authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken.unauthenticated(request.login().trim(), request.password()));
@@ -83,9 +87,25 @@ public class AuthService {
         return issueToken(user);
     }
 
+    /** Rota el refresh token y emite un acceso nuevo con los roles actuales del usuario. */
+    @Transactional(noRollbackFor = UnauthorizedException.class)
+    public AuthResponse refresh(String refreshToken) {
+        RefreshTokenService.Rotation rotation = refreshTokenService.rotate(refreshToken);
+        return buildResponse(rotation.user(), rotation.refreshToken());
+    }
+
+    @Transactional
+    public void logout(String refreshToken) {
+        refreshTokenService.revoke(refreshToken);
+    }
+
     private AuthResponse issueToken(User user) {
+        return buildResponse(user, refreshTokenService.issue(user));
+    }
+
+    private AuthResponse buildResponse(User user, String refreshToken) {
         String token = jwtService.generateToken(AppUserPrincipal.fromUser(user));
-        return AuthResponse.bearer(token, jwtService.getExpirationSeconds(), UserResponse.from(user));
+        return AuthResponse.bearer(token, jwtService.getExpirationSeconds(), refreshToken, UserResponse.from(user));
     }
 
     private Role role(RoleName name) {

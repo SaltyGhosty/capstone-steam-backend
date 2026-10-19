@@ -13,7 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Verifica que las migraciones V1-V9 se aplican sobre H2 y que las
+ * Verifica que las migraciones V1-V10 se aplican sobre H2 y que las
  * restricciones clave del esquema funcionan.
  */
 @SpringBootTest
@@ -28,10 +28,10 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV9() {
+    void appliesAllMigrationsUpToV10() {
         var applied = flyway.info().applied();
-        assertThat(applied).hasSize(9);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("9");
+        assertThat(applied).hasSize(10);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
     }
 
     @Test
@@ -52,6 +52,21 @@ class FlywayMigrationTest {
         assertThatThrownBy(() -> jdbc.update(sql, high, low, low, high))
                 .isInstanceOf(DataIntegrityViolationException.class);
         assertThat(jdbc.queryForObject("SELECT profile_public FROM users WHERE id = ?", Boolean.class, a)).isFalse();
+    }
+
+    @Test
+    void refreshTokenHashIsUniqueAndTokensDieWithTheirUser() {
+        long userId = insertUser("refresher");
+        jdbc.update("""
+                INSERT INTO refresh_tokens (user_id, token_hash, family_id, expires_at)
+                VALUES (?, 'h1', 'f1', CURRENT_TIMESTAMP)""", userId);
+        assertThatThrownBy(() -> jdbc.update("""
+                INSERT INTO refresh_tokens (user_id, token_hash, family_id, expires_at)
+                VALUES (?, 'h1', 'f2', CURRENT_TIMESTAMP)""", userId))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        jdbc.update("DELETE FROM users WHERE id = ?", userId);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM refresh_tokens", Integer.class)).isZero();
     }
 
     @Test

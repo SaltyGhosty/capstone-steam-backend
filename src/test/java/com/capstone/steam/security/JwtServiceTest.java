@@ -17,7 +17,7 @@ class JwtServiceTest {
     private static final String SECRET = Base64.getEncoder()
             .encodeToString("una-clave-de-prueba-de-mas-de-32-bytes!!".getBytes());
 
-    private final JwtService jwtService = new JwtService(new JwtProperties(SECRET, Duration.ofMinutes(10)));
+    private final JwtService jwtService = new JwtService(new JwtProperties(SECRET, Duration.ofMinutes(10), Duration.ofDays(7)));
 
     @Test
     void generatedTokenRoundTripsIdUsernameAndRoles() {
@@ -46,7 +46,7 @@ class JwtServiceTest {
     @Test
     void rejectsTokenSignedWithAnotherKey() {
         String otherSecret = Base64.getEncoder().encodeToString("otra-clave-distinta-de-mas-de-32-bytes!!".getBytes());
-        String token = new JwtService(new JwtProperties(otherSecret, Duration.ofMinutes(10)))
+        String token = new JwtService(new JwtProperties(otherSecret, Duration.ofMinutes(10), Duration.ofDays(7)))
                 .generateToken(AppUserPrincipal.fromToken(1L, "a", List.of("ROLE_USER")));
 
         assertThatThrownBy(() -> jwtService.parseToken(token)).isInstanceOf(JwtException.class);
@@ -54,7 +54,7 @@ class JwtServiceTest {
 
     @Test
     void rejectsExpiredToken() {
-        var expiredIssuer = new JwtService(new JwtProperties(SECRET, Duration.ofSeconds(-5)));
+        var expiredIssuer = new JwtService(new JwtProperties(SECRET, Duration.ofSeconds(-5), Duration.ofDays(7)));
         String token = expiredIssuer.generateToken(AppUserPrincipal.fromToken(1L, "a", List.of("ROLE_USER")));
 
         assertThatThrownBy(() -> jwtService.parseToken(token)).isInstanceOf(ExpiredJwtException.class);
@@ -62,10 +62,10 @@ class JwtServiceTest {
 
     @Test
     void failsFastWithMissingOrShortSecret() {
-        assertThatThrownBy(() -> new JwtService(new JwtProperties("", Duration.ofMinutes(1))))
+        assertThatThrownBy(() -> new JwtService(new JwtProperties("", Duration.ofMinutes(1), Duration.ofDays(7))))
                 .isInstanceOf(IllegalStateException.class);
         String shortSecret = Base64.getEncoder().encodeToString("corta".getBytes());
-        assertThatThrownBy(() -> new JwtService(new JwtProperties(shortSecret, Duration.ofMinutes(1))))
+        assertThatThrownBy(() -> new JwtService(new JwtProperties(shortSecret, Duration.ofMinutes(1), Duration.ofDays(7))))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("32 bytes");
     }

@@ -1,7 +1,7 @@
 // Estado global de la sesión: usuario y token, carrito, ids de la wishlist y avisos (toast).
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { ApiError, getToken, setToken, setUnauthorizedHandler } from '@/api/client';
+import { ApiError, getRefreshToken, getToken, setRefreshToken, setToken, setUnauthorizedHandler } from '@/api/client';
 import { authApi, cartApi, userApi, wishlistApi } from '@/api/endpoints';
 import type { Cart, RegisterRequest, Role, User } from '@/api/types';
 import { t } from '@/i18n';
@@ -59,6 +59,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const clearSession = useCallback(() => {
     setToken(null);
+    setRefreshToken(null);
     setUser(null);
     setCart(null);
     setWishlistIds(new Set());
@@ -83,7 +84,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .finally(() => setBooting(false));
   }, [clearSession, loadUserData]);
 
-  // Token caducado (2 h) o inválido: se cierra la sesión y se manda al login
+  // Sesión caducada (el refresh de 7 días ya no vale) o inválida: se cierra y se manda al login
   useEffect(() => {
     setUnauthorizedHandler(() => {
       clearSession();
@@ -94,8 +95,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [clearSession, navigate, notify]);
 
   const startSession = useCallback(
-    async (token: string, me: User) => {
+    async (token: string, refreshToken: string, me: User) => {
       setToken(token);
+      setRefreshToken(refreshToken);
       setUser(me);
       await loadUserData();
     },
@@ -105,7 +107,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (loginValue: string, password: string) => {
       const res = await authApi.login(loginValue, password);
-      await startSession(res.accessToken, res.user);
+      await startSession(res.accessToken, res.refreshToken, res.user);
     },
     [startSession],
   );
@@ -113,7 +115,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const register = useCallback<StoreValue['register']>(
     async (data) => {
       const res = await authApi.register(data);
-      await startSession(res.accessToken, res.user);
+      await startSession(res.accessToken, res.refreshToken, res.user);
     },
     [startSession],
   );
@@ -121,7 +123,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     // Recarga completa en la portada: React Router navega como transición y, si solo se limpiara
     // el estado, RequireAuth vería antes el usuario vacío y mandaría al login.
+    const refreshToken = getRefreshToken();
+    // Se revoca en el servidor sin esperar la respuesta; si falla, el refresh caducará solo
+    if (refreshToken) authApi.logout(refreshToken).catch(() => undefined);
     setToken(null);
+    setRefreshToken(null);
     window.location.assign('/');
   }, []);
 

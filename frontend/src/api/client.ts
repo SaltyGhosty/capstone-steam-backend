@@ -5,6 +5,7 @@ import { getLang, t } from '@/i18n';
 
 const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 const TOKEN_KEY = 'arcade.token';
+const REFRESH_KEY = 'arcade.refresh';
 
 /** Swagger UI del backend: mismo origen con el proxy (Vite/Caddy) o VITE_API_URL en producción. */
 export const API_DOCS_URL = `${BASE_URL}/swagger-ui/index.html`;
@@ -34,6 +35,24 @@ export function setToken(token: string | null) {
   try {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // almacenamiento bloqueado: la sesión solo dura lo que la pestaña
+  }
+}
+
+export function getRefreshToken(): string | null {
+  try {
+    return localStorage.getItem(REFRESH_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** setToken(null) no toca el refresh token: hay que borrarlo aparte con setRefreshToken(null). */
+export function setRefreshToken(token: string | null) {
+  try {
+    if (token) localStorage.setItem(REFRESH_KEY, token);
+    else localStorage.removeItem(REFRESH_KEY);
   } catch {
     // almacenamiento bloqueado: la sesión solo dura lo que la pestaña
   }
@@ -69,10 +88,54 @@ interface RequestOptions {
   query?: Query;
   /** Estados distintos de 2xx que se devuelven como respuesta normal (p. ej. 402 del pago). */
   acceptStatus?: number[];
+  /** La petición sobrevive a una navegación inmediata (cierre de sesión). */
+  keepalive?: boolean;
+}
+
+// Renovación en curso, compartida: varias peticiones con 401 a la vez hacen un solo refresh.
+let refreshing: Promise<boolean> | null = null;
+
+/** true si se guardaron tokens nuevos; false si el backend rechazó el refresh (sesión cerrada). */
+function refreshSession(): Promise<boolean> {
+  refreshing ??= doRefresh().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
+
+async function doRefresh(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+  let res: Response;
+  try {
+    // fetch directo (no api()): un 401 aquí no debe volver a intentar refrescar
+    res = await fetch(buildUrl('/api/auth/refresh'), {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'Accept-Language': getLang() },
+      body: JSON.stringify({ refreshToken }),
+    });
+  } catch {
+    // sin conexión no se pierde la sesión: la petición original falla y ya se reintentará
+    throw new ApiError(0, t('common.serverDown'));
+  }
+  const data = res.ok ? ((await res.json().catch(() => null)) as { accessToken?: string; refreshToken?: string } | null) : null;
+  if (data?.accessToken && data.refreshToken) {
+    setToken(data.accessToken);
+    setRefreshToken(data.refreshToken);
+    return true;
+  }
+  setToken(null);
+  setRefreshToken(null);
+  onUnauthorized?.();
+  return false;
 }
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, query, acceptStatus = [] } = options;
+  return request<T>(path, options, true);
+}
+
+async function request<T>(path: string, options: RequestOptions, canRefresh: boolean): Promise<T> {
+  const { method = 'GET', body, query, acceptStatus = [], keepalive } = options;
   const token = getToken();
   // La API responde (errores, descripciones, motivos de pago) en el idioma de la interfaz
   const headers: Record<string, string> = { Accept: 'application/json', 'Accept-Language': getLang() };
@@ -85,6 +148,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
+      keepalive,
     });
   } catch {
     throw new ApiError(0, t('common.serverDown'));
@@ -97,7 +161,17 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     return data as T;
   }
 
-  if (res.status === 401 && token) onUnauthorized?.();
+  if (res.status === 401 && token) {
+    if (canRefresh && !path.startsWith('/api/auth/') && getRefreshToken()) {
+      // Otra petición ya renovó los tokens mientras esta volaba: basta con repetirla
+      const renewed = getToken() !== token || (await refreshSession());
+      if (renewed) return request<T>(path, options, false);
+      // refreshSession ya cerró la sesión y avisó una sola vez
+    } else if (getToken() === token) {
+      // (si el token ya cambió o se borró, otra petición se ocupó de la sesión)
+      onUnauthorized?.();
+    }
+  }
 
   const problem = (data ?? {}) as { detail?: string; title?: string; errors?: Record<string, string> };
   const message = problem.detail || problem.title || `Error ${res.status}`;

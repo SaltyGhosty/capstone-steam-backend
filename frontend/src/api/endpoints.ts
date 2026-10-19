@@ -14,6 +14,9 @@ export const authApi = {
     api<AuthResponse>('/api/auth/login', { method: 'POST', body: { login, password } }),
   register: (body: RegisterRequest) =>
     api<AuthResponse>('/api/auth/register', { method: 'POST', body }),
+  /** Revoca el refresh token en el servidor (204). */
+  logout: (refreshToken: string) =>
+    api<void>('/api/auth/logout', { method: 'POST', body: { refreshToken }, keepalive: true }),
 };
 
 export const userApi = {
