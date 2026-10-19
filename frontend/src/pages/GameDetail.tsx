@@ -4,10 +4,12 @@ import { ApiError } from '@/api/client';
 import { catalogApi, libraryApi, reviewApi } from '@/api/endpoints';
 import type { GameDetail as Game, Ownership, Review } from '@/api/types';
 import Icon from '@/components/Icon';
-import { ErrorState, FieldError, Loading, Pagination, Price, Stars } from '@/components/ui';
+import ReviewScoreBadge from '@/components/ReviewScoreBadge';
+import { ErrorState, FieldError, Loading, Pagination, Price } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
-import { useI18n } from '@/i18n';
+import { getLang, useI18n } from '@/i18n';
 import { formatDate, formatDateTime, genreLabel, genreName, initials, wideImage } from '@/lib/format';
+import { LOCALES } from '@/lib/locale';
 import { useAsync } from '@/lib/useAsync';
 
 export default function GameDetail() {
@@ -44,9 +46,7 @@ export default function GameDetail() {
           <p className="eyebrow">{g.developer.displayName.toUpperCase()} · {formatDate(g.releaseDate)}</p>
           <h1>{g.title.toUpperCase()}</h1>
           <div className="detail-meta">
-            {g.ratingCount > 0
-              ? <><Stars value={g.averageRating} /> <span>{g.averageRating.toFixed(1)} · {t('game.reviews', { count: g.ratingCount })}</span></>
-              : <span>{t('game.noReviews')}</span>}
+            <ReviewScoreBadge game={g} />
           </div>
           <div className="hero-tags">
             {g.genres.map((genre) => <Link key={genre.id} to={`/browse?genres=${genre.slug}`}>{genreName(genre)}</Link>)}
@@ -98,10 +98,17 @@ export default function GameDetail() {
 
 function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Ownership | null; onChanged: () => void }) {
   const { user, hasRole, notify, notifyError } = useStore();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<Review | null>(null);
-  const reviews = useAsync(() => catalogApi.reviews(game.slug, page, 6), [game.slug, page, game.ratingCount, game.averageRating]);
+  // Por defecto, las reseñas en el idioma de la interfaz; la puntuación de arriba cuenta todas
+  const [allLanguages, setAllLanguages] = useState(false);
+  const reviews = useAsync(
+    () => catalogApi.reviews(game.slug, page, 6, allLanguages ? undefined : lang),
+    [game.slug, page, allLanguages, lang, game.reviewCount, game.positivePercent],
+  );
+  const languageName = LOCALES.find((l) => l.value === lang)?.label ?? lang;
+  const pickScope = (all: boolean) => { setAllLanguages(all); setPage(0); };
 
   const canWrite = ownership?.owned && !ownership.reviewed;
 
@@ -128,9 +135,25 @@ function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Owners
       )}
       {!user && <p className="hint"><Link to="/login">{t('nav.login')}</Link> {t('review.loginToReview')}</p>}
 
+      <div className="segmented review-languages">
+        <button type="button" className={!allLanguages ? 'active' : ''} aria-pressed={!allLanguages} onClick={() => pickScope(false)}>
+          {t('review.mineLanguage', { language: languageName })}
+        </button>
+        <button type="button" className={allLanguages ? 'active' : ''} aria-pressed={allLanguages} onClick={() => pickScope(true)}>
+          {t('review.allLanguages')}
+        </button>
+      </div>
+
       {reviews.loading && !reviews.data && <Loading />}
       {reviews.error ? <ErrorState error={reviews.error} onRetry={reviews.reload} /> : null}
-      {reviews.data && reviews.data.content.length === 0 && <p className="hint">{t('review.none')}</p>}
+      {reviews.data && reviews.data.content.length === 0 && (
+        !allLanguages && game.reviewCount > 0 ? (
+          <p className="hint">
+            {t('review.noneInLanguage')}{' '}
+            <button type="button" className="secondary small" onClick={() => pickScope(true)}>{t('review.allLanguages')}</button>
+          </p>
+        ) : <p className="hint">{t('review.none')}</p>
+      )}
       <div className="review-list">
         {reviews.data?.content.map((r) =>
           editing?.id === r.id ? (
@@ -144,11 +167,11 @@ function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Owners
                   <b>{r.author.displayName}</b>
                   <small>{formatDate(r.createdAt)}{r.updatedAt !== r.createdAt ? t('review.edited') : ''}</small>
                 </div>
+                <span className="review-lang" title={LOCALES.find((l) => l.value === r.language)?.label}>{r.language.toUpperCase()}</span>
                 <span className={r.recommended ? 'verdict yes' : 'verdict no'}>
                   <Icon name="thumb" size={14} /> {r.recommended ? t('review.recommended') : t('review.notRecommended')}
                 </span>
               </header>
-              <Stars value={r.rating} size={13} />
               {r.body && <p>{r.body}</p>}
               {(user?.id === r.author.id || hasRole('ROLE_ADMIN')) && (
                 <div className="review-actions">
@@ -168,22 +191,22 @@ function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Owners
 function ReviewForm({ gameId, review, onSaved, onCancel }: { gameId: number; review?: Review; onSaved: () => void; onCancel?: () => void }) {
   const { notify, notifyError } = useStore();
   const { t } = useI18n();
-  const [rating, setRating] = useState(review?.rating ?? 0);
-  const [recommended, setRecommended] = useState(review?.recommended ?? true);
+  // Sin veredicto elegido de partida: hay que decidir 👍 o 👎 antes de publicar
+  const [recommended, setRecommended] = useState<boolean | null>(review?.recommended ?? null);
   const [body, setBody] = useState(review?.body ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!rating) {
-      setErrors({ rating: t('review.pickRating') });
+    if (recommended === null) {
+      setErrors({ recommended: t('review.pickVerdict') });
       return;
     }
     setSaving(true);
     setErrors({});
     try {
-      const payload = { gameId, rating, recommended, body: body.trim() || undefined };
+      const payload = { gameId, recommended, body: body.trim() || undefined, language: getLang() };
       if (review) await reviewApi.update(review.id, payload);
       else await reviewApi.create(payload);
       notify(review ? t('review.updated') : t('review.thanks'));
@@ -199,19 +222,11 @@ function ReviewForm({ gameId, review, onSaved, onCancel }: { gameId: number; rev
   return (
     <form className="panel review-form" onSubmit={submit}>
       <h3>{review ? t('review.editYours') : t('review.write')}</h3>
-      <div className="rating-input" role="radiogroup" aria-label={t('review.score')}>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button type="button" key={n} role="radio" aria-checked={rating === n} aria-label={t('review.stars', { n })}
-            className={n <= rating ? 'on' : ''} onClick={() => setRating(n)}>
-            <Icon name="star" size={22} />
-          </button>
-        ))}
-      </div>
-      <FieldError errors={errors} name="rating" />
       <div className="segmented">
-        <button type="button" className={recommended ? 'active' : ''} onClick={() => setRecommended(true)}>{t('review.recommend')}</button>
-        <button type="button" className={!recommended ? 'active' : ''} onClick={() => setRecommended(false)}>{t('review.notRecommend')}</button>
+        <button type="button" className={recommended === true ? 'active' : ''} aria-pressed={recommended === true} onClick={() => setRecommended(true)}>{t('review.recommend')}</button>
+        <button type="button" className={recommended === false ? 'active' : ''} aria-pressed={recommended === false} onClick={() => setRecommended(false)}>{t('review.notRecommend')}</button>
       </div>
+      <FieldError errors={errors} name="recommended" />
       <textarea value={body} onChange={(e) => setBody(e.target.value)} maxLength={5000} rows={4}
         placeholder={t('review.placeholder')} aria-label={t('review.textLabel')} />
       <FieldError errors={errors} name="body" />

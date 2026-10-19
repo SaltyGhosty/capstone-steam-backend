@@ -111,7 +111,7 @@ export function DeveloperGames() {
                   <td><span className={`badge ${g.status.toLowerCase()}`}>{gameStatus(g.status)}</span></td>
                   <td>{formatMoney(g.finalPrice)}{g.discountPercent > 0 && <small className="muted"> (−{g.discountPercent}%)</small>}</td>
                   <td>{g.salesCount}</td>
-                  <td>{g.ratingCount ? `${g.averageRating.toFixed(1)} ★ (${g.ratingCount})` : '—'}</td>
+                  <td>{g.reviewCount ? t('dev.positiveSummary', { percent: g.positivePercent, count: g.reviewCount }) : '—'}</td>
                   <td className="row-actions">
                     <Link className="icon-button" to={`/developer/games/${g.id}`} aria-label={t('dev.editTitle', { title: g.title })}><Icon name="edit" size={16} /></Link>
                     {g.status === 'DRAFT' && <button className="secondary small" onClick={() => act(() => developerApi.publish(g.id), t('dev.publishedToast', { title: g.title }))}>{t('dev.publish')}</button>}

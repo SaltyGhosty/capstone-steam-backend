@@ -129,10 +129,17 @@ select:focus, .field input:focus, .field textarea:focus, .inline-form input:focu
 .review-actions button:hover { color: #b7ff3c; }
 .review-form { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
 .review-form textarea { width: 100%; padding: 12px; resize: vertical; line-height: 1.6; }
-.rating-input { display: flex; gap: 4px; }
-.rating-input button { padding: 2px; border: 0; color: #3a414b; background: none; }
-.rating-input button.on { color: #b7ff3c; }
-.rating-input button.on svg { fill: currentColor; }
+/* Puntuación de reseñas, como en Steam: azul las positivas, ámbar las variadas y rojo las negativas */
+.review-score { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.review-score b { font-weight: 700; }
+.score-positive { color: #66c0f4; }
+.score-mixed { color: #e0b84a; }
+.score-negative { color: #ff7a6b; }
+.rating .review-score { padding: 3px 7px; border-radius: 4px; background: rgba(7,10,14,.78); font-size: 10px; }
+.review-languages { max-width: 420px; margin-top: 14px; }
+.review-lang { padding: 3px 6px; border-radius: 4px; color: #8d96a2; background: #1a2028; font-size: 9px; font-weight: 700; }
+.review header .review-lang { margin-left: auto; }
+.review header .review-lang + .verdict { margin-left: 0; }
 .segmented { display: flex; padding: 3px; border: 1px solid #2a3039; border-radius: 9px; background: #0d1116; }
 .segmented button { flex: 1; height: 32px; border: 0; border-radius: 6px; color: #8d96a2; background: none; font-size: 11px; font-weight: 600; }
 .segmented button.active { color: #151a0d; background: #b7ff3c; }

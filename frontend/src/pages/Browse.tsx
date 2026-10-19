@@ -19,7 +19,7 @@ export default function Browse() {
   const q = params.get('q') ?? '';
   const genres = params.get('genres')?.split(',').filter(Boolean) ?? [];
   const maxPrice = params.get('maxPrice') ?? '';
-  const minRating = params.get('minRating') ?? '';
+  const minPositive = params.get('minPositivePercent') ?? '';
   const onSale = params.get('onSale') === 'true';
   const sort = (params.get('sort') as GameSort) || 'newest';
   const page = Number(params.get('page') ?? 0);
@@ -31,7 +31,7 @@ export default function Browse() {
       q: q || undefined,
       genres,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
-      minRating: minRating ? Number(minRating) : undefined,
+      minPositivePercent: minPositive ? Number(minPositive) : undefined,
       onSale: onSale || undefined,
       sort,
       page,
@@ -55,7 +55,7 @@ export default function Browse() {
     update({ genres: next.join(',') || null });
   };
 
-  const hasFilters = Boolean(q || genres.length || maxPrice || minRating || onSale);
+  const hasFilters = Boolean(q || genres.length || maxPrice || minPositive || onSale);
   const data = results.data;
 
   return (
@@ -96,12 +96,12 @@ export default function Browse() {
             </div>
           </div>
           <div className="filter-group">
-            <h4>{t('browse.minRating')}</h4>
+            <h4>{t('browse.minPositive')}</h4>
             <div className="chips">
-              {['3', '4', '4.5'].map((v) => (
-                <button key={v} className={minRating === v ? 'chip active' : 'chip'} aria-pressed={minRating === v}
-                  onClick={() => update({ minRating: minRating === v ? null : v })}>
-                  ★ {v.replace('.', ',')}+
+              {['70', '80', '95'].map((v) => (
+                <button key={v} className={minPositive === v ? 'chip active' : 'chip'} aria-pressed={minPositive === v}
+                  onClick={() => update({ minPositivePercent: minPositive === v ? null : v })}>
+                  {t('browse.minPositiveChip', { percent: v })}
                 </button>
               ))}
             </div>

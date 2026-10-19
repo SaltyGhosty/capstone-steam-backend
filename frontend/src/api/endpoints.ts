@@ -2,7 +2,7 @@
 import { api } from './client';
 import type {
   AuthResponse, Cart, CatalogQuery, GameDetail, GameRequest, GameStatus, GameSummary, Genre,
-  LibraryEntry, Order, OrderSummary, Ownership, PageResponse, PaymentMethod, RegisterRequest, Review, ReviewRequest, Role,
+  LibraryEntry, Locale, Order, OrderSummary, Ownership, PageResponse, PaymentMethod, RegisterRequest, Review, ReviewRequest, Role,
   SteamSyncResult, UpdateProfileRequest, User,
   WishlistItem,
 } from './types';
@@ -26,8 +26,9 @@ export const catalogApi = {
   search: (q: CatalogQuery = {}) =>
     api<PageResponse<GameSummary>>('/api/games', { query: { ...q } }),
   get: (slug: string) => api<GameDetail>(`/api/games/${encodeURIComponent(slug)}`),
-  reviews: (slug: string, p = 0, size = 10) =>
-    api<PageResponse<Review>>(`/api/games/${encodeURIComponent(slug)}/reviews`, { query: page(p, size) }),
+  /** Sin language salen las reseñas de todos los idiomas. */
+  reviews: (slug: string, p = 0, size = 10, language?: Locale) =>
+    api<PageResponse<Review>>(`/api/games/${encodeURIComponent(slug)}/reviews`, { query: { ...page(p, size), language } }),
   genres: () => api<Genre[]>('/api/genres'),
 };
 

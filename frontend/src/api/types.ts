@@ -7,6 +7,10 @@ export type OrderStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
 export type PaymentMethod = 'CREDIT_CARD' | 'PAYPAL' | 'WALLET';
 export type PaymentStatus = 'INITIATED' | 'SUCCEEDED' | 'FAILED';
 export type AccountType = 'PLAYER' | 'DEVELOPER';
+/** Etiqueta de valoración de un juego, con las reglas de Steam (NONE = menos de 10 reseñas). */
+export type ReviewScore =
+  | 'OVERWHELMINGLY_POSITIVE' | 'VERY_POSITIVE' | 'POSITIVE' | 'MOSTLY_POSITIVE' | 'MIXED'
+  | 'MOSTLY_NEGATIVE' | 'NEGATIVE' | 'VERY_NEGATIVE' | 'OVERWHELMINGLY_NEGATIVE' | 'NONE';
 /** Idioma de los correos del usuario (la interfaz se elige aparte, con las banderas). */
 export type Locale = 'es' | 'en' | 'it';
 
@@ -69,8 +73,9 @@ export interface GameSummary {
   discountPercent: number;
   finalPrice: number;
   releaseDate: string | null;
-  averageRating: number;
-  ratingCount: number;
+  reviewCount: number;
+  positivePercent: number;
+  reviewScore: ReviewScore;
   genres: Genre[];
   developerName: string;
 }
@@ -92,8 +97,9 @@ export interface GameDetail {
   finalPrice: number;
   releaseDate: string | null;
   status: GameStatus;
-  averageRating: number;
-  ratingCount: number;
+  reviewCount: number;
+  positivePercent: number;
+  reviewScore: ReviewScore;
   salesCount: number;
   genres: Genre[];
   developer: { id: number; displayName: string };
@@ -168,9 +174,10 @@ export interface LibraryEntry {
 export interface Review {
   id: number;
   gameId: number;
-  rating: number;
   recommended: boolean;
   body: string | null;
+  /** Idioma en que está escrita */
+  language: Locale;
   author: { id: number; displayName: string };
   createdAt: string;
   updatedAt: string;
@@ -178,9 +185,10 @@ export interface Review {
 
 export interface ReviewRequest {
   gameId?: number;
-  rating: number;
   recommended: boolean;
   body?: string;
+  /** Idioma de la interfaz al escribirla */
+  language: Locale;
 }
 
 export interface Order {
@@ -216,7 +224,7 @@ export interface CatalogQuery {
   minPrice?: number;
   maxPrice?: number;
   onSale?: boolean;
-  minRating?: number;
+  minPositivePercent?: number;
   sort?: GameSort;
   page?: number;
   size?: number;

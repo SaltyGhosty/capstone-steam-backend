@@ -4,6 +4,7 @@ import { useStore } from '@/context/StoreContext';
 import { useI18n } from '@/i18n';
 import { cardImage, formatMoney, genreLabel } from '@/lib/format';
 import Icon from './Icon';
+import ReviewScoreBadge from './ReviewScoreBadge';
 
 export default function GameCard({ game }: { game: GameSummary }) {
   const { wishlistIds, toggleWishlist, addToCart } = useStore();
@@ -18,7 +19,7 @@ export default function GameCard({ game }: { game: GameSummary }) {
           aria-label={t(wished ? 'card.removeWish' : 'card.addWish', { title: game.title })}>
           <Icon name="heart" size={18} />
         </button>
-        {game.ratingCount > 0 && <div className="rating"><Icon name="star" size={13} /> {game.averageRating.toFixed(1)}</div>}
+        {game.reviewScore !== 'NONE' && <div className="rating"><ReviewScoreBadge game={game} compact /></div>}
         {game.discountPercent > 0 && <div className="card-sale">−{game.discountPercent}%</div>}
       </div>
       <div className="game-info">

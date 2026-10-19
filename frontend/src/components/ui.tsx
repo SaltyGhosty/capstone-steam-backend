@@ -22,17 +22,6 @@ export function Price({ price, finalPrice, discountPercent }: { price: number; f
   return <span className="price"><b>{formatMoney(finalPrice)}</b></span>;
 }
 
-export function Stars({ value, size = 14 }: { value: number; size?: number }) {
-  const { t } = useI18n();
-  return (
-    <span className="stars" aria-label={t('common.ofFive', { value })}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <span key={n} className={n <= Math.round(value) ? 'on' : ''}><Icon name="star" size={size} /></span>
-      ))}
-    </span>
-  );
-}
-
 export function PageHeader({ eyebrow, title, children }: { eyebrow: string; title: string; children?: ReactNode }) {
   return (
     <div className="section-heading page-heading">
