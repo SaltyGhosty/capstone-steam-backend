@@ -175,7 +175,8 @@ export default function Layout() {
         <Footer />
       </main>
 
-      <AssistantChat />
+      {/* con otra sesión se remonta: la conversación de un usuario no pasa al siguiente */}
+      <AssistantChat key={user?.id ?? 'anon'} />
 
       {toast && (
         <div key={toast.id} className={`toast ${toast.kind}`} role="status">

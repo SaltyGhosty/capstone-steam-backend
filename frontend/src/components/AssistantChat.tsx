@@ -41,6 +41,10 @@ export default function AssistantChat() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Cada envío lleva un número; una respuesta que llega tarde (otra pregunta, sesión cerrada) se descarta
+  const requestId = useRef(0);
+  useEffect(() => () => { requestId.current += 1; }, []);
+
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
@@ -67,15 +71,20 @@ export default function AssistantChat() {
     setText('');
     setNotice(null);
     setThinking(true);
+    const id = ++requestId.current;
     try {
       const messages = history.slice(-MAX_HISTORY).map(({ role, content: c }) => ({ role, content: c.slice(0, MAX_LENGTH) }));
       const res = await assistantApi.chat(messages);
+      if (id !== requestId.current) return;
       setEntries((prev) => [...prev, { role: 'assistant', content: res.reply, games: res.games }]);
     } catch (err) {
+      if (id !== requestId.current) return;
       setNotice(err instanceof ApiError && err.status === 429 ? 'assistant.rateLimitedUi' : 'assistant.unavailableUi');
     } finally {
-      setThinking(false);
-      inputRef.current?.focus();
+      if (id === requestId.current) {
+        setThinking(false);
+        inputRef.current?.focus();
+      }
     }
   };
 

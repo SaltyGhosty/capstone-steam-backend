@@ -1,7 +1,9 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setToken } from '@/api/client';
+import Layout from '@/components/Layout';
+import { useStore } from '@/context/StoreContext';
 import { mockFetch, page } from '@/test/http';
 import { demoUser, renderRoutes } from '@/test/render';
 import AssistantChat from './AssistantChat';
@@ -148,5 +150,50 @@ describe('chat del asistente', () => {
     await open();
     await userEvent.click(screen.getByRole('button', { name: 'Cerrar el asistente' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+function SwitchUser() {
+  const { login } = useStore();
+  return <button type="button" onClick={() => void login('otra', 'pw')}>Cambiar de usuario</button>;
+}
+
+describe('el chat y el cambio de sesión', () => {
+  beforeEach(() => setToken('jwt-demo'));
+
+  it('el usuario B no ve los mensajes de A ni la respuesta que llega tarde', async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const inner = mockFetch({
+      ...base,
+      'POST /api/auth/login': {
+        body: {
+          accessToken: 'jwt-b', tokenType: 'Bearer', expiresIn: 900, refreshToken: 'ref-b',
+          user: { ...demoUser, id: 8, username: 'otra', displayName: 'Otra Persona' },
+        },
+      },
+      'POST /api/recommendations/chat': { body: { reply: 'respuesta tardía para A', games: [] } },
+    });
+    // la respuesta del chat se retiene hasta que la sesión ya ha cambiado
+    vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input).endsWith('/api/recommendations/chat') ? gate.then(() => inner(input, init)) : inner(input, init));
+    renderRoutes({ '/': <><Layout /><SwitchUser /></> }, '/');
+
+    const input = await open();
+    await userEvent.type(input, 'secreto de A');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    expect(await screen.findByText('secreto de A')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cambiar de usuario' }));
+    await screen.findByRole('button', { name: /Otra Persona/ });
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // sin remontar, el panel de A seguiría abierto con su conversación
+    const fab = screen.queryByRole('button', { name: 'Abrir el asistente' });
+    if (fab) await userEvent.click(fab);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByText('secreto de A')).not.toBeInTheDocument();
+    expect(screen.queryByText('respuesta tardía para A')).not.toBeInTheDocument();
   });
 });
