@@ -13,7 +13,7 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 | Paquete base | `com.capstone.steam` |
 | Artifact | `capstone-steam-backend` |
 | Estado actual | **✅ Bloques 0 a 16, bloque A (cierre) y los seis extras B a G, más la pasada de arreglos tras la revisión: backend (315 tests, JaCoCo exige el 80 % de líneas, Swagger) + frontend React en es/en/it (69 tests en 14 archivos) + CI + despliegue preparado. Migraciones V1 a V10. Último trabajo: las pasadas de arreglos de las oleadas 1 y 2, la BD demo migrada y sembrada, y Newman en verde (2026-10-19)** |
-| Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). <br>El plan `docs/superpowers/specs/2026-10-19-cierre-y-extras-design.md` está **entero en `main`** (bloques A a G). Quedan los pendientes manuales del usuario (ver abajo): probar Cloudinary y OpenRouter con claves reales, un envío real de correos en inglés e italiano y desplegar en Render + Vercel (README → Despliegue) |
+| Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). <br>El plan `docs/superpowers/specs/2026-10-19-cierre-y-extras-design.md` está **entero en `main`** (bloques A a G). Cloudinary, OpenRouter y los correos en/it ya están probados con las cuentas reales. Solo queda **desplegar en Render + Vercel** (README → Despliegue) |
 | Última actualización | 2026-10-19 |
 
 ### Entorno local (máquina del usuario, Windows 11)
@@ -56,12 +56,9 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 - Amistades: la base de datos no obliga a que `user_low_id` y `user_high_id` coincidan con solicitante y destinatario (un CHECK pendiente, necesitaría una V11), y dos solicitudes cruzadas simultáneas dan un 409 genérico porque lo resuelve la UNIQUE del par.
 
 ### Pendientes manuales del usuario
-- **Prueba real de Cloudinary** con su `CLOUDINARY_URL`: subir una portada como developer y como admin. En los tests está simulado.
-- **Prueba real de OpenRouter** con su `OPENROUTER_API_KEY`. Los modelos `:free` exigen activar la opción de privacidad de la cuenta de OpenRouter; sin ella responden error y el asistente da 503. En los tests está simulado.
-- **Envío real de correos en inglés e italiano** (bienvenida, recibo y pago rechazado). Solo se probó en español (bloque 14).
 - **Desplegar** en Render + Vercel (README → Despliegue), con `CLOUDINARY_URL` y `OPENROUTER_API_KEY` si se quieren esas funciones.
-- Ejecutar **Newman** con la colección de Postman nueva (73 peticiones) contra un backend con V8 a V10; no se ha ejecutado desde que se reescribió.
-- Aplicar V8 a V10 a la base `capstone_steam_demo` (Flyway lo hace al arrancar) y volver a cargar los datos: `node scripts/seed-demo.mjs`.
+- Regenerar las claves de OpenRouter y Cloudinary (salieron en el chat).
+- Hecho el 2026-10-19: pruebas reales de Cloudinary, OpenRouter y correos en en/it; Newman (73 peticiones, 0 fallos); V8 a V10 en `capstone_steam_demo` con el seed relanzado.
 
 ### Versiones fijadas
 Spring Boot **4.1.1** · jjwt **0.13.0** · Java **25** · Flyway (gestionado por Boot) · H2 2.4 (solo tests).
@@ -353,6 +350,7 @@ Total: **315 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de 
 | OpenRouter real | Prueba con la clave del usuario | ✅ Hecho | 2026-10-19 | `google/gemma-4-31b-it:free` daba 429 (proveedor gratuito saturado) y `minimax/minimax-m3.1-flash:free` daba 400 porque exige razonamiento. Arreglo `ab84673`/`5a1341c`: `OPENROUTER_MODEL` admite una lista de reserva (`models`), `reasoning: {effort: low, exclude: true}`, `max_tokens` 1200 y log con el motivo del error, sin la clave. Prueba real: respuestas en es/it en unos 3 s, con juegos del catálogo. **315 tests**, 0 fallos |
 | Cloudinary real | Prueba con la cuenta del usuario | ✅ Hecho | 2026-10-19 | La primera subida dio 403 `missing permissions (actions=["create"])`: la API key no tenía permiso de subida. El usuario se lo dio en Cloudinary. Después, subida real de 148 KB en 1,4 s, con `secure_url` https en `arcade/covers/game-<id>`. El botón «Subir portada» y la vista previa funcionan en el formulario del estudio. Ojo: una API key de Cloudinary con permisos limitados no puede subir; hay que usar una con la acción *create* |
 | Limpieza Newman | Restos de pruebas en la BD demo | ✅ Hecho | 2026-10-19 | Se borraron los 3 géneros «Roguelike <sufijo>» que habían dejado las pasadas de Newman; no tenían juegos. Ahora la colección borra al final el género que crea (73 peticiones, 114 comprobaciones, 0 fallos) y tras cada pasada siguen 12 géneros. Quedan, sin verse en la tienda, los juegos «Postman Quest <sufijo>» en DELISTED y algunas cuentas `pm_*` |
+| Correos en/it reales | Prueba con la cuenta Gmail del usuario | ✅ Hecho | 2026-10-19 | Script por la API contra el backend del 8081: dos cuentas con alias `+` (`mail_en_*` con `locale: en`, `mail_it_*` con `locale: it`). Cada una: registro, pago con tarjeta `…0000` → 402 y pago correcto → PAID (Undertale y XCOM 2). **El usuario confirmó que llegaron los 6 correos** (bienvenida, pago rechazado y recibo) en su idioma y con importes en €. Las dos cuentas se quedan en `capstone_steam_demo` |
 | Docs | README, handoff, Postman y agentes al día | ✅ Hecho | 2026-10-19 | `README.md` y `frontend/README.md` con las funciones nuevas, endpoints, variables y cifras; spec corregida (familia en vez de todos); Postman reescrita a 73 peticiones (reseñas 👍/👎, refresh y logout, amigos, estado de portadas y asistente con 200 o 503); cifras de los agentes. **Newman sin ejecutar** con la colección nueva |
 
 ---
