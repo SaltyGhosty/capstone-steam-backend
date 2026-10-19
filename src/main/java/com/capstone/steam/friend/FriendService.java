@@ -88,8 +88,10 @@ public class FriendService {
     public FriendRequestsResponse requests(Long userId) {
         return new FriendRequestsResponse(
                 friendshipRepository.findIncoming(userId).stream()
+                        .filter(f -> isPlayer(f.other(userId)))
                         .map(f -> FriendRequestResponse.from(f, userId)).toList(),
                 friendshipRepository.findOutgoing(userId).stream()
+                        .filter(f -> isPlayer(f.other(userId)))
                         .map(f -> FriendRequestResponse.from(f, userId)).toList());
     }
 
@@ -162,6 +164,8 @@ public class FriendService {
         return friendshipRepository.findById(requestId)
                 .filter(f -> f.getStatus() == FriendshipStatus.PENDING)
                 .filter(f -> (asAddressee ? f.getAddressee() : f.getRequester()).getId().equals(userId))
+                // si alguno de los dos ya no es jugador activo, la solicitud es invisible
+                .filter(f -> isPlayer(f.getRequester()) && isPlayer(f.getAddressee()))
                 .orElseThrow(() -> NotFoundException.of("friendRequest", requestId));
     }
 

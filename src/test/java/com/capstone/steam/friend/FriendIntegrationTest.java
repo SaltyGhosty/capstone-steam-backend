@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -79,6 +80,27 @@ class FriendIntegrationTest {
         mvc.perform(auth(get("/api/users/search").param("q", "a"), ana)).andExpect(status().isBadRequest());
         mvc.perform(auth(get("/api/users/search").param("q", " a "), ana)).andExpect(status().isBadRequest());
         mvc.perform(auth(get("/api/users/search"), ana)).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void pendingRequestsFromDisabledAccountsAreHiddenAndNotAcceptable() throws Exception {
+        int id = idOf(sendRequest(leo, "ana"));
+        mvc.perform(auth(patch("/api/admin/users/" + leoId + "/enabled"), adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
+                .andExpect(status().isOk());
+        mvc.perform(auth(get("/api/friends/requests"), ana)).andExpect(jsonPath("$.incoming.length()").value(0));
+        mvc.perform(auth(post("/api/friends/requests/" + id + "/accept"), ana)).andExpect(status().isNotFound());
+        mvc.perform(auth(post("/api/friends/requests/" + id + "/reject"), ana)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void pendingRequestsFromAccountsThatBecameDevelopersAreHiddenAndNotAcceptable() throws Exception {
+        int id = idOf(sendRequest(leo, "ana"));
+        mvc.perform(auth(put("/api/admin/users/" + leoId + "/roles"), adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"roles\":[\"ROLE_DEVELOPER\"]}"))
+                .andExpect(status().isOk());
+        mvc.perform(auth(get("/api/friends/requests"), ana)).andExpect(jsonPath("$.incoming.length()").value(0));
+        mvc.perform(auth(post("/api/friends/requests/" + id + "/accept"), ana)).andExpect(status().isNotFound());
     }
 
     @Test
