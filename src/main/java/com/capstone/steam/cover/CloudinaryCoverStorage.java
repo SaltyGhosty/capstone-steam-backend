@@ -22,6 +22,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestClientException;
 
 import com.capstone.steam.common.exception.BadRequestException;
@@ -123,17 +124,34 @@ public class CloudinaryCoverStorage implements CoverStorage {
                     .body(String.class);
             String url = body == null ? "" : json.readTree(body).path("secure_url").asString("");
             if (!url.startsWith("https://")) {
+                log.warn("Cloudinary ha devuelto una secure_url que no es https para el juego {}", gameId);
                 throw new CoverUploadException(null);
             }
             return url;
         } catch (HttpClientErrorException.BadRequest ex) {
             // Cloudinary rechaza el archivo (400): es culpa de la imagen, no un fallo del servicio
-            log.warn("Cloudinary ha rechazado la portada del juego {} con 400", gameId);
+            log.warn("Cloudinary ha rechazado la portada del juego {} con 400: {}", gameId, errorMessage(ex));
             throw new BadRequestException("cover.invalidType");
         } catch (RestClientException | JacksonException | IllegalArgumentException ex) {
             // solo el tipo del error: ni la URL de configuración ni el cuerpo de la petición
-            log.warn("Cloudinary no ha aceptado la portada del juego {}: {}", gameId, ex.getClass().getSimpleName());
+            // el código y el error.message de Cloudinary ayudan a diagnosticar; el secreto nunca se escribe
+            if (ex instanceof RestClientResponseException re) {
+                log.warn("Cloudinary no ha aceptado la portada del juego {}: {} {}", gameId,
+                        re.getStatusCode().value(), errorMessage(re));
+            } else {
+                log.warn("Cloudinary no ha aceptado la portada del juego {}: {}", gameId, ex.getClass().getSimpleName());
+            }
             throw new CoverUploadException(ex);
+        }
+    }
+
+    /** El {@code error.message} del JSON de error de Cloudinary, sin el secreto por si lo repitiera. */
+    private String errorMessage(RestClientResponseException ex) {
+        try {
+            String message = json.readTree(ex.getResponseBodyAsString()).path("error").path("message").asString("");
+            return message.replace(apiSecret, "***");
+        } catch (JacksonException | IllegalArgumentException e) {
+            return "(sin mensaje)";
         }
     }
 
