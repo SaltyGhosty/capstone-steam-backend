@@ -23,6 +23,10 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     @EntityGraph(attributePaths = {"genres", "developer"})
     List<Game> findWithDetailsByIdIn(Collection<Long> ids);
 
+    /** Todos los juegos de un estado con géneros y developer, para el prompt del asistente. */
+    @EntityGraph(attributePaths = {"genres", "developer"})
+    List<Game> findWithDetailsByStatusOrderByIdAsc(GameStatus status);
+
     Page<Game> findByDeveloperId(Long developerId, Pageable pageable);
 
     Page<Game> findByStatus(GameStatus status, Pageable pageable);
