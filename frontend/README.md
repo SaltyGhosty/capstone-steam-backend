@@ -55,9 +55,12 @@ src/
 | `/cart` | Usuario | Carrito; «Continuar al pago» crea el pedido PENDING |
 | `/orders`, `/orders/:id` | Usuario | Historial y pago (200 → PAID, 402 → FAILED) |
 | `/library`, `/wishlist` | Usuario | Colecciones del usuario; «Jugar» simula una sesión de 30 a 90 minutos (`POST /library/{id}/play`) |
-| `/settings` | Usuario | Perfil (`PATCH /users/me`) |
-| `/developer` | DEVELOPER | Sus juegos: crear, editar (con `version` para el bloqueo optimista), publicar y aplicar un descuento masivo |
+| `/settings` | Usuario | Perfil (`PATCH /users/me`) e idioma de los correos (es, en, it) |
+| `/developer` | DEVELOPER | Sus juegos: publicar, retirar y aplicar un descuento masivo |
+| `/developer/games/:id` | DEVELOPER | Formulario del juego (`new` para uno nuevo): crear o editar con `version` para el bloqueo optimista, descripción en es/en/it e importar desde Steam por AppID |
 | `/admin` | ADMIN | Moderación de juegos, roles y activación de usuarios, regalar juegos y CRUD de géneros |
+
+**Idioma de la interfaz:** español, inglés o italiano, con las banderas de la cabecera (`LanguageSwitcher`), también sin sesión. Se recuerda en `localStorage` (`arcade.lang`); la primera vez se usa el idioma del navegador, o español si no es uno de los tres. Los textos están en `src/i18n/messages.ts` y la API recibe el mismo idioma en `Accept-Language`.
 
 El token se guarda en `localStorage`. Si la API responde 401 con un token guardado (caduca a las 2 h), se cierra la sesión y se abre el login.
 
@@ -69,6 +72,9 @@ El token se guarda en `localStorage`. Si la API responde 401 con un token guarda
 | `lib/format.test.ts` | Precios en €, tiempo jugado, portadas apaisadas e iniciales |
 | `pages/Auth.test.tsx` | Login correcto (token guardado y redirección), credenciales incorrectas y errores de validación del registro |
 | `pages/Checkout.test.tsx` | Carrito → pedido → pago aprobado; pago rechazado (402) con su motivo; validación de la tarjeta; carrito sin sesión → login |
+| `pages/Settings.test.tsx` | Muestra el idioma de los correos del usuario y lo envía al guardar |
+| `lib/locale.test.ts` | `detectLocale`: dos primeras letras del idioma del navegador; español si no está soportado |
+| `i18n/i18n.test.tsx` | Los tres idiomas tienen las mismas claves, variables y plurales, las banderas cambian el idioma sin sesión y lo recuerdan, géneros traducidos y `Accept-Language` en las peticiones |
 
 ## Despliegue
 

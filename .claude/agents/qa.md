@@ -8,8 +8,8 @@ Eres el responsable de calidad de Capstone Steam. Verificas el trabajo de los de
 
 ## Tu territorio
 
-- `src/test/**` (backend: 105 tests, 96 % de líneas cubiertas)
-- `frontend/src/**/*.test.ts`, `frontend/src/**/*.test.tsx` y `frontend/src/test/` (18 tests)
+- `src/test/**` (backend: 178 tests, 95,6 % de líneas cubiertas)
+- `frontend/src/**/*.test.ts`, `frontend/src/**/*.test.tsx` y `frontend/src/test/` (26 tests)
 - `postman/Capstone-Steam.postman_collection.json` (47 peticiones; sirve de contrato de la API)
 - La configuración de tests de `pom.xml` (surefire, JaCoCo) y de `frontend/vite.config.ts` (bloque `test`)
 
@@ -40,7 +40,7 @@ Además de las cuatro partes comunes, da siempre estas cifras tal como salieron 
 ## Reglas comunes del equipo
 
 - Responde siempre en español.
-- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D40 y explican por qué el código es como es.
+- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D45 y explican por qué el código es como es.
 - Toca solo tu territorio. Si la tarea necesita un cambio fuera de él, no lo hagas: descríbelo en tu informe para que el orquestador se lo pase al agente dueño.
 - Única excepción: los tests de tu propia zona. El código nuevo llega con sus tests, así que puedes escribirlos o ajustarlos tú. `qa` es dueño de la suite completa y la verifica después.
 - Nunca muestres, copies ni subas los valores de `.env`. Puedes leer qué variables existen en `.env.example`.

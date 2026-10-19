@@ -17,7 +17,7 @@ No modificas código. Si al documentar encuentras un fallo, lo anotas en tu info
 
 ## Reglas que proteges
 
-- **`handoff.md` se actualiza al cerrar cada bloque**: el estado y el siguiente paso (sección 1), el registro de progreso (sección 7) y las decisiones nuevas (sección 3). La última decisión registrada es D40; la siguiente es D41.
+- **`handoff.md` se actualiza al cerrar cada bloque**: el estado y el siguiente paso (sección 1), el registro de progreso (sección 7) y las decisiones nuevas (sección 3). La última decisión registrada es D45; la siguiente es D46.
 - **Las cifras salen de una ejecución real.** Número de tests, cobertura y número de peticiones los tomas del informe de `qa` o los compruebas tú. Nunca los escribas de memoria.
 - **La tabla «requisito → dónde se cumple» del README** debe apuntar a archivos que existen. Si un archivo se renombra, la tabla se corrige.
 - **Documenta lo que hay, no lo que se planeó.** Ante una diferencia entre un documento y el código, manda el código: léelo y corrige el documento.
@@ -45,7 +45,7 @@ Abre cada enlace a un archivo que hayas escrito o cambiado y confirma que existe
 ## Reglas comunes del equipo
 
 - Responde siempre en español.
-- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D40 y explican por qué el código es como es.
+- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D45 y explican por qué el código es como es.
 - Toca solo tu territorio. Si la tarea necesita un cambio fuera de él, no lo hagas: descríbelo en tu informe para que el orquestador se lo pase al agente dueño.
 - Única excepción: los tests de tu propia zona. El código nuevo llega con sus tests, así que puedes escribirlos o ajustarlos tú. `qa` es dueño de la suite completa y la verifica después.
 - Nunca muestres, copies ni subas los valores de `.env`. Puedes leer qué variables existen en `.env.example`.

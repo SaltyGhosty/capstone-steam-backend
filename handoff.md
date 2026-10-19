@@ -12,9 +12,9 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 |---|---|
 | Paquete base | `com.capstone.steam` |
 | Artifact | `capstone-steam-backend` |
-| Estado actual | **✅ Bloques 0 a 15: backend (158 tests, 96 % de cobertura, Swagger) + frontend React (21 tests) + CI + despliegue preparado. Último bloque: correos en el idioma del usuario (es, en, it), con `users.locale` (V5)** |
-| Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). El primer commit (`0578f9e`) está subido a `main`, que sigue a `origin/main`. Pendiente (necesita cuentas del usuario): <br>• **Desplegar**: Render (Blueprint con `render.yaml`) + Vercel (`frontend/`), ver README → Despliegue <br>Opcional: refresh token, subir portadas (Cloudinary), amigos/descargas del diseño <br>Opcional, de la revisión de seguridad del bloque 13 (no bloqueantes): <br>• `GameRequest.java:27`: `@URL` no limita el esquema (acepta `file:`, `ftp:`…) → limitarlo a http(s) (**backend-tienda**) <br>• `EmailTemplates.safeImageUrl` acepta `http://` sin TLS → valorar aceptar solo `https://` (**pagos-y-correo**) <br>• `EmailService.java` (líneas 81, 92 y 94) escribe el email del destinatario en el log → enmascararlo (**pagos-y-correo**) <br>Pendientes del bloque 15: <br>• El motivo de rechazo (`reason`) de `SimulatedPaymentGateway.java` (líneas 49 y 53) está en español y sale así en los correos en inglés e italiano → pasar un código de motivo y traducirlo en `MailTexts` (**pagos-y-correo**, menor) <br>• Ejecutar Newman con los nuevos bodies de Postman (`locale` en el registro del developer y al actualizar el perfil) (**qa**) <br>• Probar en el navegador el selector de idioma y un envío real en inglés e italiano (sin probar todavía) |
-| Última actualización | 2026-10-09 |
+| Estado actual | **✅ Bloques 0 a 16 y bloque A (cierre): backend (178 tests, 95,6 % de cobertura, Swagger) + frontend React en es/en/it + CI + despliegue preparado. Último bloque: A, arreglos de seguridad y verificación con Newman (2026-10-19)** |
+| Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). <br>**Plan aprobado (2026-10-19):** `docs/superpowers/specs/2026-10-19-cierre-y-extras-design.md`, por bloques y con un commit por función: <br>• B: reseñas estilo Steam (👍/👎, % y etiqueta, filtradas por idioma) <br>• C: catálogo a ~60 juegos importados de Steam <br>• D: chatbot recomendador con OpenRouter <br>• E: amigos y perfil (público o solo amigos) <br>• F: refresh token <br>• G: portadas en Cloudinary <br>Pendiente del usuario: desplegar en Render + Vercel (README → Despliegue) y probar un envío real en inglés e italiano |
+| Última actualización | 2026-10-19 |
 
 ### Entorno local (máquina del usuario, Windows 11)
 - **JDK:**
@@ -34,7 +34,7 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 - **Git:** repo propio en la carpeta del proyecto (antes estaba dentro del repo del home).
 
 ### Frontend (hecho el 2026-09-30, en `frontend/`; ver `frontend/README.md`)
-- **Cómo se hizo:** se partió del código exportado de Figma Make (`D:\Video Game Website`) y se quitaron los plugins de Figma. Stack: React 19, Vite 8, Tailwind v4, React Router 7 y npm (no hay pnpm instalado). La interfaz está en español y los precios en €.
+- **Cómo se hizo:** se partió del código exportado de Figma Make (`D:\Video Game Website`) y se quitaron los plugins de Figma. Stack: React 19, Vite 8, Tailwind v4, React Router 7 y npm (no hay pnpm instalado). La interfaz está en español, inglés e italiano (bloque 16) y los precios en €.
 - **Cobertura de la API:** se usan todos los endpoints (tienda, carrito, checkout y pago, biblioteca, wishlist, reseñas, perfil, panel de developer y panel de admin).
 - **Proxy de Vite:** `/api` → `localhost:8081`. El proxy **quita la cabecera `Origin`**: si no, el CORS del backend rechaza con 403 los POST cuando Vite no corre justo en el 5173.
 - **Puertos:** el 5174 lo ocupa Agent Office; el 5173 lo usaba `sprout-capstone`, que se cerró a petición del usuario el 2026-09-30.
@@ -71,10 +71,10 @@ Spring Boot **4.1.1** · jjwt **0.13.0** · Java **25** · Flyway (gestionado po
 | # | Decisión | Origen | Estado |
 |---|---|---|---|
 | D1 | Roles: USER, DEVELOPER y ADMIN | Usuario | ✅ Cerrada |
-| D2 | Pagos simulados (PaymentSimulator), sin pasarela real | Usuario | ✅ Cerrada |
+| D2 | Pagos simulados (`PaymentGateway` implementada por `SimulatedPaymentGateway`), sin pasarela real | Usuario | ✅ Cerrada |
 | D3 | Carrito y wishlist | Usuario | ✅ Cerrada |
 | D4 | Paquete `com.capstone.steam` | Usuario | ✅ Cerrada |
-| D5 | JWT con jjwt 0.12 y un `OncePerRequestFilter` propio | Propuesta | ⏳ Por validar |
+| D5 | JWT con jjwt 0.13 (`JwtService`) y un `OncePerRequestFilter` propio (`JwtAuthFilter`) | Propuesta | ✅ Aplicada |
 | D6 | Paquetes por feature; DTOs como `record` con mappers manuales | Propuesta | ⏳ Por validar |
 | D7 | Flyway con las ubicaciones `common` + `{vendor}`: una V4 para PostgreSQL y otra para H2 | Propuesta | ⏳ Por validar |
 | D8 | Tests con H2 en `MODE=PostgreSQL` | Propuesta | ⏳ Por validar |
@@ -124,26 +124,29 @@ Spring Boot **4.1.1** · jjwt **0.13.0** · Java **25** · Flyway (gestionado po
 ## 4. Arquitectura
 ```
 com.capstone.steam
-├── config/        AsyncConfig (mailExecutor), JpaAuditingConfig, OpenApi (opcional)
-├── security/      SecurityConfig, JwtService, JwtAuthFilter, UserDetailsServiceImpl, RestAuthEntryPoint
+├── config/        AsyncConfig (mailExecutor), MailExecutorProperties, OpenApiConfig
+├── security/      SecurityConfig, JwtService, JwtAuthFilter, JwtProperties, UserDetailsServiceImpl, AppUserPrincipal, ProblemResponseWriter (401/403), CorsProperties
 ├── auth/          AuthController, AuthService, dto (RegisterRequest, LoginRequest, AuthResponse)
-├── user/          User, Role, UserRepository, UserController (/me)
-├── genre/         Genre, GenreRepository, GenreService, GenreController (ADMIN CRUD)
-├── game/          Game, GameStatus, GameRepository (UPDATE atómicos), GameService, GameController
-│   └── search/    GameSearchCriteria (record), GameCriteriaRepository (Criteria API), PageResponse
-├── library/       LibraryEntry, LibraryRepository, LibraryController
-├── cart/          CartItem, CartService, CartController
-├── wishlist/      WishlistItem, WishlistService, WishlistController
-├── review/        Review, ReviewService, ReviewController
-├── order/         Order, OrderItem, OrderStatus, Payment, PaymentStatus, CheckoutService, PaymentSimulator
-├── notification/  events (UserRegisteredEvent, OrderPaidEvent, PaymentFailedEvent), MailListener, EmailService, EmailTemplates, MailTexts (es/en/it)
-└── common/        GlobalExceptionHandler (ProblemDetail), excepciones de dominio, BaseEntity
+├── user/          User, Role, RoleName, UserRepository, UserService, UserController (/me), AdminUserController, AdminAccountInitializer
+├── genre/         Genre, GenreRepository, GenreService, GenreController (ADMIN crea)
+├── game/          Game, GameStatus, GameRepository (UPDATE atómicos), CatalogService, GameManagementService, StorefrontRules,
+│                  CatalogController, DeveloperGameController, AdminGameController
+│   └── search/    GameSearchCriteria (record), GameSort, GameCriteriaRepository (Criteria API)
+├── library/       LibraryEntry, LibraryRepository, LibraryService, LibraryController
+├── cart/          CartItem, CartItemRepository, CartService, CartController
+├── wishlist/      WishlistItem, WishlistItemRepository, WishlistService, WishlistController
+├── review/        Review, ReviewRepository, ReviewService, ReviewController
+├── order/         Order, OrderItem, OrderStatus, Payment, PaymentStatus, PaymentMethod, OrderService, OrderController
+│   └── payment/   PaymentGateway, SimulatedPaymentGateway, PaymentProperties
+├── notification/  event (UserRegisteredEvent, OrderPaidEvent, PaymentFailedEvent, GameOnSaleEvent), MailListener, EmailService, EmailTemplates, MailTexts (es/en/it)
+├── steamstore/    SteamStoreClient, SteamImportService, SteamPriceSyncService, SteamPriceScheduler, SteamController
+└── common/        dto/PageResponse, exception (GlobalExceptionHandler con ProblemDetail, excepciones de dominio), i18n/Messages (errores en es/en/it)
 ```
 - **Capas:** Controller → Service (`@Transactional`) → Repository.
 - **Nunca se exponen entidades**: la API solo trabaja con DTOs.
 
 **Perfiles:**
-- `dev`: PostgreSQL con Docker.
+- `dev`: PostgreSQL local (o con Docker Compose, puerto 5433).
 - `test`: H2.
 - `prod`.
 
@@ -195,6 +198,12 @@ com.capstone.steam
 
 **V5__user_locale.sql** (en `common`, bloque 15)
 - **`users.locale`:** `VARCHAR(5) NOT NULL DEFAULT 'es'`, con `CHECK ck_users_locale` (`es`, `en` o `it`). Los usuarios existentes quedan en `es` (D44).
+
+**V6__game_description_translations.sql** (en `common`, bloque 16)
+- **`games.description_en`** y **`games.description_it`** (`VARCHAR(10000)`). `description` es la española y hace de respaldo.
+
+**V7__steam_link.sql** (en `common`, bloque 16)
+- **`games.steam_app_id`** (`INTEGER`, índice único) y **`games.price_synced_at`**. Los juegos sin AppID (creados a mano) no se sincronizan.
 
 ---
 
@@ -254,8 +263,8 @@ com.capstone.steam
     | Rechazo | No hemos podido cobrar tu pedido #N | We couldn't charge your order #N | Non siamo riusciti ad addebitare il tuo ordine #N |
 
 ### Testing
-- **Unitarios (Mockito):** `JwtServiceTest`, `CheckoutServiceTest`, `ReviewServiceTest` y `CartServiceTest`.
-- **`@DataJpaTest` con H2 y Flyway real:** `GameCriteriaRepositoryTest` y `GameRepositoryTest` (UPDATE atómicos y doble pago).
+- **Unitarios (Mockito):** `JwtServiceTest`, `AuthServiceTest`, `OrderServiceTest`, `ReviewServiceTest`, `CartServiceTest`, `GameManagementServiceTest`, `SimulatedPaymentGatewayTest`, `EmailServiceTest` y `SteamStoreClientTest`.
+- **`@DataJpaTest` con H2 y Flyway real:** `GameCriteriaRepositoryTest` y `RepositoryIntegrationTest` (UPDATE atómicos y doble pago). Concurrencia con 16 hilos en `AtomicUpdateConcurrencyTest`.
 - **`@SpringBootTest` + MockMvc:**
   - `AuthIntegrationTest`
   - `CheckoutIntegrationTest`
@@ -282,6 +291,8 @@ com.capstone.steam
 | 13 | Recibo de compra con portada y precio | ✅ Hecho | 2026-10-09 | • Correos con el estilo de ARCADE (D41) y recibo con miniatura de portada, título y precio pagado por juego, más el total (D42) <br>• `OrderPaidEvent` pasa a `List<Line(title, coverUrl, unitPrice)>`; nuevo `EmailTemplates.safeImageUrl` <br>• La página de pedidos del frontend ya mostraba portada y precio: sin cambios <br>• `.\mvnw.cmd verify`: **122 tests, 0 fallos, 0 errores**, BUILD SUCCESS. Cobertura: **96,28 % de líneas (1.192 de 1.238)** y 80 % de ramas. Frontend no ejecutado (sin cambios; siguen 18 tests) <br>• Revisión de seguridad sin hallazgos bloqueantes; 3 mejoras menores pendientes (ver «Siguiente paso») y una limitación aceptada (D43) <br>• **El envío real a Gmail sigue sin probarse**: `MAIL_USERNAME`, `MAIL_APP_PASSWORD` y `MAIL_FROM` están vacíos en `.env` |
 | 14 | Prueba real del correo con Gmail | ✅ Hecho | 2026-10-09 | Backend en el 8081, perfil `dev`, BD `capstone_steam_demo`. <br>• **1.ª prueba (fallida):** `535 5.7.8 BadCredentials`, porque la contraseña de aplicación era de otra cuenta distinta de `MAIL_USERNAME`. La app degradó bien (D36): pedido #22 PAID y el error solo en el log. El usuario corrigió `.env`. <br>• **2.ª prueba (correcta):** usuario nuevo `mailtest_arcade2`. Pedido #23 PAID: Cyberpunk 2077 (id 7) a 44,99 € con 25 % de descuento + Celeste (id 3) a 18,99 €; total **63,98 €**. Log: «¡Bienvenido a ARCADE!» en `mail-1` y «Recibo de tu compra #23» en `mail-2`, sin excepciones. **El usuario confirmó que los dos correos llegaron a su bandeja.** <br>• Sin cambios de código ni tests ejecutados en este bloque. Lecciones del entorno en la sección 8 |
 | 15 | Correos en el idioma del usuario (es, en, it) | ✅ Hecho | 2026-10-09 | Pedido por el usuario antes del commit. <br>• **BD:** `V5__user_locale.sql` (`users.locale` + CHECK), aplicada en `capstone_steam_demo` (31 usuarios en `es`) (D44) <br>• **API:** `locale` opcional en el registro y en `PATCH /api/users/me`; sale en `UserResponse`; no va en el JWT. Postman: `locale` en el registro del developer (`en`) y al actualizar el perfil (`it`) <br>• **Correo:** `MailTexts` con ES, EN e IT; el `locale` viaja en los 3 eventos; `<html lang>` e importes por idioma (D45). Hecho también el `trim()` de `MAIL_FROM` <br>• **Frontend:** `lib/locale.ts` (`detectLocale` con el idioma del navegador; si no es es/en/it → es). El registro lo envía sin campo visible. En Ajustes, «Perfil público» tiene el selector «Idioma de los correos» (Español, English, Italiano), que se guarda con «Guardar cambios». La interfaz web sigue solo en español <br>• `.\mvnw.cmd verify`: **158 tests, 0 fallos, 0 errores, 0 omitidos**, coverage checks met, BUILD SUCCESS. Cobertura: **96,35 % de líneas (1.213 de 1.259)** y 81 % de ramas. Frontend: **21 tests en 6 archivos** y build correcto <br>• **Sin probar:** Newman con los nuevos bodies, el selector en el navegador y un envío real en inglés o italiano. El motivo de rechazo sigue en español (ver «Siguiente paso») |
+| 16 | Interfaz en es/en/it, importación de Steam y alojamiento local | ✅ Hecho | 2026-10-18 | Commits `245570c` a `8e980c7`. <br>• **Frontend:** `i18n/` (`messages.ts`, `LanguageSwitcher` con banderas en la cabecera, `localStorage` `arcade.lang`, por defecto el idioma del navegador o `es`); todas las páginas traducidas; la tarjeta entera abre el detalle; Swagger accesible desde el frontend (proxy de `/swagger-ui` y `/v3/api-docs`); móvil con «Accedi» y «Ordini»; footer con GitHub, LinkedIn y API Docs <br>• **Backend:** errores de la API traducidos con `common/i18n/Messages` y `Accept-Language`; descripciones en/it (V6); integración con la tienda de Steam (V7): `POST /api/developer/games/import` y sincronización de precios al arrancar y cada 6 h (`POST /api/admin/steam/sync`); si la sincronización detecta que empieza una oferta, correo a quien tiene el juego en la wishlist, en su idioma (`GameOnSaleEvent`) <br>• **Datos demo:** reseñas en italiano <br>• **Alojamiento local:** `deploy/local/` (Caddy + scripts `start-arcade`/`stop-arcade`) |
+| A | Cierre: seguridad y verificación | ✅ Hecho | 2026-10-19 | Diseño: `docs/superpowers/specs/2026-10-19-cierre-y-extras-design.md`. <br>• `coverUrl` y `avatarUrl` solo http(s) (`010677a`) <br>• Email del destinatario enmascarado en los logs, también en el error SMTP (`e9ee925`) <br>• Portadas del correo solo por https (`2ec4015`) <br>• El motivo de rechazo ya se traducía (claves `payment.declined.*`) <br>• `.\mvnw.cmd verify`: **178 tests**, 0 fallos, cobertura **95,64 %** de líneas (1.558 de 1.629) y 81 % de ramas <br>• Newman: 47 peticiones, 60 comprobaciones, 0 fallos <br>• Navegador: selector de idioma de la interfaz y de los correos; pago rechazado en inglés por API <br>• Pendiente del usuario: envío real en en/it |
 
 ---
 
@@ -313,7 +324,7 @@ com.capstone.steam
 0. Crear la BD (solo la primera vez):
    `& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -h localhost -c "CREATE DATABASE capstone_steam;"`
 1. `docker compose up -d` (solo si se usa Docker en lugar de Postgres local)
-2. `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`: Flyway aplica V1 a V5 y Hibernate valida el esquema.
+2. `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`: Flyway aplica V1 a V7 y Hibernate valida el esquema.
 3. `./mvnw test`: todo en verde sobre H2.
 4. Prueba manual: register → login → buscar con filtros → carrito → checkout → biblioteca → reseña.
 5. Comprobar que llega el correo y que en los logs el envío aparece en un hilo `mail-*`.

@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 158 tests, 96 % de líneas cubiertas (JaCoCo) · Frontend: 21 tests · CI en GitHub Actions |
+| **Tests** | Backend: 178 tests, 95,6 % de líneas cubiertas (JaCoCo) · Frontend: 26 tests · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 47 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -51,7 +51,7 @@ Los pagos son **simulados**: una tarjeta terminada en `0000` siempre se rechaza,
 - Al registrarse, el frontend envía el idioma del navegador (si no es `es`, `en` ni `it`, usa `es`).
 - En *Ajustes → Perfil público*, el selector «Idioma de los correos» permite cambiarlo.
 - Los importes siguen en euros, con el formato de cada idioma.
-- La interfaz web sigue solo en español.
+- La interfaz web también está en los tres idiomas: se elige con las banderas de la cabecera y se recuerda en el navegador.
 
 ## Requisitos técnicos y dónde se cumplen
 
@@ -239,7 +239,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 158 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 178 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
@@ -248,12 +248,12 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 | Unitarios (Mockito) | `JwtServiceTest`, `AuthServiceTest`, `OrderServiceTest`, `ReviewServiceTest`, `CartServiceTest` | Reglas de negocio aisladas: tokens manipulados o caducados, delta de rating, pago aprobado o rechazado |
 | Repositorio (`@DataJpaTest` + Flyway real) | `GameCriteriaRepositoryTest`, `RepositoryIntegrationTest` | Filtros y órdenes de Criteria API, UPDATE atómicos y restricciones de la base de datos |
 | Integración HTTP (MockMvc) | `AuthIntegrationTest`, `CatalogIntegrationTest`, `CheckoutIntegrationTest`… | Flujos completos con JWT real, 401/403/404/409/402 y el formato ProblemDetail |
-| Correo asíncrono | `MailEventIntegrationTest`, `EmailServiceTest` | El correo sale **después del commit**, en un hilo `mail-*`, y **no** sale si hay rollback. Las plantillas escapan el HTML, el recibo solo enlaza portadas `http(s)` y cada correo sale en el idioma del usuario (es, en o it, con español si falta) |
+| Correo asíncrono | `MailEventIntegrationTest`, `EmailServiceTest` | El correo sale **después del commit**, en un hilo `mail-*`, y **no** sale si hay rollback. Las plantillas escapan el HTML, el recibo solo enlaza portadas `https`, en el log el email del destinatario sale enmascarado (`l***@gmail.com`) y cada correo sale en el idioma del usuario (es, en o it, con español si falta) |
 | Concurrencia | `AtomicUpdateConcurrencyTest` | 16 hilos reales: ninguna venta se pierde y **exactamente 1** pago gana el pedido |
 
 Los tests usan H2 en modo PostgreSQL **con las mismas migraciones de Flyway** que producción; no hay `ddl-auto=create`.
 
-**Frontend** (`cd frontend && npm test`): 21 tests en 6 archivos, con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402), los formateadores, la detección del idioma del navegador y los flujos de login, registro, checkout (pedido → pago aprobado o rechazado) y ajustes (selector del idioma de los correos) sobre las páginas reales con `fetch` simulado.
+**Frontend** (`cd frontend && npm test`): 26 tests en 7 archivos, con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402), los formateadores, la detección del idioma del navegador y los flujos de login, registro, checkout (pedido → pago aprobado o rechazado) y ajustes (selector del idioma de los correos) sobre las páginas reales con `fetch` simulado, además de la traducción de la interfaz (mismas claves en los tres idiomas, banderas y `Accept-Language`).
 
 **CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta `./mvnw verify` y los tests y el build del frontend en cada push a `main`.
 
@@ -313,5 +313,4 @@ La justificación de cada decisión (D1 a D45) está en [handoff.md](handoff.md)
 ### Limitaciones conocidas
 - El JWT no consulta la base de datos en cada petición. Si se desactiva un usuario o cambian sus roles, el cambio no se aplica hasta que caduca su token (2 h). No hay refresh tokens.
 - Si llegan dos pagos simultáneos del mismo pedido, la pasarela simulada se llama dos veces, aunque solo uno se completa y el otro hace rollback. Con un proveedor real habría que usar una idempotency key.
-- En los correos en inglés e italiano, el motivo de un pago rechazado todavía sale en español (lo genera la pasarela simulada).
 - La portada del recibo se carga desde la URL que puso el developer, así que ese servidor puede saber cuándo se abre el correo (como un píxel de seguimiento). Pasa lo mismo en la tienda web. Gmail lo atenúa porque sirve las imágenes a través de su proxy. La solución sería alojar las portadas en un almacenamiento propio.

@@ -17,7 +17,7 @@ Eres el responsable de la base de datos de Capstone Steam, una tienda de videoju
 
 ## Reglas que proteges
 
-- **Las migraciones aplicadas no se editan.** V1 a V4 ya están en la base de datos. Cualquier cambio es una migración nueva (V5, V6…).
+- **Las migraciones aplicadas no se editan.** V1 a V7 ya están en la base de datos. Cualquier cambio es una migración nueva (V8, V9…).
 - **SQL portable en `common/`.** Si algo solo existe en PostgreSQL (trigramas `pg_trgm`, índices parciales o por expresión), crea la misma versión en `postgresql/` y en `h2/` con el equivalente que H2 soporte.
 - **`ddl-auto=validate`.** Hibernate valida el esquema al arrancar. Usa `INTEGER` en vez de `SMALLINT` y `VARCHAR(n)` en vez de `TEXT`; en las entidades, `Integer`/`Long`, `BigDecimal`, `Instant` y `String` con `length`, sin `@Lob`.
 - **Contadores solo con UPDATE atómicos (D11).** `sales_count`, `rating_sum`, `rating_count` y `playtime_minutes` nunca se modifican con `save()`. En `Game` son `insertable=false, updatable=false`.
@@ -41,7 +41,7 @@ $env:SERVER_PORT = "8081"; .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profile
 ## Reglas comunes del equipo
 
 - Responde siempre en español.
-- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D40 y explican por qué el código es como es.
+- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D45 y explican por qué el código es como es.
 - Toca solo tu territorio. Si la tarea necesita un cambio fuera de él, no lo hagas: descríbelo en tu informe para que el orquestador se lo pase al agente dueño.
 - Única excepción: los tests de tu propia zona. El código nuevo llega con sus tests, así que puedes escribirlos o ajustarlos tú. `qa` es dueño de la suite completa y la verifica después.
 - Nunca muestres, copies ni subas los valores de `.env`. Puedes leer qué variables existen en `.env.example`.

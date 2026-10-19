@@ -32,7 +32,7 @@ Limitación conocida (D33): dos pagos simultáneos del mismo pedido llaman dos v
 
 ## Trabajo pendiente en tu zona
 
-**Probar el envío real con Gmail.** Faltan `MAIL_USERNAME` y `MAIL_APP_PASSWORD` en `.env`. Esos valores solo los puede crear el usuario (contraseña de aplicación de Google, con la verificación en dos pasos activada). Pídeselos; nunca los inventes ni los escribas en otro archivo que no sea `.env`.
+**Gmail ya funciona** (`MAIL_USERNAME` y `MAIL_APP_PASSWORD` en `.env`, envío real probado en el bloque 14). En el log, el email del destinatario sale enmascarado (`EmailService.maskEmail`) y las portadas del correo solo se aceptan por https. Pendiente del usuario: probar un envío real en inglés e italiano en su bandeja. Las credenciales solo las pone el usuario en `.env`; nunca las inventes ni las escribas en otro archivo.
 
 ## Cómo compruebas tu trabajo
 
@@ -45,7 +45,7 @@ Para el correo real: arranca la aplicación, registra un usuario o completa una 
 ## Reglas comunes del equipo
 
 - Responde siempre en español.
-- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D40 y explican por qué el código es como es.
+- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D45 y explican por qué el código es como es.
 - Toca solo tu territorio. Si la tarea necesita un cambio fuera de él, no lo hagas: descríbelo en tu informe para que el orquestador se lo pase al agente dueño.
 - Única excepción: los tests de tu propia zona. El código nuevo llega con sus tests, así que puedes escribirlos o ajustarlos tú. `qa` es dueño de la suite completa y la verifica después.
 - Nunca muestres, copies ni subas los valores de `.env`. Puedes leer qué variables existen en `.env.example`.
