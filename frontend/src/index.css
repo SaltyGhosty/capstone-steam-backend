@@ -95,7 +95,6 @@ h1 { max-width: 520px; margin: 0; font-size: clamp(38px, 5vw, 67px); line-height
 .wish.active { color: #151a0d; background: #b7ff3c; border-color: #b7ff3c; }
 .wish.active svg { fill: currentColor; }
 .rating { position: absolute; z-index: 2; pointer-events: none; left: 11px; bottom: 9px; display: flex; align-items: center; gap: 4px; color: #e9edf0; font-size: 9px; }
-.rating svg { color: #b7ff3c; fill: #b7ff3c; }
 .game-info { min-height: 73px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 14px; }
 .game-info h3 { margin: 0 0 6px; color: #e6e9ed; font-size: 13px; }
 .game-info p { margin: 0; color: #68717e; font-size: 9px; }
