@@ -6,6 +6,8 @@
 //   node scripts/seed-demo.mjs --api https://mi-api.onrender.com
 //
 // Se puede repetir: lo que ya existe (usuarios, juegos, compras, reseñas…) se salta.
+// Para sembrar un backend con rechazo aleatorio de pagos, conviene arrancarlo con PAYMENT_FAILURE_RATE=0:
+// aun así, un pago rechazado se reintenta hasta 3 veces. Las compras de «failedPayments» fallan a propósito.
 // Los datos están en scripts/demo-data.json. Las portadas se enlazan desde el CDN de Steam y cada juego
 // queda enlazado por su AppID: el backend sincroniza después precio y descuento con la tienda de Steam.
 import { readFile } from 'node:fs/promises';
@@ -145,13 +147,26 @@ async function buy(token, keys, card) {
   return paid.status;
 }
 
+/**
+ * Compra de verdad: si el pago se rechaza (PAYMENT_FAILURE_RATE > 0) repite hasta 3 veces, con un pedido
+ * nuevo cada vez. Devuelve false si los 3 intentos fallan.
+ */
+async function buyPaid(token, keys, who) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const status = await buy(token, keys, VALID_CARD);
+    if (status === 'PAID') return true;
+    console.warn(`  ! ${who}: pedido ${status} (intento ${attempt} de 3)`);
+  }
+  return false;
+}
+
 for (const [player, keys] of Object.entries(data.purchases)) {
   const token = playerTokens[player];
   const pending = [];
   for (const key of keys) if (live(key) && !(await owned(token, key))) pending.push(key);
   if (pending.length) {
     // de dos en dos, para que cada jugador tenga un historial con varios pedidos
-    for (let i = 0; i < pending.length; i += 2) await buy(token, pending.slice(i, i + 2), VALID_CARD);
+    for (let i = 0; i < pending.length; i += 2) await buyPaid(token, pending.slice(i, i + 2), player);
     log(`${player} compra ${pending.length} juegos`);
   }
 }
@@ -234,8 +249,10 @@ for (const r of reviewers) {
   const pending = assigned.filter((a) => !library.has(gameIds[a.game.key]));
   let bought = 0;
   if (pending.length) {
-    const status = await buy(token, pending.map((a) => a.game.key), VALID_CARD);
-    if (status !== 'PAID') throw new Error(`${r.username}: el pedido quedó ${status}`);
+    if (!(await buyPaid(token, pending.map((a) => a.game.key), r.username))) {
+      console.warn(`  ! ${r.username}: los 3 pagos fallaron, se pasa al siguiente reseñador`);
+      continue;
+    }
     bought = pending.length;
   }
 
