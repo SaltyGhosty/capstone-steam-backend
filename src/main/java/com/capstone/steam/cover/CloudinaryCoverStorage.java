@@ -20,8 +20,11 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+
+import com.capstone.steam.common.exception.BadRequestException;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -123,6 +126,10 @@ public class CloudinaryCoverStorage implements CoverStorage {
                 throw new CoverUploadException(null);
             }
             return url;
+        } catch (HttpClientErrorException.BadRequest ex) {
+            // Cloudinary rechaza el archivo (400): es culpa de la imagen, no un fallo del servicio
+            log.warn("Cloudinary ha rechazado la portada del juego {} con 400", gameId);
+            throw new BadRequestException("cover.invalidType");
         } catch (RestClientException | JacksonException | IllegalArgumentException ex) {
             // solo el tipo del error: ni la URL de configuración ni el cuerpo de la petición
             log.warn("Cloudinary no ha aceptado la portada del juego {}: {}", gameId, ex.getClass().getSimpleName());

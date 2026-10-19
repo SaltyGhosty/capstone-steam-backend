@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -21,6 +22,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+
+import com.capstone.steam.common.exception.BadRequestException;
 
 class CloudinaryCoverStorageTest {
 
@@ -89,5 +92,24 @@ class CloudinaryCoverStorageTest {
         assertThatThrownBy(() -> storage.upload(7, new byte[] {1}, ImageType.PNG))
                 .isInstanceOf(CoverUploadException.class)
                 .satisfies(e -> assertThat(String.valueOf(e.getCause())).doesNotContain("topsecret"));
+    }
+
+    @Test
+    void aCloudinary400IsABadRequestAndA500IsStillABadGateway() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://api.cloudinary.com/v1_1/demo/image/upload"))
+                .andRespond(withBadRequest().contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"error\":{\"message\":\"Invalid image file\"}}"));
+        server.expect(requestTo("https://api.cloudinary.com/v1_1/demo/image/upload"))
+                .andRespond(withServerError());
+        CloudinaryCoverStorage storage = new CloudinaryCoverStorage(props("cloudinary://key:secret@demo"),
+                builder.build(), CLOCK);
+
+        assertThatThrownBy(() -> storage.upload(7, new byte[] {1}, ImageType.PNG))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("La portada tiene que ser una imagen JPEG, PNG o WebP");
+        assertThatThrownBy(() -> storage.upload(7, new byte[] {1}, ImageType.PNG))
+                .isInstanceOf(CoverUploadException.class);
     }
 }
