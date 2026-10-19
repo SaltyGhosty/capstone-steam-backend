@@ -58,12 +58,12 @@ async function account(username, displayName, accountType) {
       username, displayName, accountType, password: data.password, email: `${username}@demo.capstone-steam.local`,
     } });
     sessionUser.set(res.accessToken, username);
-    return { token: res.accessToken, created: true };
+    return { token: res.accessToken, created: true, id: res.user.id };
   } catch (e) {
     if (e.status !== 409) throw e;
     const res = await call('POST', '/api/auth/login', { body: { login: username, password: data.password } });
     sessionUser.set(res.accessToken, username);
-    return { token: res.accessToken, created: false };
+    return { token: res.accessToken, created: false, id: res.user.id };
   }
 }
 
@@ -121,7 +121,12 @@ for (const g of data.games) {
 
 // ---------------------------------------------------------------- jugadores
 const playerTokens = {};
-for (const p of data.players) playerTokens[p.username] = (await account(p.username, p.displayName, 'PLAYER')).token;
+const playerIds = {}; // username -> id de usuario: el displayName no es único, el id sí
+for (const p of data.players) {
+  const acc = await account(p.username, p.displayName, 'PLAYER');
+  playerTokens[p.username] = acc.token;
+  playerIds[p.username] = acc.id;
+}
 
 /** Solo se puede comprar, reseñar o guardar un juego publicado. */
 const live = (key) => gameStatus[key] === 'PUBLISHED';
@@ -183,9 +188,8 @@ for (const r of data.reviews) {
   } catch (e) {
     if (e.status !== 409) throw e;
     // ya la había escrito: se actualiza si cambió el texto, el idioma o el voto (p. ej. al traducir los datos demo)
-    const author = data.players.find((p) => p.username === r.player)?.displayName;
     const existing = (await call('GET', `/api/games/${gameSlugs[r.game]}/reviews?size=100`)).content
-      .find((x) => x.author.displayName === author);
+      .find((x) => x.author.id === playerIds[r.player]);
     if (existing && (existing.body !== r.body || existing.language !== r.language || existing.recommended !== r.recommended)) {
       await call('PUT', `/api/reviews/${existing.id}`, { token: playerTokens[r.player], body: {
         gameId: gameIds[r.game], recommended: r.recommended, body: r.body, language: r.language,
