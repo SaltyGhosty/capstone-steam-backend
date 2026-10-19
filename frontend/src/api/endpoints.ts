@@ -3,7 +3,7 @@ import { api } from './client';
 import type {
   AuthResponse, Cart, CatalogQuery, GameDetail, GameRequest, GameStatus, GameSummary, Genre,
   LibraryEntry, Order, OrderSummary, Ownership, PageResponse, PaymentMethod, RegisterRequest, Review, ReviewRequest, Role,
-  SteamSyncResult, UpdateProfileRequest, User,
+  FriendRequest, FriendRequests, FriendResponse, PublicProfile, SearchHit, SteamSyncResult, UpdateProfileRequest, User,
   WishlistItem,
 } from './types';
 
@@ -20,6 +20,19 @@ export const userApi = {
   me: () => api<User>('/api/users/me'),
   update: (body: UpdateProfileRequest) =>
     api<User>('/api/users/me', { method: 'PATCH', body }),
+  search: (q: string) => api<SearchHit[]>('/api/users/search', { query: { q } }),
+  profile: (username: string) => api<PublicProfile>(`/api/users/${encodeURIComponent(username)}/profile`),
+};
+
+export const friendsApi = {
+  list: () => api<FriendResponse[]>('/api/friends'),
+  requests: () => api<FriendRequests>('/api/friends/requests'),
+  send: (username: string) =>
+    api<FriendRequest>('/api/friends/requests', { method: 'POST', body: { username } }),
+  accept: (id: number) => api<FriendRequest>(`/api/friends/requests/${id}/accept`, { method: 'POST' }),
+  reject: (id: number) => api<void>(`/api/friends/requests/${id}/reject`, { method: 'POST' }),
+  cancel: (id: number) => api<void>(`/api/friends/requests/${id}`, { method: 'DELETE' }),
+  remove: (username: string) => api<void>(`/api/friends/${encodeURIComponent(username)}`, { method: 'DELETE' }),
 };
 
 export const catalogApi = {

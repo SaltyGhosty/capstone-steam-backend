@@ -15,6 +15,7 @@ export default function Settings() {
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? '');
   const [locale, setLocale] = useState<Locale>(user?.locale ?? 'es');
+  const [profilePublic, setProfilePublic] = useState(user?.profilePublic ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
@@ -30,6 +31,7 @@ export default function Settings() {
         displayName: displayName.trim() || undefined,
         avatarUrl: avatarUrl.trim() || undefined,
         locale,
+        profilePublic,
       });
       setUser(updated);
       notify(t('settings.updated'));
@@ -59,7 +61,7 @@ export default function Settings() {
           <button className="secondary full" onClick={logout}><Icon name="logout" size={16} /> {t('nav.logout')}</button>
         </aside>
         <form className="panel form" onSubmit={submit}>
-          <h3>{t('settings.publicProfile')}</h3>
+          <h3>{t('settings.profileSection')}</h3>
           <label className="field">
             <span>{t('auth.displayName')}</span>
             <input maxLength={100} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
@@ -76,6 +78,10 @@ export default function Settings() {
               {LOCALES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
             </select>
             <FieldError errors={errors} name="locale" />
+          </label>
+          <label className="check-field">
+            <input type="checkbox" checked={profilePublic} onChange={(e) => setProfilePublic(e.target.checked)} />
+            <span>{t('settings.publicProfile')} <em>{t('settings.publicProfileHelp')}</em></span>
           </label>
           <div className="form-actions">
             <button className="primary small" disabled={busy}>{busy ? t('common.saving') : t('common.saveChanges')}</button>
