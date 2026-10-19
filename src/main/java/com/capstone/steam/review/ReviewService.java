@@ -1,5 +1,7 @@
 package com.capstone.steam.review;
 
+import java.util.Set;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -30,6 +32,7 @@ import com.capstone.steam.user.UserRepository;
 @Service
 public class ReviewService {
 
+    private static final Set<String> LANGUAGES = Set.of("es", "en", "it");
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "createdAt");
 
     private final ReviewRepository reviewRepository;
@@ -46,12 +49,17 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<ReviewResponse> listForGame(String slug, Pageable pageable) {
+    public PageResponse<ReviewResponse> listForGame(String slug, String language, Pageable pageable) {
+        if (language != null && !LANGUAGES.contains(language)) {
+            throw new BadRequestException("review.invalidLanguage", language);
+        }
         Game game = gameRepository.findBySlug(slug)
                 .filter(Game::isPublished)
                 .orElseThrow(() -> NotFoundException.of("game", slug));
-        var page = reviewRepository.findByGameId(game.getId(),
-                PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), NEWEST_FIRST));
+        PageRequest paging = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), NEWEST_FIRST);
+        var page = language == null
+                ? reviewRepository.findByGameId(game.getId(), paging)
+                : reviewRepository.findByGameIdAndLanguage(game.getId(), language, paging);
         return PageResponse.of(page, ReviewResponse::from);
     }
 

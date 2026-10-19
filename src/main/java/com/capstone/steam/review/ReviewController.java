@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,10 +30,11 @@ public class ReviewController {
         this.reviewService = reviewService;
     }
 
-    /** Público (GET /api/games/** es permitAll). */
+    /** Público (GET /api/games/** es permitAll). {@code language} es opcional: sin él salen todas. */
     @GetMapping("/api/games/{slug}/reviews")
-    public PageResponse<ReviewResponse> listForGame(@PathVariable String slug, Pageable pageable) {
-        return reviewService.listForGame(slug, pageable);
+    public PageResponse<ReviewResponse> listForGame(@PathVariable String slug,
+            @RequestParam(required = false) String language, Pageable pageable) {
+        return reviewService.listForGame(slug, language, pageable);
     }
 
     @PostMapping("/api/reviews")

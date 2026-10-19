@@ -188,6 +188,34 @@ class StorefrontIntegrationTest {
     }
 
     @Test
+    void reviewsCanBeFilteredByLanguage() throws Exception {
+        for (String language : List.of("es", "en", "it")) {
+            String token = register("p" + language, "p" + language + "@test.com", "PLAYER");
+            long id = ((Number) JsonPath.read(mvc.perform(auth(get("/api/users/me"), token))
+                    .andReturn().getResponse().getContentAsString(), "$.id")).longValue();
+            mvc.perform(auth(post("/api/admin/users/" + id + "/library/" + gameId), adminToken))
+                    .andExpect(status().isCreated());
+            mvc.perform(auth(post("/api/reviews"), token).contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"gameId":%d,"recommended":true,"body":"Review","language":"%s"}"""
+                                    .formatted(gameId, language)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.language").value(language));
+        }
+
+        mvc.perform(get("/api/games/celeste/reviews").param("language", "en"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].language").value("en"));
+        mvc.perform(get("/api/games/celeste/reviews"))
+                .andExpect(jsonPath("$.totalElements").value(3));
+        mvc.perform(get("/api/games/celeste/reviews").param("language", "fr"))
+                .andExpect(status().isBadRequest());
+        // la puntuación global cuenta todos los idiomas
+        mvc.perform(get("/api/games/celeste")).andExpect(jsonPath("$.reviewCount").value(3));
+    }
+
+    @Test
     void invalidReviewReturns400() throws Exception {
         grantToPlayer();
         mvc.perform(auth(post("/api/reviews"), playerToken).contentType(MediaType.APPLICATION_JSON)
@@ -195,6 +223,16 @@ class StorefrontIntegrationTest {
                                 {"gameId":%d,"body":"Sin voto"}""".formatted(gameId)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.recommended").exists());
+    }
+
+    @Test
+    void reviewWithAnInvalidLanguageReturns400() throws Exception {
+        grantToPlayer();
+        mvc.perform(auth(post("/api/reviews"), playerToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"gameId":%d,"recommended":true,"language":"fr"}""".formatted(gameId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.language").exists());
     }
 
     // ------------------------------------------------------------------

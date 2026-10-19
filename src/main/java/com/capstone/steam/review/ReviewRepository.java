@@ -13,6 +13,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             countQuery = "select count(r) from Review r where r.game.id = :gameId")
     Page<Review> findByGameId(Long gameId, Pageable pageable);
 
+    @Query(value = "select r from Review r join fetch r.user where r.game.id = :gameId and r.language = :language",
+            countQuery = "select count(r) from Review r where r.game.id = :gameId and r.language = :language")
+    Page<Review> findByGameIdAndLanguage(Long gameId, String language, Pageable pageable);
+
     Optional<Review> findByUserIdAndGameId(Long userId, Long gameId);
 
     boolean existsByUserIdAndGameId(Long userId, Long gameId);
