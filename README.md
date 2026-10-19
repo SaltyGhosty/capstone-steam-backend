@@ -323,7 +323,7 @@ El repositorio incluye todo lo necesario; solo faltan las cuentas.
 3. Vuelve a Render y pon en `CORS_ALLOWED_ORIGINS` la URL final de Vercel.
 4. Carga el catálogo demo en la base de datos nueva: `node scripts/seed-demo.mjs --api https://<tu-servicio>.onrender.com`.
 
-En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda unos 30-60 s en despertarlo.
+En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda unos 3 minutos en despertarlo.
 
 ### Alternativa: alojarlo en tu propio PC
 
