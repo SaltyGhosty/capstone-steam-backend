@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Capstone Steam API",
-    "description": "Colección de la API de Capstone Steam (backend Spring Boot 4 + JWT).\n\nEstá ordenada como un **flujo completo**: ejecútala con el Collection Runner de arriba abajo.\nLos tokens, ids y slugs se guardan solos en variables de colección.\n\n- `baseUrl`: por defecto http://localhost:8081\n- La carpeta **8. Admin** necesita un admin: define ADMIN_PASSWORD en .env y pon la misma contraseña en `adminPassword`.\n- Tarjeta terminada en 0000 = pago rechazado (simulado).",
+    "description": "Colección de la API de Capstone Steam (backend Spring Boot 4 + JWT).\n\nEstá ordenada como un **flujo completo**: ejecútala con el Collection Runner de arriba abajo.\nLos tokens, ids y slugs se guardan solos en variables de colección.\n\n- `baseUrl`: por defecto http://localhost:8081\n- La carpeta **10. Admin** necesita un admin: define ADMIN_PASSWORD en .env y pon la misma contraseña en `adminPassword`.\n- Tarjeta terminada en 0000 = pago rechazado (simulado).\n- La carpeta **9** acepta que el asistente responda 503 si el servidor no tiene `OPENROUTER_API_KEY`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -60,6 +60,30 @@
     {
       "key": "reviewId",
       "value": ""
+    },
+    {
+      "key": "playerRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "oldRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "player2Token",
+      "value": ""
+    },
+    {
+      "key": "player2Id",
+      "value": ""
+    },
+    {
+      "key": "player2Username",
+      "value": ""
+    },
+    {
+      "key": "friendRequestId",
+      "value": ""
     }
   ],
   "item": [
@@ -86,7 +110,8 @@
                   "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
                   "const b = pm.response.json();",
                   "pm.collectionVariables.set(\"devToken\", b.accessToken);",
-                  "pm.test(\"rol DEVELOPER\", () => pm.expect(b.user.roles).to.include(\"ROLE_DEVELOPER\"));"
+                  "pm.test(\"rol DEVELOPER\", () => pm.expect(b.user.roles).to.include(\"ROLE_DEVELOPER\"));",
+                  "pm.test(\"llega refreshToken\", () => pm.expect(b.refreshToken).to.be.a(\"string\").and.not.empty);"
                 ]
               }
             }
@@ -136,7 +161,10 @@
                   "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
                   "const b = pm.response.json();",
                   "pm.collectionVariables.set(\"playerToken\", b.accessToken);",
-                  "pm.collectionVariables.set(\"playerId\", b.user.id);"
+                  "pm.collectionVariables.set(\"playerId\", b.user.id);",
+                  "pm.collectionVariables.set(\"playerRefreshToken\", b.refreshToken);",
+                  "pm.test(\"llega refreshToken\", () => pm.expect(b.refreshToken).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"el acceso trae su duración\", () => pm.expect(b.expiresIn).to.be.above(0));"
                 ]
               }
             }
@@ -183,8 +211,11 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-                  "pm.collectionVariables.set(\"playerToken\", pm.response.json().accessToken);",
-                  "pm.test(\"Bearer\", () => pm.expect(pm.response.json().tokenType).to.eql(\"Bearer\"));"
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set(\"playerToken\", b.accessToken);",
+                  "pm.collectionVariables.set(\"playerRefreshToken\", b.refreshToken);",
+                  "pm.test(\"Bearer\", () => pm.expect(b.tokenType).to.eql(\"Bearer\"));",
+                  "pm.test(\"llega refreshToken\", () => pm.expect(b.refreshToken).to.be.a(\"string\").and.not.empty);"
                 ]
               }
             }
@@ -391,6 +422,162 @@
                 "me"
               ]
             }
+          }
+        },
+        {
+          "name": "Renovar sesión (refresh con rotación)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"oldRefreshToken\", pm.collectionVariables.get(\"playerRefreshToken\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"acceso y refresh nuevos\", () => { pm.expect(b.accessToken).to.be.a(\"string\").and.not.empty; pm.expect(b.refreshToken).to.be.a(\"string\").and.not.empty; });",
+                  "pm.test(\"el refresh rota\", () => pm.expect(b.refreshToken).to.not.eql(pm.collectionVariables.get(\"oldRefreshToken\")));",
+                  "pm.collectionVariables.set(\"playerToken\", b.accessToken);",
+                  "pm.collectionVariables.set(\"playerRefreshToken\", b.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{playerRefreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Canjea el refresh token por un acceso y un refresh nuevos; el anterior queda revocado (rotación). Los dos tokens nuevos se guardan en variables."
+          }
+        },
+        {
+          "name": "Reutilizar el refresh viejo → 401 (revoca la familia)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"ProblemDetail\", () => pm.expect(pm.response.json().status).to.eql(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{oldRefreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Un refresh ya usado se toma por robado: responde 401 y revoca toda la familia (también el refresh nuevo del paso anterior)."
+          }
+        },
+        {
+          "name": "Logout → 204",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{playerRefreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Revoca la sesión del refresh token dado. Es idempotente: un token ya revocado o desconocido también responde 204. El token de acceso sigue valiendo hasta que caduca (15 min)."
           }
         }
       ]
@@ -1518,7 +1705,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set(\"reviewId\", pm.response.json().id);"
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set(\"reviewId\", b.id);",
+                  "pm.test(\"positiva y en español\", () => { pm.expect(b.recommended).to.eql(true); pm.expect(b.language).to.eql(\"es\"); });"
                 ]
               }
             }
@@ -1553,7 +1742,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"gameId\": {{gameId}},\n  \"rating\": 5,\n  \"recommended\": true,\n  \"body\": \"¡Una joya!\"\n}",
+              "raw": "{\n  \"gameId\": {{gameId}},\n  \"recommended\": true,\n  \"body\": \"¡Una joya!\",\n  \"language\": \"es\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1605,7 +1794,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"gameId\": {{gameId}},\n  \"rating\": 1,\n  \"recommended\": false\n}",
+              "raw": "{\n  \"gameId\": {{gameId}},\n  \"recommended\": false,\n  \"language\": \"en\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1622,7 +1811,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"ahora es negativa\", () => pm.expect(pm.response.json().recommended).to.eql(false));"
                 ]
               }
             }
@@ -1658,7 +1848,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"rating\": 4,\n  \"recommended\": true,\n  \"body\": \"Muy bueno\"\n}",
+              "raw": "{\n  \"recommended\": false,\n  \"body\": \"Al final no me convenció\",\n  \"language\": \"es\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1675,7 +1865,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"1 reseña, con idioma\", () => { const b = pm.response.json(); pm.expect(b.totalElements).to.eql(1); pm.expect(b.content[0].language).to.eql(\"es\"); });"
                 ]
               }
             }
@@ -1701,7 +1892,7 @@
           }
         },
         {
-          "name": "La media se actualiza (UPDATE atómico)",
+          "name": "Reseñas del juego filtradas por idioma (?language=es)",
           "event": [
             {
               "listen": "test",
@@ -1709,7 +1900,128 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"media 4.0 y 1 venta\", () => { const b = pm.response.json(); pm.expect(b.averageRating).to.eql(4); pm.expect(b.salesCount).to.eql(1); });"
+                  "pm.test(\"todas en español\", () => { const b = pm.response.json(); pm.expect(b.totalElements).to.eql(1); b.content.forEach(r => pm.expect(r.language).to.eql(\"es\")); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/games/{{gameSlug}}/reviews?language=es",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "games",
+                "{{gameSlug}}",
+                "reviews"
+              ],
+              "query": [
+                {
+                  "key": "language",
+                  "value": "es"
+                }
+              ]
+            },
+            "description": "Sin `language` salen todas; con `language` (es, en o it) solo las de ese idioma."
+          }
+        },
+        {
+          "name": "Reseñas del juego en otro idioma (?language=en) → vacío",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"ninguna en inglés\", () => pm.expect(pm.response.json().content).to.have.lengthOf(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/games/{{gameSlug}}/reviews?language=en",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "games",
+                "{{gameSlug}}",
+                "reviews"
+              ],
+              "query": [
+                {
+                  "key": "language",
+                  "value": "en"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Idioma no válido (?language=xx) → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"ProblemDetail\", () => pm.expect(pm.response.json().status).to.eql(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/games/{{gameSlug}}/reviews?language=xx",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "games",
+                "{{gameSlug}}",
+                "reviews"
+              ],
+              "query": [
+                {
+                  "key": "language",
+                  "value": "xx"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Los contadores se actualizan (UPDATE atómico)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"1 reseña, 0 % positivo, sin etiqueta y 1 venta\", () => { const b = pm.response.json(); pm.expect(b.reviewCount).to.eql(1); pm.expect(b.positivePercent).to.eql(0); pm.expect(b.reviewScore).to.eql(\"NONE\"); pm.expect(b.salesCount).to.eql(1); });"
                 ]
               }
             }
@@ -1775,7 +2087,878 @@
       ]
     },
     {
-      "name": "8. Admin (requiere ADMIN_PASSWORD)",
+      "name": "8. Amigos y perfil",
+      "item": [
+        {
+          "name": "Registro del segundo jugador",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set(\"player2Token\", b.accessToken);",
+                  "pm.collectionVariables.set(\"player2Id\", b.user.id);",
+                  "pm.collectionVariables.set(\"player2Username\", b.user.username);",
+                  "pm.test(\"perfil privado por defecto\", () => pm.expect(b.user.profilePublic).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"pm_friend_{{suffix}}\",\n  \"email\": \"pm_friend_{{suffix}}@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Postman Friend\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Buscar jugadores por nombre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"aparece el segundo jugador, sin relación\", () => { const hit = pm.response.json().find(h => h.user.username === pm.collectionVariables.get(\"player2Username\")); pm.expect(hit).to.exist; pm.expect(hit.relation).to.eql(\"NONE\"); pm.expect(hit.user).to.not.have.property(\"email\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/search?q=pm_friend_{{suffix}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "pm_friend_{{suffix}}"
+                }
+              ]
+            },
+            "description": "Solo salen cuentas de jugador activas (no developers ni admins), sin el propio usuario. `q` va de 2 a 50 caracteres."
+          }
+        },
+        {
+          "name": "Búsqueda demasiado corta → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/search?q=a",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "a"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Perfil privado de un desconocido: no enseña biblioteca ni amigos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"perfil oculto\", () => { const b = pm.response.json(); pm.expect(b.visible).to.eql(false); pm.expect(b.profilePublic).to.eql(false); pm.expect(b.relation).to.eql(\"NONE\"); pm.expect(b.library).to.eql(null); pm.expect(b.friends).to.eql(null); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{player2Username}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{player2Username}}",
+                "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "El segundo jugador hace público su perfil",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"profilePublic\", () => pm.expect(pm.response.json().profilePublic).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{player2Token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"profilePublic\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Perfil público: lo ve cualquier jugador",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"perfil visible sin ser amigos\", () => { const b = pm.response.json(); pm.expect(b.visible).to.eql(true); pm.expect(b.relation).to.eql(\"NONE\"); pm.expect(b.library).to.be.an(\"array\"); pm.expect(b.friends).to.be.an(\"array\"); });",
+                  "pm.test(\"nunca el email\", () => pm.expect(pm.response.json().user).to.not.have.property(\"email\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{player2Username}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{player2Username}}",
+                "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Enviar solicitud de amistad → 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set(\"friendRequestId\", b.id);",
+                  "pm.test(\"pendiente, para el otro jugador\", () => { pm.expect(b.status).to.eql(\"PENDING\"); pm.expect(b.user.username).to.eql(pm.collectionVariables.get(\"player2Username\")); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/friends/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friends",
+                "requests"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{player2Username}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Solicitud duplicada → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/friends/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friends",
+                "requests"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{player2Username}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Solicitudes recibidas (segundo jugador)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"la solicitud está en incoming\", () => { const b = pm.response.json(); pm.expect(b.incoming.map(r => r.id)).to.include(Number(pm.collectionVariables.get(\"friendRequestId\"))); pm.expect(b.outgoing).to.be.an(\"array\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{player2Token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friends/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friends",
+                "requests"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Aceptar la solicitud",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"ACCEPTED\", () => pm.expect(pm.response.json().status).to.eql(\"ACCEPTED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{player2Token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friends/requests/{{friendRequestId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friends",
+                "requests",
+                "{{friendRequestId}}",
+                "accept"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mis amigos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"el segundo jugador es amigo\", () => pm.expect(pm.response.json().map(f => f.user.username)).to.include(pm.collectionVariables.get(\"player2Username\")));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friends",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friends"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Perfil de un amigo → relación FRIENDS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"amigos y visible\", () => { const b = pm.response.json(); pm.expect(b.relation).to.eql(\"FRIENDS\"); pm.expect(b.visible).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{player2Username}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{player2Username}}",
+                "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Eliminar al amigo → 204",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friends/{{player2Username}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friends",
+                "{{player2Username}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ya no son amigos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"lista vacía\", () => pm.expect(pm.response.json()).to.have.lengthOf(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friends",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friends"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Portadas y asistente",
+      "item": [
+        {
+          "name": "¿Está activa la subida de portadas?",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"devuelve { enabled }\", () => pm.expect(pm.response.json().enabled).to.be.a(\"boolean\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{devToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/uploads/covers/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "uploads",
+                "covers",
+                "status"
+              ]
+            },
+            "description": "Pide sesión. `enabled` es false si el servidor no tiene `CLOUDINARY_URL`."
+          }
+        },
+        {
+          "name": "Estado de portadas sin token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/uploads/covers/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "uploads",
+                "covers",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pedir una recomendación al asistente (200 o 503)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 o 503\", () => pm.expect(pm.response.code).to.be.oneOf([200, 503]));",
+                  "const b = pm.response.json();",
+                  "if (pm.response.code === 200) { pm.test(\"reply y juegos del catálogo\", () => { pm.expect(b.reply).to.be.a(\"string\").and.not.empty; pm.expect(b.games).to.be.an(\"array\").with.length.of.at.most(4); b.games.forEach(g => { pm.expect(g.id).to.be.a(\"number\"); pm.expect(g.slug).to.be.a(\"string\"); }); }); }",
+                  "else { pm.test(\"ProblemDetail 503\", () => { pm.expect(b.status).to.eql(503); pm.expect(b.detail).to.be.a(\"string\").and.not.empty; }); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/recommendations/chat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "recommendations",
+                "chat"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Busco algo oscuro, difícil y con buena historia\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Sin `OPENROUTER_API_KEY` en el servidor responde 503 con un ProblemDetail (el asistente se desactiva solo). Con clave, 200 con `reply` y hasta 4 juegos del catálogo. La colección acepta los dos casos."
+          }
+        },
+        {
+          "name": "El último mensaje tiene que ser del usuario → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"ProblemDetail\", () => pm.expect(pm.response.json().status).to.eql(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{playerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/recommendations/chat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "recommendations",
+                "chat"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messages\": [\n    {\n      \"role\": \"assistant\",\n      \"content\": \"Hola, ¿qué te apetece jugar?\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Asistente sin token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/recommendations/chat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "recommendations",
+                "chat"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"hola\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Admin (requiere ADMIN_PASSWORD)",
       "item": [
         {
           "name": "Login admin",
