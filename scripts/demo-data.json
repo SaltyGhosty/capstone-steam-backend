@@ -53,57 +53,57 @@
   ],
   "games": [
     { "key": "hollow-knight", "steamAppId": 367520, "studio": "team_cherry", "title": "Hollow Knight", "price": 14.79, "discountPercent": 30, "releaseDate": "2017-02-24", "steamPositivePercent": 97, "reviewCount": 58, "genres": ["action", "indie", "platformer"],
-      "description": "Una aventura épica por Hallownest, un vasto reino de insectos en ruinas. Explora cavernas tortuosas, combate contra criaturas corrompidas y descubre los secretos de un mundo dibujado a mano.",
-      "descriptionEn": "An epic adventure through Hallownest, a vast ruined kingdom of insects. Explore twisting caverns, battle tainted creatures and uncover the secrets of a hand-drawn world.",
-      "descriptionIt": "Un’avventura epica attraverso Hallownest, un vasto regno di insetti in rovina. Esplora caverne tortuose, combatti creature corrotte e scopri i segreti di un mondo disegnato a mano." },
+      "description": "Baja a un reino subterráneo de insectos olvidado y abre camino con tu aguijón entre túneles, jefes memorables y secretos escondidos. Todo está pintado a mano.",
+      "descriptionEn": "Descend into a forgotten underground bug kingdom and fight your way past tunnels, memorable bosses and hidden secrets, all drawn by hand.",
+      "descriptionIt": "Scendi in un dimenticato regno sotterraneo di insetti e ti fai strada con il tuo pungolo tra gallerie, boss memorabili e segreti nascosti, tutto disegnato a mano." },
     { "key": "silksong", "steamAppId": 1030300, "studio": "team_cherry", "title": "Hollow Knight: Silksong", "price": 19.50, "releaseDate": "2025-09-04", "steamPositivePercent": 90, "reviewCount": 20, "genres": ["action", "indie", "platformer"], "draft": true,
       "description": "Encarna a Hornet, princesa protectora de Hallownest, en su ascenso por un reino gobernado por la seda y el canto. Plataformas exigentes, combates ágiles y un mundo enorme por descubrir.",
       "descriptionEn": "Play as Hornet, princess-protector of Hallownest, as she climbs through a kingdom ruled by silk and song. Demanding platforming, agile combat and a huge world to discover.",
       "descriptionIt": "Vesti i panni di Hornet, principessa protettrice di Hallownest, nella sua ascesa attraverso un regno governato dalla seta e dal canto. Platform impegnativo, combattimenti agili e un mondo enorme da scoprire." },
     { "key": "celeste", "steamAppId": 504230, "studio": "maddy_makes_games", "title": "Celeste", "price": 18.99, "releaseDate": "2018-01-25", "steamPositivePercent": 97, "reviewCount": 50, "genres": ["indie", "platformer"],
-      "description": "Ayuda a Madeline a sobrevivir a sus demonios interiores en su viaje hasta la cima de la montaña Celeste. Cientos de desafíos de plataformas diseñados a mano y una historia sobre la ansiedad y la superación.",
-      "descriptionEn": "Help Madeline survive her inner demons on her journey to the top of Celeste Mountain. Hundreds of handcrafted platforming challenges and a story about anxiety and overcoming it.",
-      "descriptionIt": "Aiuta Madeline a sopravvivere ai suoi demoni interiori nel viaggio verso la cima del monte Celeste. Centinaia di sfide platform create a mano e una storia sull’ansia e su come superarla." },
+      "description": "Sube con Madeline una montaña casi imposible y lucha contra sus miedos por el camino. Saltos exigentes, muchas muertes sin castigo y una historia sincera.",
+      "descriptionEn": "Climb an almost impossible mountain with Madeline while she faces her own fears. Demanding jumps, plenty of painless deaths and an honest story.",
+      "descriptionIt": "Scala con Madeline una montagna quasi impossibile mentre affronta le sue paure. Salti impegnativi, tante morti senza penalità e una storia sincera." },
     { "key": "stardew-valley", "steamAppId": 413150, "studio": "concernedape", "title": "Stardew Valley", "price": 13.99, "releaseDate": "2016-02-26", "steamPositivePercent": 98, "reviewCount": 56, "genres": ["indie", "simulation", "rpg"],
       "description": "Heredas la vieja granja de tu abuelo en Stardew Valley. Cultiva, cría animales, pesca, explora las minas y hazte un hueco en la vida del pueblo, solo o en cooperativo.",
       "descriptionEn": "You inherit your grandfather’s old farm in Stardew Valley. Grow crops, raise animals, fish, explore the mines and find your place in town life, solo or in co-op.",
       "descriptionIt": "Erediti la vecchia fattoria di tuo nonno a Stardew Valley. Coltiva, alleva animali, pesca, esplora le miniere e trova il tuo posto nella vita del paese, da solo o in cooperativa." },
     { "key": "hades", "steamAppId": 1145360, "studio": "supergiant", "title": "Hades", "price": 24.50, "discountPercent": 40, "releaseDate": "2020-09-17", "steamPositivePercent": 98, "reviewCount": 52, "genres": ["action", "indie", "rpg"],
-      "description": "Desafía al dios de los muertos y escapa del Inframundo en este roguelike de acción de los creadores de Bastion y Transistor. Cada huida es distinta gracias a los dones de los dioses del Olimpo.",
-      "descriptionEn": "Defy the god of the dead and escape the Underworld in this action roguelike from the creators of Bastion and Transistor. Every escape is different thanks to the boons of the Olympian gods.",
-      "descriptionIt": "Sfida il dio dei morti e fuggi dagli Inferi in questo roguelike d’azione dai creatori di Bastion e Transistor. Ogni fuga è diversa grazie ai doni degli dèi dell’Olimpo." },
+      "description": "Eres el hijo del dueño del Inframundo e intentas huir una y otra vez. Cada intento mezcla combate veloz, ayudas divinas distintas y conversaciones que hacen avanzar la trama.",
+      "descriptionEn": "You are the son of the Underworld’s ruler, trying to escape again and again. Each attempt mixes fast combat, different divine boons and conversations that move the plot forward.",
+      "descriptionIt": "Sei il figlio del signore degli Inferi e provi a fuggire ancora e ancora. Ogni tentativo unisce combattimento rapido, doni divini diversi e dialoghi che fanno avanzare la trama." },
     { "key": "witcher-3", "steamAppId": 292030, "studio": "cdprojektred", "title": "The Witcher 3: Wild Hunt", "price": 49.99, "discountPercent": 50, "releaseDate": "2015-05-18", "steamPositivePercent": 96, "reviewCount": 60, "genres": ["rpg", "adventure"],
-      "description": "En la piel de Geralt de Rivia, cazador de monstruos a sueldo, recorre un mundo abierto de fantasía oscura en busca de la niña de la profecía mientras la Cacería Salvaje le pisa los talones.",
-      "descriptionEn": "As Geralt of Rivia, a monster slayer for hire, roam a dark fantasy open world in search of the child of prophecy while the Wild Hunt is hot on his heels.",
-      "descriptionIt": "Nei panni di Geralt di Rivia, cacciatore di mostri a pagamento, attraversa un open world dark fantasy in cerca della bambina della profezia mentre la Caccia Selvaggia gli sta alle calcagna." },
+      "description": "Geralt busca a una joven que todos persiguen. Acepta encargos contra bestias, resuelve conflictos entre reinos y recorre un territorio enorme donde cada decisión pesa.",
+      "descriptionEn": "Geralt searches for a young woman everyone is hunting. Take monster contracts, settle disputes between kingdoms and roam a huge land where every choice carries weight.",
+      "descriptionIt": "Geralt cerca una giovane che tutti inseguono. Accetta incarichi contro le bestie, risolvi conflitti tra regni e viaggia in una terra immensa dove ogni scelta ha un peso." },
     { "key": "cyberpunk-2077", "steamAppId": 1091500, "studio": "cdprojektred", "title": "Cyberpunk 2077", "price": 59.99, "discountPercent": 25, "releaseDate": "2020-12-09", "steamPositivePercent": 87, "reviewCount": 55, "genres": ["rpg", "action", "shooter"],
-      "description": "RPG de acción de mundo abierto ambientado en Night City, una megalópolis obsesionada con el poder, el glamur y los implantes. Eres V, un mercenario en busca de un implante único que es la clave de la inmortalidad.",
-      "descriptionEn": "An open-world action RPG set in Night City, a megalopolis obsessed with power, glamour and body modification. You are V, a mercenary chasing a one-of-a-kind implant that is the key to immortality.",
-      "descriptionIt": "GDR d’azione open world ambientato a Night City, una megalopoli ossessionata dal potere, dal glamour e dagli impianti. Sei V, un mercenario in cerca di un impianto unico che è la chiave dell’immortalità." },
+      "description": "Un mercenario llega a una ciudad futurista llena de neón, corporaciones y tecnología en el cuerpo. Rol de acción en primera persona con misiones muy variadas y un mundo denso.",
+      "descriptionEn": "A mercenary arrives in a neon-soaked future city of corporations and cybernetic bodies. First-person action role-playing with varied missions and a dense world.",
+      "descriptionIt": "Un mercenario arriva in una città futuristica piena di neon, corporazioni e corpi potenziati. Gioco di ruolo d’azione in prima persona con missioni varie e un mondo fitto." },
     { "key": "elden-ring", "steamAppId": 1245620, "studio": "fromsoftware", "title": "ELDEN RING", "price": 59.99, "releaseDate": "2022-02-24", "steamPositivePercent": 93, "reviewCount": 58, "genres": ["action", "rpg"],
-      "description": "Álzate, Sinluz, y conviértete en señor del Círculo en las Tierras Intermedias. Un mundo abierto inmenso, mazmorras intrincadas y combates desafiantes de los creadores de Dark Souls.",
-      "descriptionEn": "Rise, Tarnished, and become an Elden Lord in the Lands Between. A vast open world, intricate dungeons and challenging combat from the creators of Dark Souls.",
-      "descriptionIt": "Alzati, Senzaluce, e diventa Lord Ancestrale nell’Interregno. Un open world immenso, dungeon intricati e combattimenti impegnativi dai creatori di Dark Souls." },
+      "description": "Despierta como un guerrero sin gracia en un mundo vasto y hostil. Explora a tu ritmo, enfréntate a jefes colosales y crea tu propio estilo de combate, de la mano de los autores de Dark Souls.",
+      "descriptionEn": "Awaken as a graceless warrior in a vast, hostile world. Explore at your own pace, face colossal bosses and build your own fighting style, from the minds behind Dark Souls.",
+      "descriptionIt": "Ti risvegli come guerriero privo di grazia in un mondo vasto e ostile. Esplora con i tuoi tempi, affronta boss colossali e costruisci il tuo stile di lotta, dagli autori di Dark Souls." },
     { "key": "baldurs-gate-3", "steamAppId": 1086940, "studio": "larian", "title": "Baldur's Gate 3", "price": 59.99, "releaseDate": "2023-08-03", "steamPositivePercent": 97, "reviewCount": 60, "genres": ["rpg", "strategy", "adventure"],
-      "description": "Reúne a tu grupo y vuelve a los Reinos Olvidados en un relato de compañerismo y traición, sacrificio y supervivencia. Combate por turnos y decisiones que cambian la historia.",
-      "descriptionEn": "Gather your party and return to the Forgotten Realms in a tale of fellowship and betrayal, sacrifice and survival. Turn-based combat and choices that change the story.",
-      "descriptionIt": "Riunisci il tuo gruppo e torna nei Forgotten Realms in una storia di amicizia e tradimento, sacrificio e sopravvivenza. Combattimenti a turni e scelte che cambiano la storia." },
+      "description": "Forma tu equipo de aventureros, cada uno con su pasado, y sobrevive a una amenaza mental que crece dentro de ti. Combates por turnos, libertad total y consecuencias reales.",
+      "descriptionEn": "Build a party of adventurers, each with a past of their own, and survive a mind-bending threat growing inside you. Turn-based fights, great freedom and real consequences.",
+      "descriptionIt": "Forma un gruppo di avventurieri, ognuno con il suo passato, e sopravvivi a una minaccia mentale che cresce dentro di te. Combattimenti a turni, grande libertà e conseguenze reali." },
     { "key": "civilization-6", "steamAppId": 289070, "studio": "firaxis", "title": "Sid Meier's Civilization VI", "price": 59.99, "discountPercent": 75, "releaseDate": "2016-10-20", "steamPositivePercent": 86, "reviewCount": 40, "genres": ["strategy"],
-      "description": "Expande tu imperio, haz avanzar tu cultura y enfréntate a los mejores líderes de la historia. Estrategia por turnos en la que cada partida construye una civilización distinta.",
-      "descriptionEn": "Expand your empire, advance your culture and go head to head against history’s greatest leaders. Turn-based strategy where every game builds a different civilization.",
-      "descriptionIt": "Espandi il tuo impero, fai progredire la tua cultura e sfida i più grandi leader della storia. Strategia a turni in cui ogni partita costruisce una civiltà diversa." },
+      "description": "Funda una ciudad y llévala a lo largo de los siglos hasta convertirla en una potencia. Diplomacia, guerra, ciencia y cultura en partidas por turnos que nunca se parecen.",
+      "descriptionEn": "Found a city and guide it through the centuries until it becomes a world power. Diplomacy, war, science and culture in turn-based games that never play out the same.",
+      "descriptionIt": "Fonda una città e guidala attraverso i secoli fino a farne una potenza. Diplomazia, guerra, scienza e cultura in partite a turni che non sono mai uguali." },
     { "key": "portal-2", "steamAppId": 620, "studio": "valve", "title": "Portal 2", "price": 9.75, "releaseDate": "2011-04-18", "steamPositivePercent": 99, "reviewCount": 52, "genres": ["puzzle", "adventure"],
       "description": "Vuelve a Aperture Science con la pistola de portales para resolver puzles cada vez más ingeniosos junto a GLaDOS y Wheatley. Incluye una campaña cooperativa para dos jugadores.",
       "descriptionEn": "Return to Aperture Science with the portal gun to solve ever more ingenious puzzles alongside GLaDOS and Wheatley. Includes a two-player co-op campaign.",
       "descriptionIt": "Torna ad Aperture Science con la pistola a portali per risolvere enigmi sempre più ingegnosi insieme a GLaDOS e Wheatley. Include una campagna cooperativa per due giocatori." },
     { "key": "doom-eternal", "steamAppId": 782330, "studio": "id_software", "title": "DOOM Eternal", "price": 29.99, "releaseDate": "2020-03-19", "steamPositivePercent": 91, "reviewCount": 35, "genres": ["action", "shooter"],
-      "description": "Los ejércitos del infierno han invadido la Tierra. Ponte en la piel del Slayer y cruza dimensiones en una campaña frenética para detener la destrucción de la humanidad.",
-      "descriptionEn": "Hell’s armies have invaded Earth. Become the Slayer and cross dimensions in a frantic campaign to stop the destruction of humanity.",
-      "descriptionIt": "Gli eserciti dell’inferno hanno invaso la Terra. Vesti i panni dello Slayer e attraversa dimensioni in una campagna frenetica per fermare la distruzione dell’umanità." },
+      "description": "Los demonios han tomado la Tierra y solo tú puedes frenarlos. Disparos rapidísimos, armas contundentes y un ritmo que no da respiro, con escenarios de distintos mundos.",
+      "descriptionEn": "Demons have taken over the Earth and only you can stop them. Lightning-fast shooting, hard-hitting weapons and a pace that never lets up, across settings from different worlds.",
+      "descriptionIt": "I demoni hanno invaso la Terra e solo tu puoi fermarli. Sparatorie velocissime, armi potenti e un ritmo senza pause, in ambientazioni di mondi diversi." },
     { "key": "forza-horizon-5", "steamAppId": 1551360, "studio": "playground_games", "title": "Forza Horizon 5", "price": 59.99, "releaseDate": "2021-11-08", "steamPositivePercent": 89, "reviewCount": 30, "genres": ["racing", "simulation"],
-      "description": "Explora los paisajes del mundo abierto de México al volante de cientos de los mejores coches del mundo: selvas, desiertos, volcanes y carreras sin límites.",
-      "descriptionEn": "Explore the open-world landscapes of Mexico behind the wheel of hundreds of the world’s greatest cars: jungles, deserts, volcanoes and limitless racing.",
-      "descriptionIt": "Esplora i paesaggi open world del Messico al volante di centinaia delle migliori auto del mondo: giungle, deserti, vulcani e corse senza limiti." },
+      "description": "Conduce por un México lleno de color, de las playas a las montañas nevadas. Un festival de carreras con un garaje enorme y libertad para ir adonde quieras.",
+      "descriptionEn": "Drive across a vibrant Mexico, from beaches to snowy peaks. A racing festival with a huge garage and the freedom to go wherever you like.",
+      "descriptionIt": "Guida in un Messico pieno di colori, dalle spiagge alle vette innevate. Un festival di corse con un garage enorme e la libertà di andare dove vuoi." },
     { "key": "resident-evil-4", "steamAppId": 2050650, "studio": "capcom", "title": "Resident Evil 4", "price": 39.99, "releaseDate": "2023-03-23", "steamPositivePercent": 97, "reviewCount": 40, "genres": ["horror", "action", "shooter"],
       "description": "Leon S. Kennedy viaja a un pueblo de Europa para rescatar a la hija del presidente. El clásico del survival horror, reimaginado con gráficos y mecánicas modernas.",
       "descriptionEn": "Leon S. Kennedy travels to a European village to rescue the president’s daughter. The survival horror classic, reimagined with modern graphics and mechanics.",
@@ -125,25 +125,25 @@
       "descriptionEn": "Soccer with rocket-powered cars. Fast, competitive, physics-based matches, free for everyone.",
       "descriptionIt": "Calcio con auto spinte da razzi. Partite veloci e competitive basate sulla fisica, gratis per tutti." },
     { "key": "red-dead-redemption-2", "steamAppId": 1174180, "studio": "rockstar", "title": "Red Dead Redemption 2", "price": 59.99, "releaseDate": "2019-12-05", "steamPositivePercent": 93, "reviewCount": 50, "genres": ["action", "adventure", "shooter"],
-      "description": "Arthur Morgan y la banda de Van der Linde huyen por el salvaje Oeste americano mientras los agentes federales y los cazarrecompensas les pisan los talones.",
-      "descriptionEn": "Arthur Morgan and the Van der Linde gang flee across the American Wild West while federal agents and bounty hunters close in on them.",
-      "descriptionIt": "Arthur Morgan e la banda di Van der Linde fuggono attraverso il selvaggio West americano mentre agenti federali e cacciatori di taglie li braccano." },
+      "description": "Una banda de forajidos huye por el Oeste americano a finales de una era que se acaba. Una historia larga y cuidada, con un mundo abierto vivo y detallado.",
+      "descriptionEn": "A gang of outlaws runs across the American frontier as their era comes to a close. A long, carefully told story in a living, detailed open world.",
+      "descriptionIt": "Una banda di fuorilegge fugge attraverso il West americano mentre la loro epoca finisce. Una storia lunga e curata in un mondo aperto vivo e ricco di dettagli." },
     { "key": "disco-elysium", "steamAppId": 632470, "studio": "zaum", "title": "Disco Elysium - The Final Cut", "price": 37.99, "releaseDate": "2019-10-15", "steamPositivePercent": 93, "reviewCount": 38, "genres": ["rpg"],
       "description": "Un RPG de detectives en el que tus habilidades hablan contigo. Resuelve un asesinato en el barrio de Martinaise interrogando a personajes memorables y decidiendo qué clase de policía quieres ser.",
       "descriptionEn": "A detective RPG where your skills talk to you. Solve a murder in the Martinaise district by questioning memorable characters and deciding what kind of cop you want to be.",
       "descriptionIt": "Un GDR investigativo in cui le tue abilità ti parlano. Risolvi un omicidio nel quartiere di Martinaise interrogando personaggi memorabili e decidendo che tipo di poliziotto vuoi essere." },
     { "key": "inside", "steamAppId": 304430, "studio": "playdead", "title": "INSIDE", "price": 22.99, "releaseDate": "2016-07-07", "steamPositivePercent": 97, "reviewCount": 22, "genres": ["puzzle", "platformer", "indie"],
-      "description": "Perseguido y solo, un niño se ve atrapado en el centro de un proyecto oscuro. Aventura de puzles atmosférica de los creadores de LIMBO.",
-      "descriptionEn": "Hunted and alone, a boy finds himself drawn into the center of a dark project. An atmospheric puzzle adventure from the creators of LIMBO.",
-      "descriptionIt": "Braccato e solo, un ragazzo si ritrova trascinato al centro di un progetto oscuro. Avventura a enigmi atmosferica dai creatori di LIMBO." },
+      "description": "Un chico sin nombre avanza en silencio por un mundo inquietante lleno de trampas y secretos. Un juego de puzles y plataformas sin una sola palabra, de los autores de LIMBO.",
+      "descriptionEn": "A nameless boy moves in silence through a disturbing world full of traps and secrets. A puzzle-platformer without a single word, from the makers of LIMBO.",
+      "descriptionIt": "Un ragazzo senza nome avanza in silenzio in un mondo inquietante pieno di trappole e segreti. Un platform a enigmi senza una parola, dai creatori di LIMBO." },
     { "key": "dead-cells", "steamAppId": 588650, "studio": "motion_twin", "title": "Dead Cells", "price": 24.99, "releaseDate": "2018-08-06", "steamPositivePercent": 97, "reviewCount": 44, "genres": ["action", "indie", "platformer"],
-      "description": "Acción roguelite con toques de metroidvania en un castillo que cambia en cada partida. Sin puntos de control: mata, muere, aprende y repite.",
-      "descriptionEn": "Roguelite action with a metroidvania twist in an ever-changing castle. No checkpoints: kill, die, learn, repeat.",
-      "descriptionIt": "Azione roguelite con tocchi metroidvania in un castello che cambia a ogni partita. Nessun checkpoint: uccidi, muori, impara e ripeti." },
+      "description": "Recorre un castillo cuyos pasillos se reordenan cada vez que mueres. Combate ágil y brutal, mejoras que cambian tu forma de jugar y ni un solo punto de guardado.",
+      "descriptionEn": "Run through a castle whose halls rearrange every time you die. Agile, brutal combat, upgrades that change how you play and not a single save point.",
+      "descriptionIt": "Percorri un castello i cui corridoi si riordinano ogni volta che muori. Combattimento agile e brutale, potenziamenti che cambiano il tuo modo di giocare e nessun punto di salvataggio." },
     { "key": "subnautica", "steamAppId": 264710, "studio": "unknown_worlds", "title": "Subnautica", "price": 29.99, "releaseDate": "2018-01-23", "steamPositivePercent": 97, "reviewCount": 36, "genres": ["adventure", "indie", "simulation"],
-      "description": "Sobrevive en las profundidades de un océano alienígena: fabrica equipamiento, pilota submarinos y explora arrecifes, volcanes y abismos llenos de belleza y peligros.",
-      "descriptionEn": "Survive the depths of an alien ocean: craft equipment, pilot submarines and explore reefs, volcanoes and abysses full of beauty and danger.",
-      "descriptionIt": "Sopravvivi nelle profondità di un oceano alieno: crea equipaggiamento, pilota sottomarini ed esplora barriere coralline, vulcani e abissi pieni di bellezza e pericoli." },
+      "description": "Tras un accidente quedas varado en un planeta cubierto de agua. Recoge recursos, construye bases y vehículos y baja cada vez más hondo, entre paisajes preciosos y criaturas que dan miedo.",
+      "descriptionEn": "Stranded on a water-covered planet after a crash, gather resources, build bases and vehicles and dive deeper and deeper, past gorgeous scenery and frightening creatures.",
+      "descriptionIt": "Dopo uno schianto rimani bloccato su un pianeta coperto d’acqua. Raccogli risorse, costruisci basi e veicoli e scendi sempre più in profondità, tra paesaggi splendidi e creature spaventose." },
     { "key": "portal", "steamAppId": 400, "studio": "valve", "title": "Portal", "price": 9.99, "releaseDate": "2007-10-10", "steamPositivePercent": 99, "reviewCount": 30, "genres": ["puzzle", "adventure"],
       "description": "Resuelve cámaras de pruebas con un arma que abre portales y descubre qué esconde el laboratorio y su inteligencia artificial tan sarcástica.",
       "descriptionEn": "Solve test chambers with a gun that opens portals and find out what the lab and its sarcastic AI are hiding.",
@@ -330,7 +330,7 @@
         "BitRunner",
         "Marshmallow",
         "StaleToast",
-        "DriftKing",
+        "TurboLlama",
         "CosmicLlama",
         "RustyNail",
         "HonkMaster",
@@ -372,7 +372,10 @@
         "Una joya, lo recomiendo sin dudarlo.",
         "Muy bien cuidado en todos los detalles.",
         "Cada partida se me pasa volando.",
-        "Vale cada euro que he pagado por él.",
+        {
+          "text": "Vale cada euro que he pagado por él.",
+          "aboutPrice": true
+        },
         "La banda sonora acompaña de maravilla.",
         "Se siente fresco incluso después de muchas horas.",
         "Es de esos juegos que te dejan con ganas de más.",
@@ -382,16 +385,37 @@
         "Lo he recomendado a media familia.",
         "Visualmente me ha encantado.",
         "Ritmo perfecto, nunca se hace pesado.",
-        "Una de mis mejores compras en mucho tiempo.",
-        "Fácil de aprender y difícil de soltar."
+        {
+          "text": "Una de mis mejores compras en mucho tiempo.",
+          "aboutPrice": true
+        },
+        "Fácil de aprender y difícil de soltar.",
+        "Engancha desde el primer minuto y no suelta.",
+        "Los gráficos y la música forman un conjunto muy redondo.",
+        "Cada rato que le dedico me deja con buen sabor de boca.",
+        "Se juega solo o acompañado y en ambos casos funciona.",
+        "Me sorprendió para bien, no esperaba tanto.",
+        "Las mecánicas se entienden rápido y tienen mucha profundidad.",
+        "Te hace sentir que tu tiempo está bien empleado.",
+        "Hacía tiempo que un juego no me tenía tan pegado a la pantalla.",
+        {
+          "text": "A este precio es casi un regalo.",
+          "aboutPrice": true
+        }
       ],
       "negative": [
         "No me ha convencido, esperaba bastante más.",
         "Se hace repetitivo muy rápido.",
         "Tiene problemas de rendimiento en mi equipo.",
-        "Por este precio, esperaba algo más pulido.",
+        {
+          "text": "Por este precio, esperaba algo más pulido.",
+          "aboutPrice": true
+        },
         "Los fallos me han sacado de la partida más de una vez.",
-        "Le falta contenido para lo que cuesta.",
+        {
+          "text": "Le falta contenido para lo que cuesta.",
+          "aboutPrice": true
+        },
         "La curva de dificultad está mal ajustada.",
         "Los menús son incómodos y poco claros.",
         "Lo dejé a las pocas horas, sin ganas de volver.",
@@ -401,7 +425,22 @@
         "Los controles me parecen toscos.",
         "Prefiero otras opciones del mismo género.",
         "Tiene buenas ideas mal ejecutadas.",
-        "Me arrepiento un poco de haberlo comprado."
+        {
+          "text": "Me arrepiento un poco de haberlo comprado.",
+          "aboutPrice": true
+        },
+        "La idea es buena, pero se queda a medio camino.",
+        "Me aburrí a la tercera sesión.",
+        "Los tiempos de carga se me hicieron eternos.",
+        "Siento que le falta una buena capa de pulido.",
+        "El ritmo decae y acaba cansando.",
+        "Esperaba más variedad en lo que hay que hacer.",
+        "A ratos resulta frustrante sin motivo.",
+        "No logré engancharme, por mucho que lo intenté.",
+        {
+          "text": "Esperaba que valiera más la pena por lo que pide.",
+          "aboutPrice": true
+        }
       ]
     },
     "en": {
@@ -410,7 +449,10 @@
         "A real gem, I recommend it without hesitation.",
         "Polished in every little detail.",
         "Every session flies by.",
-        "Worth every cent I paid for it.",
+        {
+          "text": "Worth every cent I paid for it.",
+          "aboutPrice": true
+        },
         "The soundtrack fits perfectly.",
         "Still feels fresh after many hours.",
         "One of those games that leaves you wanting more.",
@@ -420,16 +462,37 @@
         "I have already recommended it to half my family.",
         "Visually, I loved it.",
         "Perfect pacing, it never drags.",
-        "One of my best purchases in a long time.",
-        "Easy to learn and hard to put down."
+        {
+          "text": "One of my best purchases in a long time.",
+          "aboutPrice": true
+        },
+        "Easy to learn and hard to put down.",
+        "It grabs you in the first minute and never lets go.",
+        "The visuals and the music make a really well-rounded package.",
+        "Every session leaves me with a smile.",
+        "Works great solo or with company.",
+        "It surprised me in a good way, I did not expect this much.",
+        "The mechanics are quick to grasp yet surprisingly deep.",
+        "It feels like time well spent.",
+        "It has been a while since a game kept me glued to the screen like this.",
+        {
+          "text": "At this price it is almost a gift.",
+          "aboutPrice": true
+        }
       ],
       "negative": [
         "It did not convince me, I expected much more.",
         "It gets repetitive very quickly.",
         "It runs poorly on my machine.",
-        "For this price I expected something more polished.",
+        {
+          "text": "For this price I expected something more polished.",
+          "aboutPrice": true
+        },
         "Bugs pulled me out of the game more than once.",
-        "Not enough content for what it costs.",
+        {
+          "text": "Not enough content for what it costs.",
+          "aboutPrice": true
+        },
         "The difficulty curve feels off.",
         "The menus are clumsy and unclear.",
         "I dropped it after a few hours and never went back.",
@@ -439,7 +502,22 @@
         "The controls feel clunky.",
         "I prefer other options in the same genre.",
         "Good ideas, poorly executed.",
-        "I slightly regret buying it."
+        {
+          "text": "I slightly regret buying it.",
+          "aboutPrice": true
+        },
+        "Nice idea, but it stops halfway.",
+        "I got bored by the third session.",
+        "The loading times felt endless.",
+        "It needs a good coat of polish.",
+        "The pace drops and ends up tiring.",
+        "I expected more variety in what you actually do.",
+        "Sometimes it is frustrating for no good reason.",
+        "I could not get into it, however hard I tried.",
+        {
+          "text": "I expected it to be worth more for what it asks.",
+          "aboutPrice": true
+        }
       ]
     },
     "it": {
@@ -448,7 +526,10 @@
         "Una vera gemma, lo consiglio senza esitazioni.",
         "Curato in ogni minimo dettaglio.",
         "Ogni partita passa in un lampo.",
-        "Vale ogni centesimo speso.",
+        {
+          "text": "Vale ogni centesimo speso.",
+          "aboutPrice": true
+        },
         "La colonna sonora accompagna alla perfezione.",
         "Sembra ancora fresco dopo molte ore.",
         "È uno di quei giochi che ti lasciano con la voglia di continuare.",
@@ -458,16 +539,37 @@
         "L’ho già consigliato a mezza famiglia.",
         "Dal punto di vista visivo mi è piaciuto tantissimo.",
         "Ritmo perfetto, non diventa mai pesante.",
-        "Uno dei miei migliori acquisti da molto tempo.",
-        "Facile da imparare e difficile da mollare."
+        {
+          "text": "Uno dei miei migliori acquisti da molto tempo.",
+          "aboutPrice": true
+        },
+        "Facile da imparare e difficile da mollare.",
+        "Ti prende dal primo minuto e non ti molla.",
+        "Grafica e musica formano un insieme davvero riuscito.",
+        "Ogni sessione mi lascia con il sorriso.",
+        "Funziona benissimo da solo o in compagnia.",
+        "Mi ha sorpreso in positivo, non mi aspettavo tanto.",
+        "Le meccaniche si capiscono subito ma hanno una bella profondità.",
+        "Ti dà la sensazione di aver speso bene il tuo tempo.",
+        "Era da un po’ che un gioco non mi teneva incollato allo schermo.",
+        {
+          "text": "A questo prezzo è quasi un regalo.",
+          "aboutPrice": true
+        }
       ],
       "negative": [
         "Non mi ha convinto, mi aspettavo molto di più.",
         "Diventa ripetitivo molto in fretta.",
         "Gira male sul mio computer.",
-        "Per questo prezzo mi aspettavo qualcosa di più rifinito.",
+        {
+          "text": "Per questo prezzo mi aspettavo qualcosa di più rifinito.",
+          "aboutPrice": true
+        },
         "I bug mi hanno buttato fuori dalla partita più di una volta.",
-        "Manca contenuto rispetto a quanto costa.",
+        {
+          "text": "Manca contenuto rispetto a quanto costa.",
+          "aboutPrice": true
+        },
         "La curva di difficoltà è sbilanciata.",
         "I menu sono scomodi e poco chiari.",
         "L’ho mollato dopo poche ore e non ci sono più tornato.",
@@ -477,7 +579,22 @@
         "I controlli sembrano rigidi.",
         "Preferisco altre proposte dello stesso genere.",
         "Buone idee, realizzate male.",
-        "Mi pento un po’ di averlo comprato."
+        {
+          "text": "Mi pento un po’ di averlo comprato.",
+          "aboutPrice": true
+        },
+        "L’idea è buona, ma si ferma a metà strada.",
+        "Mi sono annoiato alla terza sessione.",
+        "I tempi di caricamento mi sono sembrati infiniti.",
+        "Gli manca una bella mano di rifinitura.",
+        "Il ritmo cala e alla lunga stanca.",
+        "Mi aspettavo più varietà in quello che si fa.",
+        "A tratti è frustrante senza motivo.",
+        "Non sono riuscito a entrarci, per quanto ci abbia provato.",
+        {
+          "text": "Mi aspettavo che valesse di più per quanto chiede.",
+          "aboutPrice": true
+        }
       ]
     }
   },

@@ -37,10 +37,16 @@ export function assignReviews(game, reviewerUsernames) {
   return pool.slice(0, game.reviewCount).map((username, i) => ({ username, recommended: i < positives }));
 }
 
-/** Texto de una reseña: 1-2 frases del banco del idioma y el voto, elegidas con el PRNG. */
-export function reviewText(phrasesByLang, game, lang, recommended, seed) {
+/** Una entrada del banco es un texto o { text, aboutPrice: true } si habla de precio o de la compra. */
+export const phraseText = (entry) => (typeof entry === 'string' ? entry : entry.text);
+
+/** Frases usables en ese juego: a los gratuitos se les quitan las de precio. */
+export function usablePhrases(phrasesByLang, game, lang, recommended) {
   const bank = phrasesByLang[lang]?.[recommended ? 'positive' : 'negative'] ?? [];
-  const rand = mulberry32(hash(`text:${game.key}:${lang}:${recommended}:${seed}`));
+  return bank.filter((e) => !(game.price === 0 && typeof e !== 'string' && e.aboutPrice)).map(phraseText);
+}
+
+function compose(bank, rand) {
   const first = Math.floor(rand() * bank.length);
   const parts = [bank[first]];
   if (rand() < 0.6 && bank.length > 1) {
@@ -49,4 +55,33 @@ export function reviewText(phrasesByLang, game, lang, recommended, seed) {
     parts.push(bank[second]);
   }
   return parts.join(' ');
+}
+
+/**
+ * Texto de una reseña: 1-2 frases del banco del idioma y el voto, elegidas con el PRNG.
+ * Si se pasa `used` (textos ya emitidos en ese juego), no repite ninguno y añade el nuevo.
+ */
+export function reviewText(phrasesByLang, game, lang, recommended, seed, used) {
+  const bank = usablePhrases(phrasesByLang, game, lang, recommended);
+  let text;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    text = compose(bank, mulberry32(hash(`text:${game.key}:${lang}:${recommended}:${seed}:${attempt}`)));
+    if (!used || !used.has(text)) break;
+  }
+  if (used?.has(text)) { // el PRNG no encontró hueco: se recorre el banco en orden fijo
+    outer: for (const a of bank) {
+      if (!used.has(a)) { text = a; break; }
+      for (const b of bank) if (a !== b && !used.has(`${a} ${b}`)) { text = `${a} ${b}`; break outer; }
+    }
+  }
+  used?.add(text);
+  return text;
+}
+
+/** Textos de todas las reseñas de un juego, sin repetir ninguno. langOf(username) da el idioma de cada cuenta. */
+export function gameReviewTexts(phrasesByLang, game, assigned, langOf) {
+  const used = new Set();
+  return assigned.map(({ username, recommended }) => ({
+    username, recommended, text: reviewText(phrasesByLang, game, langOf(username), recommended, username, used),
+  }));
 }
