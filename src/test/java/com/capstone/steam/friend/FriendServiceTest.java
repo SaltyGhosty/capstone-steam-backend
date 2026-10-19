@@ -141,6 +141,20 @@ class FriendServiceTest {
     }
 
     @Test
+    void cancelDeletesOnlyIfStillPendingAndIsNotFoundOtherwise() {
+        Friendship pending = new Friendship(nine, three);
+        when(friendshipRepository.findById(5L)).thenReturn(Optional.of(pending));
+        when(friendshipRepository.deletePending(5L)).thenReturn(0); // otro la aceptó entre medias
+
+        assertThatThrownBy(() -> service.cancel(9L, 5L)).isInstanceOf(NotFoundException.class);
+        verify(friendshipRepository, never()).delete(any());
+
+        when(friendshipRepository.deletePending(5L)).thenReturn(1);
+        service.cancel(9L, 5L);
+        verify(friendshipRepository, org.mockito.Mockito.times(2)).deletePending(5L);
+    }
+
+    @Test
     void searchRejectsShortQueriesWithoutTouchingTheDatabase() {
         assertThatThrownBy(() -> service.search(9L, " a ")).isInstanceOf(BadRequestException.class);
         assertThatThrownBy(() -> service.search(9L, null)).isInstanceOf(BadRequestException.class);

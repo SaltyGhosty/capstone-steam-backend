@@ -145,7 +145,11 @@ public class FriendService {
     /** El solicitante cancela su solicitud pendiente. */
     @Transactional
     public void cancel(Long userId, Long requestId) {
-        friendshipRepository.delete(pendingFor(requestId, userId, false));
+        pendingFor(requestId, userId, false);
+        // DELETE condicionado a PENDING: si el otro la aceptó entre medias, 0 filas y 404
+        if (friendshipRepository.deletePending(requestId) == 0) {
+            throw NotFoundException.of("friendRequest", requestId);
+        }
     }
 
     @Transactional
