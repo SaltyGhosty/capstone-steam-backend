@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 311 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 69 tests en 14 archivos · CI en GitHub Actions |
+| **Tests** | Backend: 315 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 69 tests en 14 archivos · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 72 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -131,7 +131,7 @@ cp .env.example .env    # y rellena los valores
 | `CORS_ALLOWED_ORIGINS` | Opcional | URL del frontend (por defecto `http://localhost:5173`) |
 | `CLOUDINARY_URL` | Opcional | `cloudinary://<api_key>:<api_secret>@<cloud_name>`, de una cuenta gratuita de Cloudinary. Si está vacía, la subida de portadas se desactiva sola (se pueden seguir pegando URLs) |
 | `OPENROUTER_API_KEY` | Opcional | Clave de [openrouter.ai/keys](https://openrouter.ai/keys). Si está vacía, el asistente se desactiva solo y responde 503 sin hacer ninguna llamada de red |
-| `OPENROUTER_MODEL` | Opcional | Modelo del asistente (por defecto `google/gemma-4-31b-it:free`). Los modelos `:free` exigen activar una opción de privacidad en la cuenta de OpenRouter |
+| `OPENROUTER_MODEL` | Opcional | Modelo del asistente: uno o varios separados por comas, que OpenRouter prueba en orden si uno está saturado (por defecto `minimax/minimax-m3.1-flash:free,google/gemma-4-31b-it:free`). Los modelos `:free` exigen activar una opción de privacidad en la cuenta de OpenRouter |
 | `app.openrouter.global-per-hour` / `cooldown` | En `application.yml` | Tope de mensajes por hora entre todos los usuarios (200) y la pausa tras un 429 de OpenRouter (5 min), para no agotar el cupo gratuito |
 
 ### 3. Arrancar
@@ -292,7 +292,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 311 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 315 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
