@@ -139,7 +139,9 @@ async function request<T>(path: string, options: RequestOptions, canRefresh: boo
   const token = getToken();
   // La API responde (errores, descripciones, motivos de pago) en el idioma de la interfaz
   const headers: Record<string, string> = { Accept: 'application/json', 'Accept-Language': getLang() };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  // Un FormData (subida de archivos) va tal cual: el navegador pone el Content-Type con su boundary
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let res: Response;
@@ -147,7 +149,7 @@ async function request<T>(path: string, options: RequestOptions, canRefresh: boo
     res = await fetch(buildUrl(path, query), {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
       keepalive,
     });
   } catch {

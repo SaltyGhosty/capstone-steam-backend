@@ -84,6 +84,18 @@ export const orderApi = {
   get: (id: number) => api<Order>(`/api/orders/${id}`),
 };
 
+/** Sube el archivo como multipart (la parte se llama `file`). */
+const coverForm = (file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return form;
+};
+
+export const uploadsApi = {
+  /** Si el servidor tiene Cloudinary configurado, se puede subir la portada como archivo */
+  coverStatus: () => api<{ enabled: boolean }>('/api/uploads/covers/status'),
+};
+
 export const developerApi = {
   list: (p = 0, size = 50) => api<PageResponse<GameDetail>>('/api/developer/games', { query: page(p, size) }),
   get: (id: number) => api<GameDetail>(`/api/developer/games/${id}`),
@@ -96,6 +108,8 @@ export const developerApi = {
     api<{ updated: number }>('/api/developer/games/discount', { method: 'POST', body: { percent } }),
   importFromSteam: (steamAppId: number) =>
     api<GameDetail>('/api/developer/games/import', { method: 'POST', body: { steamAppId } }),
+  uploadCover: (id: number, file: File) =>
+    api<GameDetail>(`/api/developer/games/${id}/cover`, { method: 'POST', body: coverForm(file) }),
 };
 
 export const adminApi = {
@@ -113,4 +127,6 @@ export const adminApi = {
   updateGenre: (id: number, name: string) => api<Genre>(`/api/admin/genres/${id}`, { method: 'PUT', body: { name } }),
   deleteGenre: (id: number) => api<void>(`/api/admin/genres/${id}`, { method: 'DELETE' }),
   syncSteam: () => api<SteamSyncResult>('/api/admin/steam/sync', { method: 'POST' }),
+  uploadCover: (id: number, file: File) =>
+    api<GameDetail>(`/api/admin/games/${id}/cover`, { method: 'POST', body: coverForm(file) }),
 };

@@ -100,6 +100,13 @@ public class GameManagementService {
         gameRepository.delete(game);
     }
 
+    /** Fija la portada ya subida (URL https del almacén). Sube la versión del juego. */
+    public GameDetailResponse setCover(Long developerId, Long gameId, String url) {
+        Game game = findOwned(developerId, gameId);
+        game.setCoverUrl(url);
+        return GameDetailResponse.from(gameRepository.saveAndFlush(game));
+    }
+
     /** Descuento masivo sobre todos los juegos publicados del developer (UPDATE atómico). */
     public int applyDiscountToAllPublished(Long developerId, int percent) {
         return gameRepository.bulkDiscountForDeveloper(developerId, percent, GameStatus.PUBLISHED);
@@ -125,6 +132,19 @@ public class GameManagementService {
             }
             case DRAFT -> throw new BadRequestException("game.draftByDeveloper");
         }
+        return GameDetailResponse.from(gameRepository.saveAndFlush(game));
+    }
+
+    /** El admin ve cualquier juego; 404 si no existe (se usa antes de subir una portada). */
+    @Transactional(readOnly = true)
+    public GameDetailResponse getAny(Long gameId) {
+        return GameDetailResponse.from(
+                gameRepository.findWithDetailsById(gameId).orElseThrow(() -> NotFoundException.of("game", gameId)));
+    }
+
+    public GameDetailResponse setCoverAsAdmin(Long gameId, String url) {
+        Game game = gameRepository.findWithDetailsById(gameId).orElseThrow(() -> NotFoundException.of("game", gameId));
+        game.setCoverUrl(url);
         return GameDetailResponse.from(gameRepository.saveAndFlush(game));
     }
 

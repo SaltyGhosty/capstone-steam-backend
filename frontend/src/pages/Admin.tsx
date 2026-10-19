@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { adminApi, catalogApi } from '@/api/endpoints';
 import type { GameStatus, Genre, Role, User } from '@/api/types';
+import CoverUpload, { useCoverUploadEnabled } from '@/components/CoverUpload';
 import Icon from '@/components/Icon';
 import { ErrorState, Loading, PageHeader } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
@@ -39,6 +40,7 @@ function GamesTab() {
   const [status, setStatus] = useState<GameStatus | ''>('');
   const games = useAsync(() => adminApi.games(status || undefined, 0, 100), [status]);
   const [syncing, setSyncing] = useState(false);
+  const coverUploadEnabled = useCoverUploadEnabled();
 
   const syncSteam = async () => {
     setSyncing(true);
@@ -91,6 +93,12 @@ function GamesTab() {
                   <td>{formatMoney(g.finalPrice)}</td>
                   <td>{g.salesCount}</td>
                   <td className="row-actions">
+                    {coverUploadEnabled && (
+                      <CoverUpload upload={(file) => adminApi.uploadCover(g.id, file)}
+                        onUploaded={(updated) => games.setData((page) => page && {
+                          ...page, content: page.content.map((x) => (x.id === updated.id ? updated : x)),
+                        })} />
+                    )}
                     {g.status === 'PUBLISHED' && <button className="secondary small danger" onClick={() => moderate(g.id, g.title, 'DELISTED')}>{t('admin.delist')}</button>}
                     {g.status === 'DELISTED' && <button className="secondary small" onClick={() => moderate(g.id, g.title, 'PUBLISHED')}>{t('admin.republish')}</button>}
                   </td>
