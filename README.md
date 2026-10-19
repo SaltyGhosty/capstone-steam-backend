@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 315 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 69 tests en 14 archivos · CI en GitHub Actions |
+| **Tests** | Backend: 321 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 69 tests en 14 archivos · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 73 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -19,7 +19,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 3. [Puesta en marcha](#puesta-en-marcha)
 4. [Frontend](#frontend)
 5. [Arquitectura](#arquitectura)
-6. [Base de datos (Flyway V1 a V10)](#base-de-datos-flyway-v1-a-v10)
+6. [Base de datos (Flyway V1 a V11)](#base-de-datos-flyway-v1-a-v11)
 7. [API](#api)
 8. [Tests](#tests)
 9. [Despliegue](#despliegue)
@@ -87,7 +87,7 @@ Los pagos son **simulados**: una tarjeta terminada en `0000` siempre se rechaza,
 | Spring Security + JWT stateless | [SecurityConfig](src/main/java/com/capstone/steam/security/SecurityConfig.java), [JwtService](src/main/java/com/capstone/steam/security/JwtService.java) (HS256, jjwt 0.13) y [JwtAuthFilter](src/main/java/com/capstone/steam/security/JwtAuthFilter.java) |
 | **Criteria API** para los filtros del catálogo | [GameCriteriaRepository](src/main/java/com/capstone/steam/game/search/GameCriteriaRepository.java): 9 filtros opcionales y 6 órdenes, con un subquery para los géneros y paginación en la base de datos |
 | **UPDATE atómicos escritos a mano** | [GameRepository](src/main/java/com/capstone/steam/game/GameRepository.java) (`incrementSalesCount`, `applyReviewDelta`, `bulkDiscountForDeveloper`), [OrderRepository](src/main/java/com/capstone/steam/order/OrderRepository.java) (`markPaid`, `closePending`) y [LibraryRepository](src/main/java/com/capstone/steam/library/LibraryRepository.java) (`addPlaytime`) |
-| Flyway V1 a V4 (y V5 a V10) | [db/migration](src/main/resources/db/migration) (ver [abajo](#base-de-datos-flyway-v1-a-v10)) |
+| Flyway V1 a V4 (y V5 a V11) | [db/migration](src/main/resources/db/migration) (ver [abajo](#base-de-datos-flyway-v1-a-v11)) |
 | Spring Mail + Gmail SMTP | [EmailService](src/main/java/com/capstone/steam/notification/EmailService.java), [EmailTemplates](src/main/java/com/capstone/steam/notification/EmailTemplates.java) y [MailTexts](src/main/java/com/capstone/steam/notification/MailTexts.java) (textos en es, en e it) |
 | Spring Events **AFTER_COMMIT** + `@Async` con **pool propio** | [MailListener](src/main/java/com/capstone/steam/notification/MailListener.java) y [AsyncConfig](src/main/java/com/capstone/steam/config/AsyncConfig.java) (`mailExecutor`, hilos `mail-*`) |
 | JUnit 5 + Mockito + H2 | [src/test](src/test/java/com/capstone/steam): tests unitarios, de repositorio, de integración HTTP y de concurrencia |
@@ -200,7 +200,7 @@ La respuesta HTTP no espera al SMTP. Si la transacción hace rollback, no se env
 
 **El idioma de los correos** sale de `users.locale`. Los textos de cada idioma están en el record `MailTexts` (una constante por idioma), así el compilador obliga a que ninguno se quede sin traducir. Los tres eventos llevan el `locale`, leído del usuario dentro de la transacción. Si falta o no se reconoce, el correo sale en español.
 
-## Base de datos (Flyway V1 a V10)
+## Base de datos (Flyway V1 a V11)
 
 | Migración | Contenido |
 |---|---|
@@ -214,8 +214,9 @@ La respuesta HTTP no espera al SMTP. Si la transacción hace rollback, no se env
 | **V8** `steam_style_reviews` | `reviews.language` (`es`, `en` o `it`), fuera `reviews.rating` y `games.rating_sum`; `rating_count` pasa a `review_count` y se añade `positive_count`. Recalcula los contadores desde las reseñas existentes |
 | **V9** `friendships` | `users.profile_public` (falso por defecto) y la tabla `friendships`: una fila por pareja sea cual sea la dirección (`UNIQUE(user_low_id, user_high_id)`), con estado `PENDING` o `ACCEPTED` |
 | **V10** `refresh_tokens` | `refresh_tokens`: SHA-256 del token (nunca el token), familia, caducidad, fecha de revocación y sustituto |
+| **V11** `friendships_pair_check` | `CHECK ck_friendships_pair`: el par `(user_low_id, user_high_id)` tiene que ser el del solicitante y el destinatario |
 
-El enunciado pide V1 a V4; V5 a V10 se añadieron después (idioma de los correos, traducciones, Steam, reseñas estilo Steam, amigos y refresh tokens). V1 a V3 y V5 a V10 son SQL portable. V4 tiene dos versiones ([postgresql](src/main/resources/db/migration/postgresql) y [h2](src/main/resources/db/migration/h2)), porque H2 no soporta los índices por trigramas ni los parciales. Flyway elige la adecuada con `locations: …/common, …/{vendor}`.
+El enunciado pide V1 a V4; V5 a V11 se añadieron después (idioma de los correos, traducciones, Steam, reseñas estilo Steam, amigos, refresh tokens y la integridad del par de amigos). V1 a V3 y V5 a V11 son SQL portable. V4 tiene dos versiones ([postgresql](src/main/resources/db/migration/postgresql) y [h2](src/main/resources/db/migration/h2)), porque H2 no soporta los índices por trigramas ni los parciales. Flyway elige la adecuada con `locations: …/common, …/{vendor}`.
 
 Las reglas de integridad también las garantiza la base de datos, no solo el código Java: `CHECK` (precio ≥ 0, descuento 0 a 100, `positive_count <= review_count`, idioma y estados válidos), `UNIQUE` y claves foráneas con `ON DELETE` pensado caso por caso.
 
@@ -292,7 +293,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 315 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 321 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
@@ -371,7 +372,7 @@ La justificación de cada decisión (D1 a D51) está en [handoff.md](handoff.md)
 ### Limitaciones conocidas
 - El JWT no consulta la base de datos en cada petición. Si se desactiva un usuario o cambian sus roles, sus refresh tokens se revocan al instante, pero el token de acceso que ya tenía sigue valiendo hasta 15 minutos.
 - El refresh token se guarda en `localStorage`, como el de acceso, así que un XSS podría leerlo. Una cookie `httpOnly` sería más segura, pero entre dominios (Vercel y Render) complica CORS y SameSite.
-- La tabla `refresh_tokens` no se purga: los tokens caducados o revocados se quedan en ella.
+- La purga diaria de `refresh_tokens` solo borra familias enteras ya caducadas; con varias instancias correría en todas (es idempotente).
 - El límite de mensajes del asistente vive en memoria: se pierde al reiniciar y no se comparte entre varias instancias del backend.
 - Las etiquetas «Extremadamente positivas» y «Extremadamente negativas» necesitan 500 reseñas; la demo no llega y no salen.
 - Si llegan dos pagos simultáneos del mismo pedido, la pasarela simulada se llama dos veces, aunque solo uno se completa y el otro hace rollback. Con un proveedor real habría que usar una idempotency key.

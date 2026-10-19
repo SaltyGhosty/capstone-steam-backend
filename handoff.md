@@ -12,7 +12,7 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 |---|---|
 | Paquete base | `com.capstone.steam` |
 | Artifact | `capstone-steam-backend` |
-| Estado actual | **✅ Bloques 0 a 16, bloque A (cierre) y los seis extras B a G, más la pasada de arreglos tras la revisión: backend (315 tests, JaCoCo exige el 80 % de líneas, Swagger) + frontend React en es/en/it (69 tests en 14 archivos) + CI + despliegue preparado. Migraciones V1 a V10. Último trabajo: las pasadas de arreglos de las oleadas 1 y 2, la BD demo migrada y sembrada, y Newman en verde (2026-10-19)** |
+| Estado actual | **✅ Bloques 0 a 16, bloque A (cierre) y los seis extras B a G, más la pasada de arreglos tras la revisión: backend (321 tests, JaCoCo exige el 80 % de líneas, Swagger) + frontend React en es/en/it (69 tests en 14 archivos) + CI + despliegue preparado. Migraciones V1 a V11. Último trabajo: las pasadas de arreglos de las oleadas 1 y 2, la BD demo migrada y sembrada, y Newman en verde (2026-10-19)** |
 | Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). <br>El plan `docs/superpowers/specs/2026-10-19-cierre-y-extras-design.md` está **entero en `main`** (bloques A a G). Cloudinary, OpenRouter y los correos en/it ya están probados con las cuentas reales. **Desplegado en Render** (2026-10-19): backend https://capstone-steam-api.onrender.com y frontend https://capstone-steam-web.onrender.com. Las rutas profundas funcionan con un `404.html` (copia de `index.html` en el `postbuild`) |
 | Última actualización | 2026-10-19 |
 
@@ -47,13 +47,13 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 
 ### Limitaciones conocidas
 - **El refresh token vive en `localStorage`** (como el de acceso): un XSS podría leerlo. Una cookie `httpOnly` sería más segura, pero entre dominios (Vercel y Render) complica CORS y SameSite. Decisión de la spec (bloque F).
-- **La tabla `refresh_tokens` no se purga**: los tokens caducados o revocados se quedan. Habría que añadir una tarea programada.
 - **El límite del chatbot es en memoria** (`ChatRateLimiter`, 20 mensajes por hora y usuario): se pierde al reiniciar y no sirve con varias instancias del backend.
 - **Las etiquetas «Extremadamente positivas/negativas» necesitan 500 reseñas** y no salen en la demo (el juego con más reseñas tiene 60). Se explica en la defensa.
+- La purga de `refresh_tokens` (D52) correría en cada instancia si hubiera varias: es idempotente, solo duplica trabajo.
 - **Una cuenta desactivada conserva su acceso hasta 15 minutos**: el filtro JWT no consulta la base de datos (D16). Sus refresh tokens sí se revocan al instante, así que no puede renovar.
 - Dos pagos simultáneos del mismo pedido llaman dos veces a la pasarela simulada (D33).
 - Las portadas **pegadas como URL** siguen cargándose desde un servidor ajeno, también en el correo (D43). Las subidas a Cloudinary no.
-- Amistades: la base de datos no obliga a que `user_low_id` y `user_high_id` coincidan con solicitante y destinatario (un CHECK pendiente, necesitaría una V11), y dos solicitudes cruzadas simultáneas dan un 409 genérico porque lo resuelve la UNIQUE del par.
+- Amistades: dos solicitudes cruzadas simultáneas dan un 409 genérico porque lo resuelve la UNIQUE del par.
 
 ### Pendientes manuales del usuario
 - Opcional: regla *Rewrite* `/*` → `/index.html` en el static site `capstone-steam-web` (el conector de Render no la crea). Hoy las rutas profundas funcionan con el `404.html`, pero responden con estado 404.
@@ -78,7 +78,7 @@ Spring Boot **4.1.1** · jjwt **0.13.0** · Java **25** · Flyway (gestionado po
   - **V2:** biblioteca, carrito, wishlist y reseñas.
   - **V3:** compras, transacciones y estados de pago.
   - **V4:** índices y optimizaciones de búsqueda.
-  - V1 a V4 es el mínimo exigido. Además existen **V5 a V10** (ver §5).
+  - V1 a V4 es el mínimo exigido. Además existen **V5 a V11** (ver §5).
 - **Correo:** Spring Mail con SMTP de Gmail.
 - **Eventos:** Spring Events en fase **AFTER_COMMIT** y `@Async` con un **thread pool propio** para el correo.
 - **Tests:** JUnit 5 (Jupiter), Mockito y H2, con pruebas unitarias y de integración.
@@ -138,6 +138,7 @@ Spring Boot **4.1.1** · jjwt **0.13.0** · Java **25** · Flyway (gestionado po
 | D49 | Amigos y perfil: <br>• `friendships` tiene una fila por pareja sea cual sea la dirección, con `user_low_id < user_high_id` y `UNIQUE(low, high)`. <br>• Solo participan cuentas **jugador** (activas, sin DEVELOPER ni ADMIN); `FriendService.isPlayer` lo comprueba también al listar y aceptar solicitudes. <br>• Solicitud cruzada = se aceptan las dos. Cancelar solo borra solicitudes aún `PENDING`. <br>• `users.profile_public` (falso por defecto): la biblioteca y los amigos de un perfil solo se devuelven si es público, el que mira es amigo o es él mismo. La regla vive en el backend; el email, los pedidos, el carrito y la wishlist nunca salen. | Bloque E | ✅ Aplicada |
 | D50 | Portadas en Cloudinary: <br>• `CoverStorage` (interfaz) con `CloudinaryCoverStorage`, que sube con la API firmada (SHA-1) usando `RestClient`; en tests se simula. <br>• `CoverService` valida dueño, tamaño (5 MB) y tipo **por los bytes mágicos** (`ImageType`: JPEG, PNG o WebP) antes de llamar al almacén, y guarda la `secure_url` (https) en `coverUrl`. <br>• Un 400 de Cloudinary responde 400 `cover.invalidType`; 5xx, red y timeout, 502. Sin `CLOUDINARY_URL` responde 503 `cover.disabled` y `GET /api/uploads/covers/status` da `{enabled:false}`, con lo que el frontend oculta el botón. <br>• `server.tomcat.max-swallow-size=10MB` para que más de 6 MB dé 413 y no un corte de conexión. | Bloque G | ✅ Aplicada |
 | D51 | Asistente de recomendaciones: <br>• `ChatModel` (interfaz) con `OpenRouterChatModel` (`RestClient` con tiempos máximos); en tests se simula, así que el CI no llama a la red. <br>• `RecommendationService` pone el catálogo publicado completo (id, título, géneros, precio, % positivo, descripción corta) en el prompt de sistema; el texto del usuario va solo como mensaje de usuario. Pide `{reply, gameIds}` y **descarta los ids** que no existan o no estén publicados (máximo 4 juegos). <br>• Sin clave, sin red, sin cupo o con una respuesta inservible: 503 `assistant.unavailable` (ProblemDetail). <br>• `ChatRateLimiter`: 20 mensajes por hora y usuario, en memoria (429). Máximo 10 mensajes por petición y 500 caracteres por mensaje; el último tiene que ser del usuario (400). | Bloque D | ✅ Aplicada |
+| D52 | Cierre de dos limitaciones: <br>• **V11** añade `ck_friendships_pair`: `(low, high)` tiene que ser `(requester, addressee)` o al revés. SQL portable (sin `LEAST`/`GREATEST`) para PostgreSQL y H2. <br>• **Purga de `refresh_tokens`**: `RefreshTokenPurgeScheduler` (`REFRESH_PURGE_CRON`, por defecto a las 03:30) borra **familias enteras** cuyo `max(expires_at)` es anterior a `now - REFRESH_PURGE_GRACE` (1 día). Nunca borra un token suelto de una familia con alguno vigente: así reutilizar un token robado sigue tirando la familia viva (D48) | 2026-10-20 | ✅ Aplicada |
 **Forma de trabajar:**
 - Se construye bloque a bloque y cada bloque se valida antes de pasar al siguiente.
 - Las respuestas van en español.
@@ -243,6 +244,9 @@ com.capstone.steam
 **V10__refresh_tokens.sql** (en `common`, bloque F)
 - **`refresh_tokens`:** `user_id` (FK con `ON DELETE CASCADE`), `token_hash` (`UNIQUE`, el SHA-256 en hexadecimal), `family_id`, `expires_at`, `created_at`, `revoked_at` y `replaced_by_id`. Índices por usuario y por familia.
 
+**V11__friendships_pair_check.sql** (en `common`, 2026-10-20)
+- **`ck_friendships_pair`:** `(user_low_id, user_high_id)` tiene que ser `(requester_id, addressee_id)` o `(addressee_id, requester_id)`. Antes solo lo garantizaba la entidad `Friendship` (D52).
+
 ---
 
 ## 6. Funcionalidad por fases
@@ -309,7 +313,7 @@ com.capstone.steam
 - **Asistente (D):** `POST /api/recommendations/chat` (D51).
 
 ### Testing
-Total: **315 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de frontend** (`npm test`, 14 archivos).
+Total: **321 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de frontend** (`npm test`, 14 archivos).
 - **Unitarios (Mockito):** `JwtServiceTest`, `AuthServiceTest`, `OrderServiceTest`, `ReviewServiceTest`, `ReviewScoreTest`, `CartServiceTest`, `GameManagementServiceTest`, `SimulatedPaymentGatewayTest`, `EmailServiceTest`, `SteamStoreClientTest`, `RefreshTokenServiceTest`, `FriendServiceTest`, `ImageTypeTest`, `CloudinaryCoverStorageTest` (con `MockRestServiceServer`), `OpenRouterChatModelTest`, `RecommendationServiceTest` y `ChatRateLimiterTest`.
 - **`@DataJpaTest` con H2 y Flyway real:** `GameCriteriaRepositoryTest` y `RepositoryIntegrationTest` (UPDATE atómicos y doble pago). Concurrencia con 16 hilos en `AtomicUpdateConcurrencyTest`, y con varios refresh simultáneos en `RefreshTokenConcurrencyTest` (solo uno gana).
 - **`@SpringBootTest` + MockMvc:**
@@ -355,6 +359,7 @@ Total: **315 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de 
 | Correos en/it reales | Prueba con la cuenta Gmail del usuario | ✅ Hecho | 2026-10-19 | Script por la API contra el backend del 8081: dos cuentas con alias `+` (`mail_en_*` con `locale: en`, `mail_it_*` con `locale: it`). Cada una: registro, pago con tarjeta `…0000` → 402 y pago correcto → PAID (Undertale y XCOM 2). **El usuario confirmó que llegaron los 6 correos** (bienvenida, pago rechazado y recibo) en su idioma y con importes en €. Las dos cuentas se quedan en `capstone_steam_demo` |
 | Despliegue | Render: backend, frontend y BD | ✅ Hecho | 2026-10-19 | Con el conector de Render, no con el Blueprint. `capstone-steam-api` (Docker, perfil `prod`), `capstone-steam-web` (*static site*: `cd frontend && npm ci && npm run build`, publica `frontend/dist`, `VITE_API_URL`) y `capstone-steam-db` (PostgreSQL 18 free, caduca el 2026-11-18), todo en Frankfurt. Vercel descartado: no había conector ni CLI. Render solo deja una Postgres free por cuenta; la de car-catalog quedó suspendida. `DB_PASSWORD` la puso el usuario a mano. Admin de producción con contraseña propia. Comprobado: health UP, Swagger, CORS, login, Cloudinary activo, chatbot con juegos del catálogo. Seed: 60 juegos, 80 pedidos, 2.101 reseñas. Sin la regla *Rewrite* (el conector no la crea y no se pudo entrar al panel), `frontend/package.json` tiene un `postbuild` que copia `index.html` como `404.html`: Render lo sirve en las rutas que no existen y React Router las resuelve (`34b97ae`) |
 | Remate A | Dos menores del bloque A | ✅ Hecho | 2026-10-19 | `coverUrl` vacía o en blanco se guarda como `null`, como `avatarUrl` (`da83628`). Tests de URLs con espacios alrededor en `coverUrl` y `avatarUrl`: ya daban 400, ahora está cubierto (`5558597`). `clean verify`: **315 tests**, 0 fallos, 95 % de instrucciones |
+| Limitaciones | V11 y purga de refresh tokens | ✅ Hecho | 2026-10-20 | Dos subagentes Sonnet en paralelo, cada uno en su worktree, revisados y fusionados (D52). • V11 `ck_friendships_pair` + test en `FlywayMigrationTest` (`94ef6f2`) • Purga programada por familias caducadas + 5 tests (`b22ccce`) • `clean verify`: **321 tests**, 0 fallos, 95 % de instrucciones • Se limpiaron los 16 worktrees ya fusionados |
 | Docs | README, handoff, Postman y agentes al día | ✅ Hecho | 2026-10-19 | `README.md` y `frontend/README.md` con las funciones nuevas, endpoints, variables y cifras; spec corregida (familia en vez de todos); Postman reescrita a 73 peticiones (reseñas 👍/👎, refresh y logout, amigos, estado de portadas y asistente con 200 o 503); cifras de los agentes. **Newman sin ejecutar** con la colección nueva |
 
 ---
@@ -387,7 +392,7 @@ Total: **315 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de 
 0. Crear la BD (solo la primera vez):
    `& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -h localhost -c "CREATE DATABASE capstone_steam;"`
 1. `docker compose up -d` (solo si se usa Docker en lugar de Postgres local)
-2. `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`: Flyway aplica V1 a V10 y Hibernate valida el esquema.
-3. `./mvnw test`: todo en verde sobre H2 (315 tests). Frontend: `cd frontend && npm test` (69 tests).
+2. `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`: Flyway aplica V1 a V11 y Hibernate valida el esquema.
+3. `./mvnw test`: todo en verde sobre H2 (321 tests). Frontend: `cd frontend && npm test` (69 tests).
 4. Prueba manual: register → login → buscar con filtros → carrito → checkout → biblioteca → reseña.
 5. Comprobar que llega el correo y que en los logs el envío aparece en un hilo `mail-*`.
