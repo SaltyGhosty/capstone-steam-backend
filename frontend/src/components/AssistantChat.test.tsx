@@ -153,6 +153,42 @@ describe('chat del asistente', () => {
   });
 });
 
+describe('accesibilidad y errores del chat', () => {
+  beforeEach(() => setToken('jwt-demo'));
+
+  it('al cerrar, el foco vuelve al botón flotante; el panel apunta a su título', async () => {
+    mockFetch(base);
+    renderRoutes({ '/': <AssistantChat /> }, '/');
+    await open();
+
+    const dialog = screen.getByRole('dialog');
+    const labelId = dialog.getAttribute('aria-labelledby');
+    expect(labelId).toBeTruthy();
+    expect(document.getElementById(labelId!)).toHaveTextContent('Asistente de recomendaciones');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cerrar el asistente' }));
+    expect(screen.getByRole('button', { name: 'Abrir el asistente' })).toHaveFocus();
+
+    await open();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Abrir el asistente' })).toHaveFocus();
+  });
+
+  it('un 400 muestra su propio texto y el aviso no lleva role alert dentro de la región aria-live', async () => {
+    mockFetch({ ...base, 'POST /api/recommendations/chat': { status: 400, body: { detail: 'malo' } } });
+    renderRoutes({ '/': <AssistantChat /> }, '/');
+    const input = await open();
+
+    await userEvent.type(input, 'hola');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+
+    const notice = await screen.findByText('No he podido enviar ese mensaje');
+    expect(screen.queryByText('El asistente no está disponible ahora')).not.toBeInTheDocument();
+    expect(notice).not.toHaveAttribute('role', 'alert');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
 function SwitchUser() {
   const { login } = useStore();
   return <button type="button" onClick={() => void login('otra', 'pw')}>Cambiar de usuario</button>;

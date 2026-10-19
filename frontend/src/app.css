@@ -314,7 +314,7 @@ td.row-actions > * { display: inline-flex; vertical-align: middle; margin-left: 
 /* Bloque D: chat del asistente */
 .assistant-fab { position: fixed; z-index: 40; right: 24px; bottom: 24px; width: 54px; height: 54px; display: grid; place-items: center; border: 0; border-radius: 50%; color: #11151b; background: #b7ff3c; box-shadow: 0 10px 30px rgba(0,0,0,.5); cursor: pointer; transition: transform .2s ease, background .2s ease; }
 .assistant-fab:hover { background: #c8ff68; transform: translateY(-2px); }
-.assistant-panel { position: fixed; z-index: 45; right: 24px; bottom: 24px; width: 380px; max-width: calc(100vw - 24px); height: min(560px, calc(100dvh - 48px)); display: flex; flex-direction: column; border: 1px solid #2a3039; border-radius: 14px; background: #12161c; box-shadow: 0 24px 60px rgba(0,0,0,.6); overflow: hidden; }
+.assistant-panel { position: fixed; z-index: 60; right: 24px; bottom: 24px; width: 380px; max-width: calc(100vw - 24px); height: min(560px, calc(100dvh - 48px)); display: flex; flex-direction: column; border: 1px solid #2a3039; border-radius: 14px; background: #12161c; box-shadow: 0 24px 60px rgba(0,0,0,.6); overflow: hidden; }
 .assistant-panel header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #20252d; }
 .assistant-panel h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; color: white; }
 .assistant-messages { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px; overflow-y: auto; }
