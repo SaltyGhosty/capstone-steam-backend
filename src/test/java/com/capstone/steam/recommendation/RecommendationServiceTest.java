@@ -165,6 +165,23 @@ class RecommendationServiceTest {
     }
 
     @Test
+    void anIdBiggerThanALongIsIgnoredAndDoesNotBreakIt() {
+        ChatResponse response = ask("{\"reply\":\"a\",\"gameIds\":[99999999999999999999,1]}");
+
+        assertThat(response.games()).extracting("id").containsExactly(1L);
+    }
+
+    @Test
+    void anUnexpectedExceptionWhileParsingIsUnavailableNotA500() {
+        JsonMapper broken = org.mockito.Mockito.spy(JsonMapper.builder().build());
+        org.mockito.Mockito.doThrow(new IllegalStateException("inesperado")).when(broken).readTree(anyString());
+        RecommendationService fragile = new RecommendationService(games, model, new ChatRateLimiter(Clock.systemUTC()), broken);
+        when(model.complete(anyString(), any())).thenReturn("{\"reply\":\"a\",\"gameIds\":[]}");
+
+        assertThatThrownBy(() -> fragile.chat(7L, user("hola"))).isInstanceOf(AssistantUnavailableException.class);
+    }
+
+    @Test
     void keepsOnlyTheFirstFourValidIdsInTheModelOrder() {
         ChatResponse response = ask("{\"reply\":\"mucho\",\"gameIds\":[6,5,4,3,1]}");
 

@@ -119,6 +119,17 @@ public class RecommendationService {
 
     /** Lee {@code {"reply","gameIds"}}, aunque venga entre ``` o con texto alrededor. */
     private ChatResponse parse(String raw, List<Game> catalog) {
+        try {
+            return doParse(raw, catalog);
+        } catch (AssistantUnavailableException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            // nada de lo que diga el modelo puede acabar en un 500
+            throw new AssistantUnavailableException(e);
+        }
+    }
+
+    private ChatResponse doParse(String raw, List<Game> catalog) {
         JsonNode root = firstJsonObject(raw);
         JsonNode reply = root.path("reply");
         if (!reply.isString() || reply.asString().isBlank()) {
@@ -129,7 +140,7 @@ public class RecommendationService {
         JsonNode raws = root.path("gameIds");
         if (raws.isArray()) {
             for (JsonNode node : raws) {
-                if (node.isIntegralNumber() && byId.containsKey(node.asLong())) {
+                if (node.isIntegralNumber() && node.canConvertToLong() && byId.containsKey(node.asLong())) {
                     ids.add(node.asLong());
                 }
             }
