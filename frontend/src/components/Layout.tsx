@@ -101,6 +101,7 @@ export default function Layout() {
           <p>{t('nav.collection')}</p>
           <SideLink to="/wishlist" icon="heart" label={t('nav.wishlist')} count={user ? wishlistIds.size : undefined} />
           <SideLink to="/orders" icon="receipt" label={t('nav.orders')} />
+          <SideLink to="/friends" icon="users" label={t('nav.friends')} />
           {hasRole('ROLE_DEVELOPER') && (<><p>{t('nav.studio')}</p><SideLink to="/developer" icon="code" label={t('nav.myGames')} /></>)}
           {hasRole('ROLE_ADMIN') && (<><p>{t('nav.admin')}</p><SideLink to="/admin" icon="shield" label={t('nav.moderation')} /></>)}
         </nav>
@@ -139,6 +140,8 @@ export default function Layout() {
                 </button>
                 {menuOpen && (
                   <div className="menu" role="menu">
+                    <Link to={`/users/${user.username}`} role="menuitem"><Icon name="users" size={16} /> {t('nav.myProfile')}</Link>
+                    <Link to="/friends" role="menuitem"><Icon name="users" size={16} /> {t('nav.friends')}</Link>
                     <Link to="/settings" role="menuitem"><Icon name="settings" size={16} /> {t('nav.settings')}</Link>
                     <Link to="/orders" role="menuitem"><Icon name="receipt" size={16} /> {t('nav.myOrders')}</Link>
                     <button onClick={logout} role="menuitem"><Icon name="logout" size={16} /> {t('nav.logout')}</button>

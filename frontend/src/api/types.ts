@@ -33,6 +33,7 @@ export interface User {
   roles: Role[];
   createdAt: string;
   locale: Locale;
+  profilePublic: boolean;
 }
 
 export interface RegisterRequest {
@@ -49,6 +50,7 @@ export interface UpdateProfileRequest {
   displayName?: string;
   avatarUrl?: string;
   locale?: Locale;
+  profilePublic?: boolean;
 }
 
 export interface AuthResponse {
@@ -236,4 +238,58 @@ export interface SteamSyncResult {
   updated: number;
   newSales: number;
   notified: number;
+}
+
+// ---- Amigos y perfil (Bloque E) ----
+export type Relation = 'SELF' | 'FRIENDS' | 'REQUEST_SENT' | 'REQUEST_RECEIVED' | 'NONE';
+export type FriendshipStatus = 'PENDING' | 'ACCEPTED';
+
+export interface UserCard {
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
+export interface SearchHit {
+  user: UserCard;
+  relation: Relation;
+  requestId: number | null;
+}
+
+export interface FriendResponse {
+  user: UserCard;
+  since: string | null;
+}
+
+/** `user` es la otra persona, no quien consulta. */
+export interface FriendRequest {
+  id: number;
+  user: UserCard;
+  status: FriendshipStatus;
+  createdAt: string;
+}
+
+export interface FriendRequests {
+  incoming: FriendRequest[];
+  outgoing: FriendRequest[];
+}
+
+export interface ProfileGame {
+  gameId: number;
+  title: string;
+  slug: string;
+  coverUrl: string | null;
+  playtimeMinutes: number;
+}
+
+/** `library` y `friends` son null si `visible` es false. */
+export interface PublicProfile {
+  user: UserCard;
+  memberSince: string;
+  profilePublic: boolean;
+  relation: Relation;
+  requestId: number | null;
+  visible: boolean;
+  library: ProfileGame[] | null;
+  friends: FriendResponse[] | null;
 }

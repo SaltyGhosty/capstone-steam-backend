@@ -31,8 +31,28 @@ describe('ajustes', () => {
     const isPatch = ([, init]: unknown[]) => (init as RequestInit | undefined)?.method === 'PATCH';
     await waitFor(() => expect(fetchMock.mock.calls.some(isPatch)).toBe(true));
     const patch = fetchMock.mock.calls.find(isPatch)!;
-    expect(JSON.parse(String(patch[1]!.body))).toEqual({ displayName: 'Demo Player', locale: 'it' });
+    expect(JSON.parse(String(patch[1]!.body))).toEqual({ displayName: 'Demo Player', locale: 'it', profilePublic: false });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Guardar cambios' })).toBeEnabled());
     expect(screen.getByLabelText(/Idioma de los correos/)).toHaveValue('it');
+  });
+
+  it('la casilla de perfil público envía profilePublic: true', async () => {
+    const fetchMock = mockFetch({
+      'GET /api/users/me': { body: user },
+      'GET /api/cart': { body: { items: [], itemCount: 0, total: 0 } },
+      'GET /api/wishlist': { body: page([]) },
+      'PATCH /api/users/me': (init) => ({ body: { ...user, ...JSON.parse(String(init.body)) } }),
+    });
+    renderRoutes({ '/settings': <RequireAuth><Settings /></RequireAuth> }, '/settings');
+
+    const box = await screen.findByRole('checkbox', { name: /Perfil público/ });
+    expect(box).not.toBeChecked();
+    await userEvent.click(box);
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    const isPatch = ([, init]: unknown[]) => (init as RequestInit | undefined)?.method === 'PATCH';
+    await waitFor(() => expect(fetchMock.mock.calls.some(isPatch)).toBe(true));
+    const patch = fetchMock.mock.calls.find(isPatch)!;
+    expect(JSON.parse(String(patch[1]!.body))).toMatchObject({ profilePublic: true });
   });
 });

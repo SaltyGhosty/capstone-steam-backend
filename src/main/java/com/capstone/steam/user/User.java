@@ -49,6 +49,10 @@ public class User {
     @Column(name = "locale", nullable = false, length = 5)
     private String locale = "es";
 
+    /** Perfil visible para cualquiera con sesión; si no, solo para los amigos (V9). */
+    @Column(name = "profile_public", nullable = false)
+    private boolean profilePublic = false;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
@@ -135,6 +139,14 @@ public class User {
 
     public void setLocale(String locale) {
         this.locale = locale;
+    }
+
+    public boolean isProfilePublic() {
+        return profilePublic;
+    }
+
+    public void setProfilePublic(boolean profilePublic) {
+        this.profilePublic = profilePublic;
     }
 
     public Set<Role> getRoles() {

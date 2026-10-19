@@ -41,6 +41,9 @@ public class UserService {
         if (request.locale() != null) {
             user.setLocale(request.locale());
         }
+        if (request.profilePublic() != null) {
+            user.setProfilePublic(request.profilePublic());
+        }
         return UserResponse.from(user);
     }
 

@@ -9,8 +9,10 @@ import Cart from '@/pages/Cart';
 import { Library, Wishlist } from '@/pages/Collection';
 import { DeveloperGameForm, DeveloperGames } from '@/pages/Developer';
 import Discover from '@/pages/Discover';
+import Friends from '@/pages/Friends';
 import GameDetail from '@/pages/GameDetail';
 import { OrderDetail, OrderList } from '@/pages/Orders';
+import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 
 function NotFound() {
@@ -37,6 +39,8 @@ export default function App() {
         <Route path="cart" element={<RequireAuth><Cart /></RequireAuth>} />
         <Route path="orders" element={<RequireAuth><OrderList /></RequireAuth>} />
         <Route path="orders/:id" element={<RequireAuth><OrderDetail /></RequireAuth>} />
+        <Route path="friends" element={<RequireAuth><Friends /></RequireAuth>} />
+        <Route path="users/:username" element={<RequireAuth><Profile /></RequireAuth>} />
         <Route path="settings" element={<RequireAuth><Settings /></RequireAuth>} />
 
         <Route path="developer" element={<RequireAuth role="ROLE_DEVELOPER"><DeveloperGames /></RequireAuth>} />

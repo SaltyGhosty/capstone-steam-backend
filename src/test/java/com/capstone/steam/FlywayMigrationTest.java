@@ -13,7 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Verifica que las migraciones V1-V8 se aplican sobre H2 y que las
+ * Verifica que las migraciones V1-V9 se aplican sobre H2 y que las
  * restricciones clave del esquema funcionan.
  */
 @SpringBootTest
@@ -28,10 +28,30 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV8() {
+    void appliesAllMigrationsUpToV9() {
         var applied = flyway.info().applied();
-        assertThat(applied).hasSize(8);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("8");
+        assertThat(applied).hasSize(9);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("9");
+    }
+
+    @Test
+    void friendshipsRejectUnorderedAndDuplicatePairs() {
+        long a = insertUser("amiga");
+        long b = insertUser("amigo");
+        long low = Math.min(a, b);
+        long high = Math.max(a, b);
+        String sql = "INSERT INTO friendships (requester_id, addressee_id, user_low_id, user_high_id, status) "
+                + "VALUES (?, ?, ?, ?, 'PENDING')";
+
+        // low > high no vale
+        assertThatThrownBy(() -> jdbc.update(sql, low, high, high, low))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        jdbc.update(sql, low, high, low, high);
+        // el mismo par, en cualquier dirección, ya existe
+        assertThatThrownBy(() -> jdbc.update(sql, high, low, low, high))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThat(jdbc.queryForObject("SELECT profile_public FROM users WHERE id = ?", Boolean.class, a)).isFalse();
     }
 
     @Test

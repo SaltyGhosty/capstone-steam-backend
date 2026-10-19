@@ -36,5 +36,6 @@ export const demoUser = {
   enabled: true,
   roles: ['ROLE_USER'],
   locale: 'es',
+  profilePublic: false,
   createdAt: '2026-09-30T10:00:00Z',
 };

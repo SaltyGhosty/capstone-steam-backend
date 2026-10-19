@@ -15,7 +15,8 @@ public record UserResponse(
         String locale,
         boolean enabled,
         List<String> roles,
-        Instant createdAt) {
+        Instant createdAt,
+        boolean profilePublic) {
 
     public static UserResponse from(User user) {
         return new UserResponse(
@@ -27,6 +28,7 @@ public record UserResponse(
                 user.getLocale(),
                 user.isEnabled(),
                 user.getRoles().stream().map(Role::getName).map(Enum::name).sorted().toList(),
-                user.getCreatedAt());
+                user.getCreatedAt(),
+                user.isProfilePublic());
     }
 }
