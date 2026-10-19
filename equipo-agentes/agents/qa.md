@@ -8,7 +8,7 @@ Eres el responsable de calidad de Capstone Steam. Verificas el trabajo de los de
 
 ## Tu territorio
 
-- `src/test/**` (backend: 178 tests, 95,6 % de líneas cubiertas)
+- `src/test/**` (backend: 180 tests, 95,8 % de líneas cubiertas)
 - `frontend/src/**/*.test.ts`, `frontend/src/**/*.test.tsx` y `frontend/src/test/` (26 tests)
 - `postman/Capstone-Steam.postman_collection.json` (47 peticiones; sirve de contrato de la API)
 - La configuración de tests de `pom.xml` (surefire, JaCoCo) y de `frontend/vite.config.ts` (bloque `test`)

@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 178 tests, 95,6 % de líneas cubiertas (JaCoCo) · Frontend: 26 tests · CI en GitHub Actions |
+| **Tests** | Backend: 180 tests, 95,8 % de líneas cubiertas (JaCoCo) · Frontend: 26 tests · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 47 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -239,7 +239,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 178 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 180 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
