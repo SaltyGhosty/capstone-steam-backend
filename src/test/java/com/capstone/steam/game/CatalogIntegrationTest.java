@@ -176,6 +176,12 @@ class CatalogIntegrationTest {
         mvc.perform(auth(post("/api/developer/games"), devToken).contentType(MediaType.APPLICATION_JSON)
                         .content(gameWithCover("Safe cover", "HTTPS://img.test/c.jpg")))
                 .andExpect(status().isCreated());
+        mvc.perform(auth(post("/api/developer/games"), devToken).contentType(MediaType.APPLICATION_JSON)
+                        .content(gameWithCover("Mixed case cover", "Http://img.test/c.jpg")))
+                .andExpect(status().isCreated());
+        mvc.perform(auth(post("/api/developer/games"), devToken).contentType(MediaType.APPLICATION_JSON)
+                        .content(gameWithCover("No cover", "")))
+                .andExpect(status().isCreated());
     }
 
     private String gameWithCover(String title, String coverUrl) {

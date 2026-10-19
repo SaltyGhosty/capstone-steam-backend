@@ -215,6 +215,19 @@ class AuthIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void emptyAvatarUrlRemovesTheAvatar() throws Exception {
+        String token = register("kleiner", "kleiner@blackmesa.com");
+        mvc.perform(patch("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"avatarUrl\":\"https://a.test/a.png\"}"))
+                .andExpect(jsonPath("$.avatarUrl").value("https://a.test/a.png"));
+
+        mvc.perform(patch("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"avatarUrl\":\"\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.avatarUrl").doesNotExist());
+    }
+
     private String register(String username, String email) throws Exception {
         String body = mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                         {"username":"%s","email":"%s","password":"password123"}""".formatted(username, email)))
