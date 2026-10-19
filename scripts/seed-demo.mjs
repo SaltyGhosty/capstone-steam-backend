@@ -9,6 +9,7 @@
 // Los datos están en scripts/demo-data.json. Las portadas se enlazan desde el CDN de Steam y cada juego
 // queda enlazado por su AppID: el backend sincroniza después precio y descuento con la tienda de Steam.
 import { readFile } from 'node:fs/promises';
+import { assignReviews, reviewText } from './demo-reviews.mjs';
 
 const apiArg = process.argv.indexOf('--api');
 const API = (apiArg > 0 ? process.argv[apiArg + 1] : 'http://localhost:8081').replace(/\/$/, '');
@@ -22,15 +23,28 @@ class HttpError extends Error {
   constructor(status, detail) { super(`${status} ${detail}`); this.status = status; }
 }
 
+// El token de acceso dura 15 min. Si caduca a mitad del seed se hace login de nuevo con la misma cuenta.
+const sessionUser = new Map(); // token -> username
+const renewed = new Map(); // token caducado -> token vigente
+
 async function call(method, path, { token, body, accept = [] } = {}) {
-  const res = await fetch(API + path, {
+  const send = (tk) => fetch(API + path, {
     method,
     headers: {
       ...(body !== undefined && { 'Content-Type': 'application/json' }),
-      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(tk && { Authorization: `Bearer ${tk}` }),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  let current = renewed.get(token) ?? token;
+  let res = await send(current);
+  if (res.status === 401 && current && !path.startsWith('/api/auth/') && sessionUser.has(current)) {
+    const login = await call('POST', '/api/auth/login', { body: { login: sessionUser.get(current), password: data.password } });
+    sessionUser.set(login.accessToken, sessionUser.get(current));
+    renewed.set(token, login.accessToken);
+    current = login.accessToken;
+    res = await send(current);
+  }
   const text = await res.text();
   const json = text ? JSON.parse(text) : null;
   if (!res.ok && !accept.includes(res.status)) throw new HttpError(res.status, json?.detail ?? json?.title ?? text);
@@ -43,15 +57,17 @@ async function account(username, displayName, accountType) {
     const res = await call('POST', '/api/auth/register', { body: {
       username, displayName, accountType, password: data.password, email: `${username}@demo.capstone-steam.local`,
     } });
+    sessionUser.set(res.accessToken, username);
     return { token: res.accessToken, created: true };
   } catch (e) {
     if (e.status !== 409) throw e;
     const res = await call('POST', '/api/auth/login', { body: { login: username, password: data.password } });
+    sessionUser.set(res.accessToken, username);
     return { token: res.accessToken, created: false };
   }
 }
 
-const count = { studios: 0, games: 0, orders: 0, reviews: 0 };
+const count = { studios: 0, games: 0, orders: 0, reviews: 0, reviewers: 0, generated: 0 };
 const log = (msg) => console.log(`  ${msg}`);
 
 // ---------------------------------------------------------------- estudios y juegos
@@ -156,11 +172,11 @@ for (const r of data.reviews) {
     count.reviews++;
   } catch (e) {
     if (e.status !== 409) throw e;
-    // ya la había escrito: se actualiza el texto por si cambió (p. ej. al traducir los datos demo)
+    // ya la había escrito: se actualiza si cambió el texto, el idioma o el voto (p. ej. al traducir los datos demo)
     const author = data.players.find((p) => p.username === r.player)?.displayName;
     const existing = (await call('GET', `/api/games/${gameSlugs[r.game]}/reviews?size=100`)).content
       .find((x) => x.author.displayName === author);
-    if (existing && existing.body !== r.body) {
+    if (existing && (existing.body !== r.body || existing.language !== r.language || existing.recommended !== r.recommended)) {
       await call('PUT', `/api/reviews/${existing.id}`, { token: playerTokens[r.player], body: {
         gameId: gameIds[r.game], recommended: r.recommended, body: r.body, language: r.language,
       } });
@@ -176,5 +192,51 @@ for (const [player, keys] of Object.entries(data.carts)) {
   for (const key of keys) await call('PUT', `/api/cart/items/${gameIds[key]}`, { token: playerTokens[player] });
 }
 
+// ---------------------------------------------------------------- reseñadores
+// 60 cuentas que compran por el checkout simulado y reseñan en su idioma. El reparto es determinista
+// (demo-reviews.mjs), así que relanzar el seed no duplica nada. Se hace de uno en uno por el token de 15 min.
+const { prefix, perLanguage, names } = data.reviewers;
+const reviewers = ['es', 'en', 'it'].flatMap((lang) => Array.from({ length: perLanguage }, (_, i) => ({
+  lang, username: `${prefix}_${lang}_${String(i + 1).padStart(2, '0')}`, displayName: names[lang][i],
+})));
+const usernames = reviewers.map((r) => r.username);
+const published = data.games.filter((g) => !g.draft); // un borrador no se puede comprar
+const plan = {}; // username -> [{ game, recommended }]
+for (const g of published) {
+  for (const { username, recommended } of assignReviews(g, usernames)) (plan[username] ??= []).push({ game: g, recommended });
+}
+
+for (const r of reviewers) {
+  const { token, created } = await account(r.username, r.displayName, 'PLAYER');
+  if (created) count.reviewers++;
+  await call('PATCH', '/api/users/me', { token, body: { locale: r.lang } });
+  const assigned = plan[r.username] ?? [];
+
+  const library = new Set((await call('GET', '/api/library?size=100', { token })).content.map((e) => e.gameId));
+  const pending = assigned.filter((a) => !library.has(gameIds[a.game.key]));
+  let bought = 0;
+  if (pending.length) {
+    const status = await buy(token, pending.map((a) => a.game.key), VALID_CARD);
+    if (status !== 'PAID') throw new Error(`${r.username}: el pedido quedó ${status}`);
+    bought = pending.length;
+  }
+
+  let reviewed = 0;
+  for (const { game, recommended } of assigned) {
+    try {
+      await call('POST', '/api/reviews', { token, body: {
+        gameId: gameIds[game.key], recommended, language: r.lang,
+        body: reviewText(data.reviewPhrases, game, r.lang, recommended, r.username),
+      } });
+      reviewed++;
+    } catch (e) {
+      if (e.status !== 409) throw e; // ya existe: las generadas no se reescriben
+    }
+  }
+  count.generated += reviewed;
+  if (bought || reviewed) log(`${r.username}: compra ${bought}, reseña ${reviewed}`);
+}
+
 console.log(`Listo: ${count.studios} estudios, ${count.games} juegos, ${count.orders} pedidos y ${count.reviews} reseñas nuevos.`);
+console.log(`Reseñadores: ${count.reviewers} cuentas nuevas de ${reviewers.length}, ${count.generated} reseñas generadas.`);
 console.log(`Cuentas demo (contraseña "${data.password}"): demo_player (jugador), team_cherry (estudio con un borrador).`);
