@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link } from 'react-router';
 import { ApiError } from '@/api/client';
 import { assistantApi } from '@/api/endpoints';
@@ -14,7 +14,15 @@ const MAX_HISTORY = 10;
 const MAX_LENGTH = 500;
 
 type Entry = ChatMessage & { games?: GameSummary[] };
-type Notice = 'assistant.unavailableUi' | 'assistant.rateLimitedUi';
+type Notice = 'assistant.unavailableUi' | 'assistant.rateLimitedUi' | 'assistant.badRequestUi';
+
+function noticeFor(err: unknown): Notice {
+  if (err instanceof ApiError) {
+    if (err.status === 429) return 'assistant.rateLimitedUi';
+    if (err.status === 400) return 'assistant.badRequestUi';
+  }
+  return 'assistant.unavailableUi';
+}
 
 function MiniCard({ game, onOpen }: { game: GameSummary; onOpen: () => void }) {
   return (
@@ -41,8 +49,19 @@ export default function AssistantChat() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Cada envío lleva un número; una respuesta que llega tarde (otra pregunta, sesión cerrada) se descarta
+  const requestId = useRef(0);
+  useEffect(() => () => { requestId.current += 1; }, []);
+
+  const fabRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+  const titleId = useId();
+
   useEffect(() => {
     if (open) inputRef.current?.focus();
+    // al cerrar, el foco vuelve al botón flotante (que se vuelve a montar justo antes de este efecto)
+    else if (wasOpen.current) fabRef.current?.focus();
+    wasOpen.current = open;
   }, [open]);
 
   useEffect(() => {
@@ -67,29 +86,34 @@ export default function AssistantChat() {
     setText('');
     setNotice(null);
     setThinking(true);
+    const id = ++requestId.current;
     try {
-      const messages = history.slice(-MAX_HISTORY).map(({ role, content: c }) => ({ role, content: c }));
+      const messages = history.slice(-MAX_HISTORY).map(({ role, content: c }) => ({ role, content: c.slice(0, MAX_LENGTH) }));
       const res = await assistantApi.chat(messages);
+      if (id !== requestId.current) return;
       setEntries((prev) => [...prev, { role: 'assistant', content: res.reply, games: res.games }]);
     } catch (err) {
-      setNotice(err instanceof ApiError && err.status === 429 ? 'assistant.rateLimitedUi' : 'assistant.unavailableUi');
+      if (id !== requestId.current) return;
+      setNotice(noticeFor(err));
     } finally {
-      setThinking(false);
-      inputRef.current?.focus();
+      if (id === requestId.current) {
+        setThinking(false);
+        inputRef.current?.focus();
+      }
     }
   };
 
   return (
     <>
       {!open && (
-        <button type="button" className="assistant-fab" onClick={() => setOpen(true)} aria-label={t('assistant.open')} title={t('assistant.open')}>
+        <button ref={fabRef} type="button" className="assistant-fab" onClick={() => setOpen(true)} aria-label={t('assistant.open')} title={t('assistant.open')}>
           <Icon name="chat" size={24} />
         </button>
       )}
       {open && (
-        <section className="assistant-panel" role="dialog" aria-label={t('assistant.title')} onKeyDown={onKeyDown}>
+        <section className="assistant-panel" role="dialog" aria-labelledby={titleId} onKeyDown={onKeyDown}>
           <header>
-            <h2><Icon name="chat" size={18} /> {t('assistant.title')}</h2>
+            <h2 id={titleId}><Icon name="chat" size={18} /> {t('assistant.title')}</h2>
             <button type="button" className="icon-button" onClick={close} aria-label={t('assistant.close')}>
               <Icon name="close" size={16} />
             </button>
@@ -107,7 +131,7 @@ export default function AssistantChat() {
               </div>
             ))}
             {thinking && <p className="assistant-msg bot thinking">{t('assistant.thinking')}</p>}
-            {notice && <p className="assistant-msg notice" role="alert">{t(notice)}</p>}
+            {notice && <p className="assistant-msg notice">{t(notice)}</p>}
           </div>
           <form className="assistant-form" onSubmit={send}>
             <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} maxLength={MAX_LENGTH}

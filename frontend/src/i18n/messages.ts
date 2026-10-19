@@ -458,6 +458,9 @@ const es = {
   'assistant.greeting': 'Dime qué te apetece: oscuro, relajante, para jugar con amigos…',
   'assistant.unavailableUi': 'El asistente no está disponible ahora',
   'assistant.rateLimitedUi': 'Has enviado demasiados mensajes. Inténtalo de nuevo más tarde.',
+
+  // Bloque D (arreglos)
+  'assistant.badRequestUi': 'No he podido enviar ese mensaje',
 };
 
 export type MessageKey = keyof typeof es;
@@ -903,6 +906,9 @@ const en: Messages = {
   'assistant.greeting': 'Tell me what you feel like: dark, relaxing, to play with friends…',
   'assistant.unavailableUi': 'The assistant is not available right now',
   'assistant.rateLimitedUi': 'You have sent too many messages. Try again later.',
+
+  // Bloque D (arreglos)
+  'assistant.badRequestUi': 'I could not send that message',
 };
 
 const it: Messages = {
@@ -1345,6 +1351,9 @@ const it: Messages = {
   'assistant.greeting': 'Dimmi cosa ti va: oscuro, rilassante, da giocare con gli amici…',
   'assistant.unavailableUi': 'L’assistente non è disponibile in questo momento',
   'assistant.rateLimitedUi': 'Hai inviato troppi messaggi. Riprova più tardi.',
+
+  // Bloque D (arreglos)
+  'assistant.badRequestUi': 'Non sono riuscito a inviare quel messaggio',
 };
 
 export const MESSAGES = { es, en, it } as const;

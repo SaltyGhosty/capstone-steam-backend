@@ -41,7 +41,7 @@ class OpenRouterChatModelTest {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
         return new OpenRouterChatModel(builder.build(), JsonMapper.builder().build(),
-                new OpenRouterProperties(apiKey, "acme/modelo:free", "https://or.test/api/v1", Duration.ofSeconds(5)));
+                new OpenRouterProperties(apiKey, "acme/modelo:free", "https://or.test/api/v1", Duration.ofSeconds(5), null, null));
     }
 
     @Test
@@ -62,6 +62,7 @@ class OpenRouterChatModelTest {
                 .andExpect(jsonPath("$.response_format.type").value("json_object"))
                 .andExpect(jsonPath("$.temperature").value(0.7))
                 .andExpect(jsonPath("$.max_tokens").value(400))
+                .andExpect(jsonPath("$.reasoning.enabled").value(false))
                 .andRespond(withSuccess("""
                         {"choices":[{"message":{"role":"assistant","content":"{\\"reply\\":\\"hola\\"}"}}]}""",
                         MediaType.APPLICATION_JSON));
@@ -91,6 +92,17 @@ class OpenRouterChatModelTest {
     }
 
     @Test
+    void aQuota429IsToldApartFromOtherErrors() {
+        OpenRouterChatModel model = model("k");
+        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+        server.expect(requestTo(URL)).andRespond(withServerError());
+
+        assertThatThrownBy(() -> model.complete("s", MESSAGES)).isInstanceOf(AssistantRateLimitedException.class);
+        assertThatThrownBy(() -> model.complete("s", MESSAGES)).isInstanceOf(AssistantUnavailableException.class)
+                .isNotInstanceOf(AssistantRateLimitedException.class);
+    }
+
+    @Test
     void aBodyWithoutChoicesOrContentIsUnavailable() {
         OpenRouterChatModel model = model("k");
         server.expect(requestTo(URL)).andRespond(withSuccess("{\"error\":{\"message\":\"cupo\"}}", MediaType.APPLICATION_JSON));
@@ -106,11 +118,11 @@ class OpenRouterChatModelTest {
 
     @Test
     void thePropertiesNeverPrintTheKey() {
-        OpenRouterProperties properties = new OpenRouterProperties("sk-secreta-123", "m", "https://or.test", Duration.ofSeconds(1));
+        OpenRouterProperties properties = new OpenRouterProperties("sk-secreta-123", "m", "https://or.test", Duration.ofSeconds(1), null, null);
 
         assertThat(properties.toString()).doesNotContain("sk-secreta-123").contains("m");
         assertThat(properties.enabled()).isTrue();
-        assertThat(new OpenRouterProperties("", "m", "u", Duration.ofSeconds(1)).enabled()).isFalse();
-        assertThat(new OpenRouterProperties(null, "m", "u", Duration.ofSeconds(1)).enabled()).isFalse();
+        assertThat(new OpenRouterProperties("", "m", "u", Duration.ofSeconds(1), null, null).enabled()).isFalse();
+        assertThat(new OpenRouterProperties(null, "m", "u", Duration.ofSeconds(1), null, null).enabled()).isFalse();
     }
 }

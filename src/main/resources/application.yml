@@ -84,6 +84,8 @@ app:
     model: ${OPENROUTER_MODEL:google/gemma-4-31b-it:free}
     base-url: https://openrouter.ai/api/v1
     timeout: 30s
+    global-per-hour: 200 # tope de mensajes por hora entre todos los usuarios
+    cooldown: 5m # tras un 429 de OpenRouter no se llama al modelo durante este tiempo
   admin:
     username: ${ADMIN_USERNAME:admin}
     email: ${ADMIN_EMAIL:admin@capstone-steam.local}

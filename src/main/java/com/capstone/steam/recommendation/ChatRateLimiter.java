@@ -26,23 +26,51 @@ public class ChatRateLimiter {
     private static final Duration SWEEP_EVERY = Duration.ofMinutes(5);
 
     private final ConcurrentHashMap<Long, Deque<Instant>> hits = new ConcurrentHashMap<>();
+    /** Mensajes de todos los usuarios en la última hora (para el tope global). */
+    private final Deque<Instant> global = new ArrayDeque<>();
     private final Clock clock;
+    private final int globalPerHour;
+    private final Duration cooldown;
     private volatile Instant nextSweep;
+    private volatile Instant cooldownUntil = Instant.MIN;
 
     @Autowired
-    public ChatRateLimiter() {
-        this(Clock.systemUTC());
+    public ChatRateLimiter(OpenRouterProperties properties) {
+        this(Clock.systemUTC(), properties.globalPerHour(), properties.cooldown());
     }
 
     ChatRateLimiter(Clock clock) {
+        this(clock, OpenRouterProperties.DEFAULT_GLOBAL_PER_HOUR, OpenRouterProperties.DEFAULT_COOLDOWN);
+    }
+
+    ChatRateLimiter(Clock clock, int globalPerHour, Duration cooldown) {
         this.clock = clock;
+        this.globalPerHour = globalPerHour;
+        this.cooldown = cooldown;
         this.nextSweep = clock.instant().plus(SWEEP_EVERY);
     }
 
-    /** Anota un mensaje del usuario. Si ya hay {@value #MAX_PER_WINDOW} en la última hora, lanza 429. */
+    /** OpenRouter dijo 429: durante el enfriamiento no se llama al modelo. */
+    public void startCooldown() {
+        cooldownUntil = clock.instant().plus(cooldown);
+    }
+
+    /**
+     * Anota un mensaje del usuario. Lanza 503 durante el enfriamiento o si el tope global de la hora
+     * está lleno, y 429 si el usuario ya tiene {@value #MAX_PER_WINDOW} en la última hora.
+     */
     public void acquire(long userId) {
         Instant now = clock.instant();
+        if (now.isBefore(cooldownUntil)) {
+            throw new AssistantUnavailableException();
+        }
         sweepIfDue(now);
+        synchronized (global) {
+            evictOld(global, now);
+            if (global.size() >= globalPerHour) {
+                throw new AssistantUnavailableException();
+            }
+        }
         boolean[] allowed = {false};
         hits.compute(userId, (id, queue) -> {
             Deque<Instant> q = queue == null ? new ArrayDeque<>() : queue;
@@ -55,6 +83,9 @@ public class ChatRateLimiter {
         });
         if (!allowed[0]) {
             throw new TooManyRequestsException("assistant.rateLimited");
+        }
+        synchronized (global) {
+            global.addLast(now);
         }
     }
 
