@@ -134,6 +134,13 @@ class RefreshTokenIntegrationTest {
     }
 
     @Test
+    void tooLongRefreshTokenReturns400() throws Exception {
+        refresh("a".repeat(129)).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.refreshToken").exists());
+        refresh("a".repeat(128)).andExpect(status().isUnauthorized()); // el límite exacto sí llega al servicio
+    }
+
+    @Test
     void wrongPasswordStillReturnsBadCredentials() throws Exception {
         register("kleiner", "kleiner@test.com");
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
