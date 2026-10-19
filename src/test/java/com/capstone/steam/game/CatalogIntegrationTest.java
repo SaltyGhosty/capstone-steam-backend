@@ -168,7 +168,8 @@ class CatalogIntegrationTest {
 
     @Test
     void coverUrlMustBeHttpOrHttps() throws Exception {
-        for (String unsafe : new String[] {"file:///C:/x.png", "ftp://a.test/x.png", "javascript:alert(1)"}) {
+        for (String unsafe : new String[] {"file:///C:/x.png", "ftp://a.test/x.png", "javascript:alert(1)",
+                " https://img.test/c.jpg", "https://img.test/c.jpg "}) {
             mvc.perform(auth(post("/api/developer/games"), devToken).contentType(MediaType.APPLICATION_JSON)
                             .content(gameWithCover("Unsafe cover", unsafe)))
                     .andExpect(status().isBadRequest());
@@ -181,7 +182,8 @@ class CatalogIntegrationTest {
                 .andExpect(status().isCreated());
         mvc.perform(auth(post("/api/developer/games"), devToken).contentType(MediaType.APPLICATION_JSON)
                         .content(gameWithCover("No cover", "")))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.coverUrl").doesNotExist());
     }
 
     private String gameWithCover(String title, String coverUrl) {

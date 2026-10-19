@@ -164,7 +164,7 @@ public class GameManagementService {
         game.setDescriptionIt(request.descriptionIt());
         game.setDiscountPercent(request.discountPercent() == null ? 0 : request.discountPercent());
         game.setReleaseDate(request.releaseDate());
-        game.setCoverUrl(request.coverUrl());
+        game.setCoverUrl(request.coverUrl() == null || request.coverUrl().isBlank() ? null : request.coverUrl());
         if (request.steamAppId() != null && !request.steamAppId().equals(game.getSteamAppId())
                 && gameRepository.existsBySteamAppId(request.steamAppId())) {
             throw new ConflictException("game.steamAppIdTaken", String.valueOf(request.steamAppId()));
