@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.capstone.steam.auth.dto.AuthResponse;
 import com.capstone.steam.auth.dto.LoginRequest;
+import com.capstone.steam.auth.dto.RefreshRequest;
 import com.capstone.steam.auth.dto.RegisterRequest;
 
 import jakarta.validation.Valid;
@@ -32,5 +33,18 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    /** Canjea un refresh token por un acceso y un refresh nuevos. */
+    @PostMapping("/refresh")
+    public AuthResponse refresh(@Valid @RequestBody RefreshRequest request) {
+        return authService.refresh(request.refreshToken());
+    }
+
+    /** Cierra la sesión del refresh token dado; idempotente. */
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@Valid @RequestBody RefreshRequest request) {
+        authService.logout(request.refreshToken());
     }
 }

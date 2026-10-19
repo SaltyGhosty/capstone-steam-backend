@@ -41,13 +41,14 @@ class AuthServiceTest {
     @Mock private AuthenticationManager authenticationManager;
     @Mock private JwtService jwtService;
     @Mock private ApplicationEventPublisher events;
+    @Mock private RefreshTokenService refreshTokenService;
 
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
         authService = new AuthService(userRepository, roleRepository, passwordEncoder, authenticationManager,
-                jwtService, events);
+                jwtService, events, refreshTokenService);
     }
 
     @Test
@@ -56,6 +57,7 @@ class AuthServiceTest {
         when(roleRepository.findByName(any())).thenAnswer(inv -> Optional.of(new Role(inv.getArgument(0))));
         when(jwtService.generateToken(any())).thenReturn("jwt");
         when(jwtService.getExpirationSeconds()).thenReturn(3600L);
+        when(refreshTokenService.issue(any())).thenReturn("refresh");
 
         AuthResponse response = authService.register(
                 new RegisterRequest("gaben", "Gabe@Valve.com", "secret123", null, AccountType.DEVELOPER, "en"));
@@ -76,6 +78,7 @@ class AuthServiceTest {
                 e -> assertThat(e.locale()).isEqualTo("en")); // el correo de bienvenida sale en su idioma
         assertThat(response.accessToken()).isEqualTo("jwt");
         assertThat(response.tokenType()).isEqualTo("Bearer");
+        assertThat(response.refreshToken()).isEqualTo("refresh");
         assertThat(response.user().locale()).isEqualTo("en");
         assertThat(response.user().roles()).containsExactly("ROLE_DEVELOPER", "ROLE_USER");
     }

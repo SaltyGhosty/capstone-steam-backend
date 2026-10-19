@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.capstone.steam.auth.RefreshTokenService;
 import com.capstone.steam.common.dto.PageResponse;
 import com.capstone.steam.common.exception.BadRequestException;
 import com.capstone.steam.common.exception.NotFoundException;
@@ -18,10 +19,13 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final RefreshTokenService refreshTokenService;
 
-    public UserService(UserRepository userRepository, RoleRepository roleRepository) {
+    public UserService(UserRepository userRepository, RoleRepository roleRepository,
+            RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Transactional(readOnly = true)
@@ -63,6 +67,8 @@ public class UserService {
         User user = findWithRoles(userId);
         user.getRoles().clear();
         roles.forEach(name -> user.addRole(roleRepository.findByName(name).orElseThrow()));
+        // Los roles viajan en el access token: se cortan sus sesiones para que renueve con los nuevos
+        refreshTokenService.revokeAll(userId);
         return UserResponse.from(user);
     }
 
@@ -73,6 +79,9 @@ public class UserService {
         }
         User user = findWithRoles(userId);
         user.setEnabled(enabled);
+        if (!enabled) {
+            refreshTokenService.revokeAll(userId);
+        }
         return UserResponse.from(user);
     }
 
