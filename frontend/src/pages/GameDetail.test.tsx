@@ -94,4 +94,29 @@ describe('ficha del juego', () => {
     expect(sent).toEqual({ gameId: 13, recommended: true, body: 'Genial', language: 'es' });
     expect(sent).not.toHaveProperty('rating');
   });
+
+  it('al editar solo el texto vuelve a pedir las reseñas y muestra el texto nuevo', async () => {
+    let current = { ...review, author: { id: 7, displayName: 'Demo Player' } };
+    const fetchMock = setup({
+      'GET /api/games/neon-drift/reviews': () => ({ body: page([current]) }),
+      'GET /api/library/status/13': { body: { gameId: 13, owned: true, inCart: false, inWishlist: false, reviewed: true } },
+      'PUT /api/reviews/1': () => {
+        current = { ...current, body: 'Texto nuevo' };
+        return { body: current };
+      },
+    }, true);
+    renderRoutes(routes, '/games/neon-drift');
+
+    expect(await screen.findByText('Muy divertido')).toBeInTheDocument();
+    const before = reviewCalls(fetchMock).length;
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar' }));
+    const form = screen.getByRole('heading', { name: 'Editar tu reseña' }).closest('form')!;
+    const text = within(form).getByLabelText('Texto de la reseña');
+    await userEvent.clear(text);
+    await userEvent.type(text, 'Texto nuevo');
+    await userEvent.click(within(form).getByRole('button', { name: 'Guardar cambios' }));
+
+    expect(await screen.findByText('Texto nuevo')).toBeInTheDocument();
+    expect(reviewCalls(fetchMock).length).toBeGreaterThan(before);
+  });
 });

@@ -118,6 +118,7 @@ function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Owners
       await reviewApi.remove(review.id);
       notify(t('review.deleted'));
       onChanged();
+      reviews.reload();
     } catch (e) {
       notifyError(e);
     }
@@ -158,7 +159,7 @@ function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Owners
         {reviews.data?.content.map((r) =>
           editing?.id === r.id ? (
             <ReviewForm key={r.id} gameId={game.id} review={r}
-              onSaved={() => { setEditing(null); onChanged(); }} onCancel={() => setEditing(null)} />
+              onSaved={() => { setEditing(null); onChanged(); reviews.reload(); }} onCancel={() => setEditing(null)} />
           ) : (
             <article key={r.id} className="review">
               <header>
