@@ -6,21 +6,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.capstone.steam.common.exception.BadRequestException;
-import com.capstone.steam.game.Game;
-import com.capstone.steam.game.GameRepository;
-import com.capstone.steam.game.GameStatus;
 import com.capstone.steam.game.dto.GameSummaryResponse;
-import com.capstone.steam.genre.Genre;
 import com.capstone.steam.recommendation.dto.ChatMessage;
 import com.capstone.steam.recommendation.dto.ChatMessage.Role;
 import com.capstone.steam.recommendation.dto.ChatResponse;
@@ -40,21 +33,20 @@ public class RecommendationService {
     private static final Logger log = LoggerFactory.getLogger(RecommendationService.class);
 
     static final int MAX_GAMES = 4;
-    static final int MAX_DESCRIPTION = 160;
 
-    private final GameRepository games;
+    private final RecommendationCatalog catalog;
     private final ChatModel model;
     private final ChatRateLimiter limiter;
     private final JsonMapper json;
 
-    public RecommendationService(GameRepository games, ChatModel model, ChatRateLimiter limiter, JsonMapper json) {
-        this.games = games;
+    public RecommendationService(RecommendationCatalog catalog, ChatModel model, ChatRateLimiter limiter, JsonMapper json) {
+        this.catalog = catalog;
         this.model = model;
         this.limiter = limiter;
         this.json = json;
     }
 
-    @Transactional(readOnly = true)
+    /** Sin transacción: el catálogo se lee en {@link RecommendationCatalog} y el modelo se llama después. */
     public ChatResponse chat(long userId, List<ChatMessage> messages) {
         // un mensaje mal formado se rechaza antes de contar para el límite
         if (messages.getLast().role() != Role.user) {
@@ -63,11 +55,11 @@ public class RecommendationService {
         limiter.acquire(userId);
 
         Locale locale = LocaleContextHolder.getLocale();
-        List<Game> catalog = games.findWithDetailsByStatusOrderByIdAsc(GameStatus.PUBLISHED);
+        RecommendationCatalog.Snapshot snapshot = catalog.load(locale);
         long start = System.nanoTime();
-        String raw = model.complete(systemPrompt(catalog, locale), messages);
+        String raw = model.complete(systemPrompt(snapshot.lines(), locale), messages);
 
-        ChatResponse response = parse(raw, catalog);
+        ChatResponse response = parse(raw, snapshot.games());
         log.info("Asistente: mensajes={} juegos={} duracion={}ms", messages.size(), response.games().size(),
                 (System.nanoTime() - start) / 1_000_000);
         return response;
@@ -75,7 +67,7 @@ public class RecommendationService {
 
     // ------------------------------------------------------------------
 
-    private static String systemPrompt(List<Game> catalog, Locale locale) {
+    private static String systemPrompt(List<String> lines, Locale locale) {
         StringBuilder sb = new StringBuilder("""
                 You are the game recommender of ARCADE, an online video game store.
                 Recommend games ONLY from the catalog below, using their ids.
@@ -88,15 +80,7 @@ public class RecommendationService {
                 Catalog, one game per line: id | title | genres | final price in EUR | %% positive reviews \
                 (number of reviews) | description
                 """.formatted(languageName(locale), MAX_GAMES));
-        for (Game g : catalog) {
-            sb.append(g.getId()).append(" | ")
-                    .append(g.getTitle()).append(" | ")
-                    .append(g.getGenres().stream().map(Genre::getSlug).sorted().collect(Collectors.joining(","))).append(" | ")
-                    .append(g.getFinalPrice().toPlainString()).append(" | ")
-                    .append(g.getReviewCount() == 0 ? "no reviews"
-                            : g.getPositivePercent() + "% (" + g.getReviewCount() + ")").append(" | ")
-                    .append(shorten(g.getDescription(locale))).append('\n');
-        }
+        lines.forEach(line -> sb.append(line).append('\n'));
         return sb.toString();
     }
 
@@ -108,19 +92,10 @@ public class RecommendationService {
         };
     }
 
-    /** Una sola línea y como mucho 160 caracteres. */
-    private static String shorten(String description) {
-        if (description == null) {
-            return "";
-        }
-        String flat = description.replaceAll("\\s+", " ").strip();
-        return flat.length() <= MAX_DESCRIPTION ? flat : flat.substring(0, MAX_DESCRIPTION);
-    }
-
     /** Lee {@code {"reply","gameIds"}}, aunque venga entre ``` o con texto alrededor. */
-    private ChatResponse parse(String raw, List<Game> catalog) {
+    private ChatResponse parse(String raw, Map<Long, GameSummaryResponse> byId) {
         try {
-            return doParse(raw, catalog);
+            return doParse(raw, byId);
         } catch (AssistantUnavailableException e) {
             throw e;
         } catch (RuntimeException e) {
@@ -129,13 +104,12 @@ public class RecommendationService {
         }
     }
 
-    private ChatResponse doParse(String raw, List<Game> catalog) {
+    private ChatResponse doParse(String raw, Map<Long, GameSummaryResponse> byId) {
         JsonNode root = firstJsonObject(raw);
         JsonNode reply = root.path("reply");
         if (!reply.isString() || reply.asString().isBlank()) {
             throw new AssistantUnavailableException();
         }
-        Map<Long, Game> byId = catalog.stream().collect(Collectors.toMap(Game::getId, Function.identity()));
         Set<Long> ids = new LinkedHashSet<>();
         JsonNode raws = root.path("gameIds");
         if (raws.isArray()) {
@@ -150,7 +124,7 @@ public class RecommendationService {
             if (picked.size() == MAX_GAMES) {
                 break;
             }
-            picked.add(GameSummaryResponse.from(byId.get(id)));
+            picked.add(byId.get(id));
         }
         return new ChatResponse(reply.asString().strip(), picked);
     }

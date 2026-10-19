@@ -50,7 +50,7 @@ class RecommendationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RecommendationService(games, model, new ChatRateLimiter(Clock.systemUTC()),
+        service = new RecommendationService(new RecommendationCatalog(games), model, new ChatRateLimiter(Clock.systemUTC()),
                 JsonMapper.builder().build());
         User dev = new User("estudio", "e@test.com", "hash");
         Genre action = new Genre("Acción", "accion");
@@ -175,7 +175,7 @@ class RecommendationServiceTest {
     void anUnexpectedExceptionWhileParsingIsUnavailableNotA500() {
         JsonMapper broken = org.mockito.Mockito.spy(JsonMapper.builder().build());
         org.mockito.Mockito.doThrow(new IllegalStateException("inesperado")).when(broken).readTree(anyString());
-        RecommendationService fragile = new RecommendationService(games, model, new ChatRateLimiter(Clock.systemUTC()), broken);
+        RecommendationService fragile = new RecommendationService(new RecommendationCatalog(games), model, new ChatRateLimiter(Clock.systemUTC()), broken);
         when(model.complete(anyString(), any())).thenReturn("{\"reply\":\"a\",\"gameIds\":[]}");
 
         assertThatThrownBy(() -> fragile.chat(7L, user("hola"))).isInstanceOf(AssistantUnavailableException.class);
