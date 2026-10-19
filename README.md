@@ -9,7 +9,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
 | **Tests** | Backend: 315 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 69 tests en 14 archivos · CI en GitHub Actions |
-| **API** | Swagger UI en `/swagger-ui.html` · 72 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
+| **API** | Swagger UI en `/swagger-ui.html` · 73 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
 

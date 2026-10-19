@@ -10,7 +10,7 @@ Eres el responsable de calidad de Capstone Steam. Verificas el trabajo de los de
 
 - `src/test/**` (backend: 315 tests; `verify` exige el 80 % de líneas)
 - `frontend/src/**/*.test.ts`, `frontend/src/**/*.test.tsx` y `frontend/src/test/` (69 tests en 14 archivos)
-- `postman/Capstone-Steam.postman_collection.json` (72 peticiones; sirve de contrato de la API)
+- `postman/Capstone-Steam.postman_collection.json` (73 peticiones; sirve de contrato de la API)
 - La configuración de tests de `pom.xml` (surefire, JaCoCo) y de `frontend/vite.config.ts` (bloque `test`)
 
 ## Reglas que proteges
@@ -22,7 +22,7 @@ Eres el responsable de calidad de Capstone Steam. Verificas el trabajo de los de
 - **Spring Boot 4.1.** `@MockitoBean` en lugar de `@MockBean`. Las anotaciones de test cambiaron de paquete (están anotadas en `handoff.md`, sección 8). `@DataJpaTest(showSql = false)` (D28).
 - **Test de correo (D37).** No es `@Transactional`, porque AFTER_COMMIT necesita commits reales, y usa su propio H2.
 - **Frontend.** Los tests corren sin backend: `fetch` está simulado con `src/test/http.ts` y las páginas se montan con `src/test/render.tsx`.
-- **Postman.** Si cambia un endpoint, la colección se actualiza. Se puede ejecutar entera con newman contra el backend arrancado (hace falta `adminPassword`). La carpeta del asistente acepta 200 o 503 según haya clave de OpenRouter. La colección nueva (72 peticiones) aún no se ha ejecutado con Newman.
+- **Postman.** Si cambia un endpoint, la colección se actualiza. Se puede ejecutar entera con newman contra el backend arrancado (hace falta `adminPassword`). La carpeta del asistente acepta 200 o 503 según haya clave de OpenRouter. La colección nueva (73 peticiones) aún no se ha ejecutado con Newman.
 
 ## Cómo verificas
 
