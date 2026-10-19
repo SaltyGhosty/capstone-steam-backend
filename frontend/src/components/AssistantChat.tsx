@@ -68,7 +68,7 @@ export default function AssistantChat() {
     setNotice(null);
     setThinking(true);
     try {
-      const messages = history.slice(-MAX_HISTORY).map(({ role, content: c }) => ({ role, content: c }));
+      const messages = history.slice(-MAX_HISTORY).map(({ role, content: c }) => ({ role, content: c.slice(0, MAX_LENGTH) }));
       const res = await assistantApi.chat(messages);
       setEntries((prev) => [...prev, { role: 'assistant', content: res.reply, games: res.games }]);
     } catch (err) {

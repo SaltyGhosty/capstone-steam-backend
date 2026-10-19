@@ -165,6 +165,16 @@ class RecommendationServiceTest {
     }
 
     @Test
+    void aLongReplyIsCutAt500CharactersOnAWordBoundary() {
+        String longReply = "palabra ".repeat(100).strip(); // 799 caracteres
+        ChatResponse response = ask("{\"reply\":\"" + longReply + "\",\"gameIds\":[]}");
+
+        assertThat(response.reply().length()).isLessThanOrEqualTo(500);
+        assertThat(response.reply()).endsWith("palabra…");
+        assertThat(ask("{\"reply\":\"corto\",\"gameIds\":[]}").reply()).isEqualTo("corto");
+    }
+
+    @Test
     void anIdBiggerThanALongIsIgnoredAndDoesNotBreakIt() {
         ChatResponse response = ask("{\"reply\":\"a\",\"gameIds\":[99999999999999999999,1]}");
 

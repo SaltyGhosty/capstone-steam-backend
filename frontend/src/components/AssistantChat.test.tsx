@@ -97,6 +97,27 @@ describe('chat del asistente', () => {
     expect(last.at(-1)).toEqual({ role: 'user', content: 'seis' });
   });
 
+  it('recorta a 500 caracteres cada mensaje del historial antes de enviarlo', async () => {
+    const fetchMock = mockFetch({
+      ...base,
+      'POST /api/recommendations/chat': { body: { reply: 'r'.repeat(700), games: [] } },
+    });
+    renderRoutes({ '/': <AssistantChat /> }, '/');
+    const input = await open();
+
+    await userEvent.type(input, 'uno');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    await screen.findByText('r'.repeat(700));
+    await userEvent.type(input, 'dos');
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+
+    await waitFor(() => expect(bodiesOf(fetchMock)).toHaveLength(2));
+    const sent = bodiesOf(fetchMock)[1].messages;
+    expect(sent[1].role).toBe('assistant');
+    expect(sent[1].content.length).toBeLessThanOrEqual(500);
+    expect(sent.every((m: { content: string }) => m.content.length <= 500)).toBe(true);
+  });
+
   it('un 503 muestra el aviso de no disponible y un 429 el del límite', async () => {
     let status = 503;
     mockFetch({

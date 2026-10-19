@@ -33,6 +33,7 @@ public class RecommendationService {
     private static final Logger log = LoggerFactory.getLogger(RecommendationService.class);
 
     static final int MAX_GAMES = 4;
+    static final int MAX_REPLY = 500;
 
     private final RecommendationCatalog catalog;
     private final ChatModel model;
@@ -126,7 +127,17 @@ public class RecommendationService {
             }
             picked.add(byId.get(id));
         }
-        return new ChatResponse(reply.asString().strip(), picked);
+        return new ChatResponse(cut(reply.asString().strip()), picked);
+    }
+
+    /** Como mucho 500 caracteres (lo que admite el chat al reenviar el historial): corta por un espacio y añade «…». */
+    private static String cut(String reply) {
+        if (reply.length() <= MAX_REPLY) {
+            return reply;
+        }
+        String head = reply.substring(0, MAX_REPLY - 1);
+        int space = head.lastIndexOf(' ');
+        return (space > 0 ? head.substring(0, space) : head).stripTrailing() + "…";
     }
 
     private JsonNode firstJsonObject(String raw) {
