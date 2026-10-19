@@ -62,6 +62,7 @@ class OpenRouterChatModelTest {
                 .andExpect(jsonPath("$.response_format.type").value("json_object"))
                 .andExpect(jsonPath("$.temperature").value(0.7))
                 .andExpect(jsonPath("$.max_tokens").value(400))
+                .andExpect(jsonPath("$.reasoning.enabled").value(false))
                 .andRespond(withSuccess("""
                         {"choices":[{"message":{"role":"assistant","content":"{\\"reply\\":\\"hola\\"}"}}]}""",
                         MediaType.APPLICATION_JSON));

@@ -48,7 +48,9 @@ public class OpenRouterChatModel implements ChatModel {
                 "messages", chat,
                 "response_format", Map.of("type", "json_object"),
                 "temperature", 0.7,
-                "max_tokens", 400);
+                "max_tokens", 400,
+                // sin razonamiento: gasta tokens de max_tokens y puede dejar la respuesta vacía
+                "reasoning", Map.of("enabled", false));
 
         long start = System.nanoTime();
         try {
