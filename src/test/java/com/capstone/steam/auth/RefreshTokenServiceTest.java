@@ -93,6 +93,7 @@ class RefreshTokenServiceTest {
         RefreshToken old = first.getValue();
         when(repository.findByTokenHash(sha256(raw))).thenReturn(Optional.of(old));
         when(userRepository.findWithRolesById(7L)).thenReturn(Optional.of(user));
+        when(repository.revokeIfActive(old.getId(), NOW)).thenReturn(1);
 
         RefreshTokenService.Rotation rotation = service.rotate(raw);
 
@@ -103,8 +104,22 @@ class RefreshTokenServiceTest {
         RefreshToken next = all.getAllValues().get(1);
         assertThat(next.getFamilyId()).isEqualTo(old.getFamilyId());
         assertThat(next.getTokenHash()).isEqualTo(sha256(rotation.refreshToken()));
-        assertThat(old.getRevokedAt()).isEqualTo(NOW);
-        assertThat(old.getReplacedById()).isEqualTo(next.getId());
+        verify(repository).revokeIfActive(old.getId(), NOW);
+        verify(repository).linkReplacement(old.getId(), next.getId());
+    }
+
+    @Test
+    void losingTheAtomicRevocationCountsAsReuseAndRevokesTheFamily() throws Exception {
+        RefreshToken live = new RefreshToken(7L, sha256("race"), "family-5", NOW.plus(LIFETIME));
+        ReflectionTestUtils.setField(live, "id", 9L);
+        when(repository.findByTokenHash(sha256("race"))).thenReturn(Optional.of(live));
+        when(userRepository.findWithRolesById(7L)).thenReturn(Optional.of(user));
+        when(repository.revokeIfActive(9L, NOW)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.rotate("race")).isInstanceOf(UnauthorizedException.class);
+
+        verify(repository).revokeFamily("family-5", NOW);
+        verify(repository, never()).save(any());
     }
 
     @Test

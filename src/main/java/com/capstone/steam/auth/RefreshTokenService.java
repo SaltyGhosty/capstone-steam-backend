@@ -25,9 +25,9 @@ import com.capstone.steam.user.UserRepository;
  * en la BD queda su SHA-256, y nunca se escribe en logs.
  *
  * <p>Cada refresh revoca el token usado y emite otro de la misma familia. Si llega uno ya revocado
- * se revoca la familia entera. Consecuencia conocida y aceptada: dos refresh simultáneos con el mismo
- * token (por ejemplo desde dos pestañas) hacen que el segundo vea el token revocado, cierre la familia
- * y la sesión se pierda. Así funciona la detección de reutilización.
+ * se revoca la familia entera. La revocación es un UPDATE condicional atómico: de varios refresh
+ * simultáneos con el mismo token solo uno gana; los demás cuentan como reutilización, cierran la
+ * familia y reciben 401 (así funciona la detección de reutilización).
  */
 @Service
 public class RefreshTokenService {
@@ -69,6 +69,10 @@ public class RefreshTokenService {
     /**
      * Canjea un refresh token por otro nuevo de la misma familia.
      * {@code noRollbackFor}: las revocaciones previas al error tienen que confirmarse.
+     *
+     * <p>AVISO: la revocación de la familia solo se guarda porque <b>todas</b> las transacciones de la
+     * cadena ({@code AuthService.refresh} y este método) llevan {@code noRollbackFor = UnauthorizedException.class}.
+     * Si una sola la pierde, la excepción marca la transacción para rollback y la reutilización no se persiste.
      */
     @Transactional(noRollbackFor = UnauthorizedException.class)
     public Rotation rotate(String rawToken) {
@@ -88,10 +92,16 @@ public class RefreshTokenService {
             throw invalid();
         }
 
+        // Revocación atómica: si otra petición se nos adelantó, esto es una reutilización.
+        if (repository.revokeIfActive(current.getId(), now) == 0) {
+            repository.revokeFamily(current.getFamilyId(), now);
+            throw invalid();
+        }
+
         String raw = newRawToken();
         RefreshToken next = repository.save(
                 new RefreshToken(user.getId(), hash(raw), current.getFamilyId(), now.plus(lifetime)));
-        current.revoke(now, next.getId());
+        repository.linkReplacement(current.getId(), next.getId());
         return new Rotation(user, raw);
     }
 

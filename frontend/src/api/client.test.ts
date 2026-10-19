@@ -140,6 +140,63 @@ describe('cliente de la API', () => {
       setUnauthorizedHandler(null);
     });
 
+    it.each([502, 429])('un refresh que da %i no borra la sesión ni avisa', async (status) => {
+      const onUnauthorized = vi.fn();
+      setUnauthorizedHandler(onUnauthorized);
+      setToken('caducado');
+      setRefreshToken('refresh-1');
+      mockFetch({
+        'GET /api/cart': { status: 401, body: { detail: 'caducado' } },
+        'POST /api/auth/refresh': { status, body: { detail: 'fallo temporal' } },
+      });
+
+      const error = await api<never>('/api/cart').catch((e: unknown) => e as ApiError);
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.status).toBe(status);
+      expect(getToken()).toBe('caducado');
+      expect(getRefreshToken()).toBe('refresh-1');
+      expect(onUnauthorized).not.toHaveBeenCalled();
+      setUnauthorizedHandler(null);
+    });
+
+    it('un 400 del refresh sí cierra la sesión', async () => {
+      const onUnauthorized = vi.fn();
+      setUnauthorizedHandler(onUnauthorized);
+      setToken('caducado');
+      setRefreshToken('refresh-1');
+      mockFetch({
+        'GET /api/cart': { status: 401, body: {} },
+        'POST /api/auth/refresh': { status: 400, body: { detail: 'no válido' } },
+      });
+
+      await expect(api('/api/cart')).rejects.toBeInstanceOf(ApiError);
+
+      expect(getToken()).toBeNull();
+      expect(getRefreshToken()).toBeNull();
+      expect(onUnauthorized).toHaveBeenCalledOnce();
+      setUnauthorizedHandler(null);
+    });
+
+    it('un 401 tardío con la sesión ya borrada no repite la petición sin token', async () => {
+      setUnauthorizedHandler(vi.fn());
+      setToken('caducado');
+      setRefreshToken('refresh-1');
+      // el token de acceso desapareció mientras la petición volaba (otro refresh cerró la sesión)
+      const fetchMock = mockFetch({
+        'GET /api/cart': () => {
+          setToken(null);
+          return { status: 401, body: {} };
+        },
+        'POST /api/auth/refresh': { status: 401, body: { detail: 'La sesión ha caducado' } },
+      });
+
+      await expect(api('/api/cart')).rejects.toBeInstanceOf(ApiError);
+
+      expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/cart')).toHaveLength(1);
+      setUnauthorizedHandler(null);
+    });
+
     it('un 401 de /api/auth/login no intenta refrescar', async () => {
       setToken('viejo');
       setRefreshToken('refresh-1');

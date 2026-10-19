@@ -20,4 +20,17 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update RefreshToken t set t.revokedAt = :now where t.userId = :userId and t.revokedAt is null")
     int revokeAllForUser(Long userId, Instant now);
+
+    /**
+     * Revoca un token solo si sigue vivo. Es atómico: de varios refresh simultáneos con el mismo
+     * token, solo uno recibe 1; el resto recibe 0 y se trata como reutilización.
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update RefreshToken t set t.revokedAt = :now where t.id = :id and t.revokedAt is null")
+    int revokeIfActive(Long id, Instant now);
+
+    /** Apunta el token ya revocado al que lo sustituye. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update RefreshToken t set t.replacedById = :replacedById where t.id = :id")
+    int linkReplacement(Long id, Long replacedById);
 }

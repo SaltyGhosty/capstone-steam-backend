@@ -124,6 +124,9 @@ async function doRefresh(): Promise<boolean> {
     setRefreshToken(data.refreshToken);
     return true;
   }
+  // Solo un rechazo de autenticación (400/401) cierra la sesión; un 5xx o un 429 es un fallo
+  // temporal del servidor y no debe expulsar al usuario.
+  if (res.status !== 400 && res.status !== 401) throw new ApiError(res.status, t('common.somethingWrong'));
   setToken(null);
   setRefreshToken(null);
   onUnauthorized?.();
@@ -166,7 +169,9 @@ async function request<T>(path: string, options: RequestOptions, canRefresh: boo
   if (res.status === 401 && token) {
     if (canRefresh && !path.startsWith('/api/auth/') && getRefreshToken()) {
       // Otra petición ya renovó los tokens mientras esta volaba: basta con repetirla
-      const renewed = getToken() !== token || (await refreshSession());
+      // (solo vale si hay un token nuevo; sin token la sesión se cerró y no se repite sin credenciales)
+      const current = getToken();
+      const renewed = (current !== null && current !== token) || (await refreshSession());
       if (renewed) return request<T>(path, options, false);
       // refreshSession ya cerró la sesión y avisó una sola vez
     } else if (getToken() === token) {

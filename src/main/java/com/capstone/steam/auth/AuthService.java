@@ -87,7 +87,11 @@ public class AuthService {
         return issueToken(user);
     }
 
-    /** Rota el refresh token y emite un acceso nuevo con los roles actuales del usuario. */
+    /**
+     * Rota el refresh token y emite un acceso nuevo con los roles actuales del usuario.
+     * AVISO: la revocación por reutilización solo se guarda porque <b>todas</b> las transacciones de la
+     * cadena (esta y {@code RefreshTokenService.rotate}) llevan {@code noRollbackFor = UnauthorizedException.class}.
+     */
     @Transactional(noRollbackFor = UnauthorizedException.class)
     public AuthResponse refresh(String refreshToken) {
         RefreshTokenService.Rotation rotation = refreshTokenService.rotate(refreshToken);
