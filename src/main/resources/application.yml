@@ -13,6 +13,11 @@ spring:
     encoding: UTF-8
     fallback-to-system-locale: false
     always-use-message-format: true
+  # portadas subidas como archivo: máximo 5 MB (el 413 lo traduce GlobalExceptionHandler)
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   web:
     locale: es
     locale-resolver: accept-header

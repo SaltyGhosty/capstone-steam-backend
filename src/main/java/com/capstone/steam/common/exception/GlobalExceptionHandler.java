@@ -20,6 +20,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import com.capstone.steam.common.i18n.Messages;
@@ -77,6 +78,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail body = problem(HttpStatus.BAD_REQUEST, Messages.get("error.invalidFields"));
         body.setProperty("errors", errors);
         return ResponseEntity.badRequest().body(body);
+    }
+
+    /** Archivo por encima del límite multipart (o del que comprueba el service): 413 traducido, no la página de Tomcat. */
+    @Override
+    protected ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE)
+                .body(problem(HttpStatus.CONTENT_TOO_LARGE, Messages.get("cover.tooLarge")));
     }
 
     @ExceptionHandler(Exception.class)

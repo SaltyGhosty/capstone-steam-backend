@@ -29,6 +29,8 @@ services:
         sync: false
       - key: MAIL_APP_PASSWORD
         sync: false
+      - key: CLOUDINARY_URL
+        sync: false # cloudinary://<api_key>:<api_secret>@<cloud_name>; vacío = sin subida de portadas
 
 databases:
   - name: capstone-steam-db
