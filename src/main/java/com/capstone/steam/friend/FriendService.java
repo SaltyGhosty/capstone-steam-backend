@@ -35,6 +35,7 @@ import com.capstone.steam.user.UserRepository;
 public class FriendService {
 
     static final int MIN_QUERY_LENGTH = 2;
+    static final int MAX_QUERY_LENGTH = 50;
     static final int MAX_SEARCH_RESULTS = 20;
     static final int PROFILE_LIBRARY_LIMIT = 100;
 
@@ -56,6 +57,9 @@ public class FriendService {
         String term = q == null ? "" : q.trim();
         if (term.length() < MIN_QUERY_LENGTH) {
             throw new BadRequestException("friend.queryTooShort");
+        }
+        if (term.length() > MAX_QUERY_LENGTH) {
+            throw new BadRequestException("friend.queryTooLong");
         }
         List<User> found = userRepository.searchPlayers(likePattern(term), viewerId,
                 PageRequest.of(0, MAX_SEARCH_RESULTS));

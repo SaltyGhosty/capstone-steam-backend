@@ -104,6 +104,14 @@ class FriendIntegrationTest {
     }
 
     @Test
+    void searchQueryLongerThan50CharactersIsRejected() throws Exception {
+        mvc.perform(auth(get("/api/users/search").param("q", "a".repeat(51)), ana))
+                .andExpect(status().isBadRequest());
+        mvc.perform(auth(get("/api/users/search").param("q", "a".repeat(50)), ana))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void searchRequiresSession() throws Exception {
         mvc.perform(get("/api/users/search").param("q", "le")).andExpect(status().isUnauthorized());
     }

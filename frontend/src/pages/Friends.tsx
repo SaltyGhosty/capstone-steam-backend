@@ -1,5 +1,5 @@
 // Amigos: buscador de jugadores, solicitudes recibidas y enviadas, y la lista de amigos.
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { friendsApi, userApi } from '@/api/endpoints';
 import type { SearchHit, UserCard } from '@/api/types';
@@ -39,6 +39,9 @@ export default function Friends() {
   const requests = useAsync(() => friendsApi.requests(), []);
 
   const term = query.trim();
+  // Último término escrito: una respuesta de otro término más viejo se descarta
+  const latestTerm = useRef(term);
+  latestTerm.current = term;
 
   const runSearch = useCallback(async () => {
     if (term.length < MIN_QUERY) {
@@ -46,9 +49,10 @@ export default function Friends() {
       return;
     }
     try {
-      setHits(await userApi.search(term));
+      const found = await userApi.search(term);
+      if (latestTerm.current === term) setHits(found);
     } catch (e) {
-      notifyError(e);
+      if (latestTerm.current === term) notifyError(e);
     }
   }, [term, notifyError]);
 

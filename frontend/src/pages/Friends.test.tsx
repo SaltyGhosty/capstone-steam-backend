@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setToken } from '@/api/client';
 import { RequireAuth } from '@/components/ui';
 import { mockFetch, page } from '@/test/http';
@@ -72,5 +72,71 @@ describe('amigos', () => {
     expect(fetchMock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(false);
     await userEvent.click(screen.getByRole('button', { name: 'Sí, eliminar' }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/api/friends/leo'))).toBe(true));
+  });
+
+  it('descarta una respuesta de búsqueda que llega tarde', async () => {
+    const lena = { username: 'lena', displayName: 'Lena', avatarUrl: null };
+    const pending: Record<string, (hits: unknown[]) => void> = {};
+    const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost');
+      if (url.pathname === '/api/users/search') {
+        const q = url.searchParams.get('q') ?? '';
+        return new Promise<Response>((resolve) => { pending[q] = (hits) => resolve(json(hits)); });
+      }
+      const bodies: Record<string, unknown> = {
+        '/api/users/me': demoUser,
+        '/api/cart': { items: [], itemCount: 0, total: 0 },
+        '/api/wishlist': page([]),
+        '/api/friends': [],
+        '/api/friends/requests': { incoming: [], outgoing: [] },
+      };
+      return json(bodies[url.pathname]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderRoutes({ '/friends': <RequireAuth><Friends /></RequireAuth> }, '/friends');
+
+    const box = await screen.findByRole('searchbox');
+    await userEvent.type(box, 'le');
+    await waitFor(() => expect(pending.le).toBeDefined());
+    await userEvent.type(box, 'o');
+    await waitFor(() => expect(pending.leo).toBeDefined());
+
+    pending.leo([{ user: leo, relation: 'NONE', requestId: null }]);
+    expect(await screen.findByText('Leo')).toBeInTheDocument();
+    pending.le([{ user: lena, relation: 'NONE', requestId: null }]); // llega tarde
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText('Lena')).not.toBeInTheDocument();
+    expect(screen.getByText('Leo')).toBeInTheDocument();
+  });
+
+  it('no rellena resultados si el término bajó de 2 caracteres', async () => {
+    const pending: Record<string, (hits: unknown[]) => void> = {};
+    const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost');
+      if (url.pathname === '/api/users/search') {
+        const q = url.searchParams.get('q') ?? '';
+        return new Promise<Response>((resolve) => { pending[q] = (hits) => resolve(json(hits)); });
+      }
+      const bodies: Record<string, unknown> = {
+        '/api/users/me': demoUser,
+        '/api/cart': { items: [], itemCount: 0, total: 0 },
+        '/api/wishlist': page([]),
+        '/api/friends': [],
+        '/api/friends/requests': { incoming: [], outgoing: [] },
+      };
+      return json(bodies[url.pathname]);
+    }));
+    renderRoutes({ '/friends': <RequireAuth><Friends /></RequireAuth> }, '/friends');
+
+    const box = await screen.findByRole('searchbox');
+    await userEvent.type(box, 'le');
+    await waitFor(() => expect(pending.le).toBeDefined());
+    await userEvent.clear(box);
+    await new Promise((r) => setTimeout(r, 400));
+    pending.le([{ user: leo, relation: 'NONE', requestId: null }]);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText('Leo')).not.toBeInTheDocument();
   });
 });
