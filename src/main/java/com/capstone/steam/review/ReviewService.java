@@ -125,8 +125,9 @@ public class ReviewService {
         return recommended ? 1 : 0;
     }
 
+    /** Bloquea la fila: dos update/delete simultáneos no calculan el delta con un voto viejo. */
     private Review findReview(Long reviewId) {
-        return reviewRepository.findById(reviewId).orElseThrow(() -> NotFoundException.of("review", reviewId));
+        return reviewRepository.findByIdForUpdate(reviewId).orElseThrow(() -> NotFoundException.of("review", reviewId));
     }
 
     private static String trimToNull(String value) {

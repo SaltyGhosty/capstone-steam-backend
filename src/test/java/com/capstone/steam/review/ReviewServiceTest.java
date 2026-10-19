@@ -109,7 +109,7 @@ class ReviewServiceTest {
 
     @Test
     void updateWithoutChangingTheVoteLeavesTheCountersAlone() {
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
+        when(reviewRepository.findByIdForUpdate(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
 
         service.update(AUTHOR_ID, REVIEW_ID, request(true));
 
@@ -118,7 +118,7 @@ class ReviewServiceTest {
 
     @Test
     void updateChangingTheVoteMovesOnePositive() {
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
+        when(reviewRepository.findByIdForUpdate(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
 
         service.update(AUTHOR_ID, REVIEW_ID, request(false));
 
@@ -126,8 +126,19 @@ class ReviewServiceTest {
     }
 
     @Test
+    void updateAndDeleteLockTheReviewRow() {
+        when(reviewRepository.findByIdForUpdate(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
+
+        service.update(AUTHOR_ID, REVIEW_ID, request(false));
+        service.delete(AUTHOR_ID, false, REVIEW_ID);
+
+        verify(reviewRepository, org.mockito.Mockito.times(2)).findByIdForUpdate(REVIEW_ID);
+        verify(reviewRepository, never()).findById(anyLong());
+    }
+
+    @Test
     void updateByAnotherUserIsForbidden() {
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
+        when(reviewRepository.findByIdForUpdate(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
 
         assertThatThrownBy(() -> service.update(OTHER_ID, REVIEW_ID, request(false))).isInstanceOf(ForbiddenException.class);
     }
@@ -135,7 +146,7 @@ class ReviewServiceTest {
     @Test
     void deleteByAdminSubtractsThePositiveAndOneReview() {
         Review review = existingReview(true);
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
+        when(reviewRepository.findByIdForUpdate(REVIEW_ID)).thenReturn(Optional.of(review));
 
         service.delete(OTHER_ID, true, REVIEW_ID);
 
@@ -146,7 +157,7 @@ class ReviewServiceTest {
     @Test
     void deleteOfANegativeReviewOnlySubtractsOneReview() {
         Review review = existingReview(false);
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
+        when(reviewRepository.findByIdForUpdate(REVIEW_ID)).thenReturn(Optional.of(review));
 
         service.delete(AUTHOR_ID, false, REVIEW_ID);
 
@@ -161,7 +172,7 @@ class ReviewServiceTest {
 
     @Test
     void deleteByNonAuthorNonAdminIsForbidden() {
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
+        when(reviewRepository.findByIdForUpdate(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
 
         assertThatThrownBy(() -> service.delete(OTHER_ID, false, REVIEW_ID)).isInstanceOf(ForbiddenException.class);
         verify(reviewRepository, never()).delete(any());
