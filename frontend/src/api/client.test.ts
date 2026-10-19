@@ -14,6 +14,21 @@ describe('cliente de la API', () => {
     expect((init!.headers as Record<string, string>).Authorization).toBe('Bearer abc');
   });
 
+  it('manda un FormData tal cual, sin Content-Type (el navegador pone el boundary)', async () => {
+    setToken('abc');
+    const fetchMock = mockFetch({ 'POST /api/developer/games/1/cover': { body: { id: 1 } } });
+    const form = new FormData();
+    form.append('file', new File(['x'], 'portada.png', { type: 'image/png' }));
+
+    await api('/api/developer/games/1/cover', { method: 'POST', body: form });
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(init!.body).toBe(form);
+    const headers = init!.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBeUndefined();
+    expect(headers.Authorization).toBe('Bearer abc');
+  });
+
   it('convierte un ProblemDetail con errores de validación en ApiError', async () => {
     mockFetch({
       'POST /api/auth/register': {

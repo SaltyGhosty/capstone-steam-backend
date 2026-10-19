@@ -384,6 +384,13 @@ const es = {
   'admin.genreName': 'Nombre del género',
   'admin.rename': 'Renombrar {name}',
   'admin.deleteName': 'Borrar {name}',
+  // Bloque G
+  'cover.upload': 'Subir portada',
+  'cover.uploading': 'Subiendo…',
+  'cover.uploaded': 'Portada subida',
+  'cover.saveFirst': 'Guarda el juego antes de subir una portada',
+  'cover.tooLarge': 'La portada no puede pesar más de 5 MB',
+  'cover.invalidType': 'La portada tiene que ser una imagen JPEG, PNG o WebP',
 };
 
 export type MessageKey = keyof typeof es;
@@ -755,6 +762,13 @@ const en: Messages = {
   'admin.genreName': 'Genre name',
   'admin.rename': 'Rename {name}',
   'admin.deleteName': 'Delete {name}',
+  // Bloque G
+  'cover.upload': 'Upload cover',
+  'cover.uploading': 'Uploading…',
+  'cover.uploaded': 'Cover uploaded',
+  'cover.saveFirst': 'Save the game before uploading a cover',
+  'cover.tooLarge': 'The cover cannot be larger than 5 MB',
+  'cover.invalidType': 'The cover must be a JPEG, PNG or WebP image',
 };
 
 const it: Messages = {
@@ -1123,6 +1137,13 @@ const it: Messages = {
   'admin.genreName': 'Nome del genere',
   'admin.rename': 'Rinomina {name}',
   'admin.deleteName': 'Elimina {name}',
+  // Bloque G
+  'cover.upload': 'Carica copertina',
+  'cover.uploading': 'Caricamento…',
+  'cover.uploaded': 'Copertina caricata',
+  'cover.saveFirst': 'Salva il gioco prima di caricare una copertina',
+  'cover.tooLarge': 'La copertina non può superare i 5 MB',
+  'cover.invalidType': 'La copertina deve essere un’immagine JPEG, PNG o WebP',
 };
 
 export const MESSAGES = { es, en, it } as const;

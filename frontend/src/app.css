@@ -239,6 +239,11 @@ td.row-actions > * { display: inline-flex; vertical-align: middle; margin-left: 
 .stat.discount div { display: flex; gap: 8px; }
 .stat input { width: 80px; height: 34px; padding: 0 10px; }
 .game-form { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 22px; align-items: start; }
+.cover-upload { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.file-button { position: relative; cursor: pointer; }
+.file-button input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.file-button:focus-within { outline: 2px solid #b7ff3c; outline-offset: 2px; }
+.file-button.busy { opacity: .6; cursor: progress; }
 .cover-preview { position: sticky; top: 110px; display: flex; flex-direction: column; gap: 12px; }
 .cover-preview small { color: #69717e; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .cover-preview img, .cover-preview .cover-fallback { width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 9px; }

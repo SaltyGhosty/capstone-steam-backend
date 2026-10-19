@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
 import { catalogApi, developerApi } from '@/api/endpoints';
 import type { GameDetail } from '@/api/types';
+import CoverUpload, { useCoverUploadEnabled } from '@/components/CoverUpload';
 import Icon from '@/components/Icon';
 import { Empty, ErrorState, FieldError, Loading, PageHeader } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
@@ -161,6 +162,9 @@ function GameForm({ game, genres, onSaved, onConflict }: {
 }) {
   const { notifyError } = useStore();
   const { t } = useI18n();
+  const coverUploadEnabled = useCoverUploadEnabled();
+  // La subida de la portada cambia el juego en el servidor (nueva versión): se sigue con esa versión
+  const [version, setVersion] = useState(game?.version ?? null);
   const [form, setForm] = useState({
     title: game?.title ?? '',
     description: game?.descriptions.es ?? '',
@@ -194,7 +198,7 @@ function GameForm({ game, genres, onSaved, onConflict }: {
       coverUrl: form.coverUrl.trim() || null,
       steamAppId: form.steamAppId ? Number(form.steamAppId) : null,
       genreIds,
-      version: game?.version ?? null,
+      version,
     };
     try {
       onSaved(game ? await developerApi.update(game.id, body) : await developerApi.create(body));
@@ -211,7 +215,7 @@ function GameForm({ game, genres, onSaved, onConflict }: {
 
   return (
     <>
-      <PageHeader eyebrow={game ? `${gameStatus(game.status).toUpperCase()} · v${game.version}` : t('dev.eyebrow')} title={game ? t('dev.editTitle', { title: game.title }) : t('dev.newGame')}>
+      <PageHeader eyebrow={game ? `${gameStatus(game.status).toUpperCase()} · v${version}` : t('dev.eyebrow')} title={game ? t('dev.editTitle', { title: game.title }) : t('dev.newGame')}>
         <Link className="view-all" to="/developer">{t('dev.back')} <Icon name="chevron" size={14} /></Link>
       </PageHeader>
       <form className="game-form" onSubmit={submit}>
@@ -258,6 +262,10 @@ function GameForm({ game, genres, onSaved, onConflict }: {
             <input type="url" maxLength={500} value={form.coverUrl} onChange={set('coverUrl')} placeholder="https://…" />
             <FieldError errors={errors} name="coverUrl" />
           </label>
+          {coverUploadEnabled && (game
+            ? <CoverUpload upload={(file) => developerApi.uploadCover(game.id, file)}
+                onUploaded={(g) => { setForm((f) => ({ ...f, coverUrl: g.coverUrl ?? '' })); setVersion(g.version); }} />
+            : <small className="hint">{t('cover.saveFirst')}</small>)}
           <label className="field">
             <span>{t('steam.appId')} <em>{t('common.optional')}</em></span>
             <input type="number" min={1} value={form.steamAppId} onChange={set('steamAppId')} />
