@@ -1,19 +1,21 @@
 package com.capstone.steam.recommendation;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import com.capstone.steam.recommendation.dto.ChatMessage;
 
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -43,14 +45,20 @@ public class OpenRouterChatModel implements ChatModel {
         List<Map<String, String>> chat = new ArrayList<>();
         chat.add(Map.of("role", "system", "content", system));
         messages.forEach(m -> chat.add(Map.of("role", m.role().name(), "content", m.content())));
-        Map<String, Object> body = Map.of(
-                "model", properties.model(),
-                "messages", chat,
-                "response_format", Map.of("type", "json_object"),
-                "temperature", 0.7,
-                "max_tokens", 400,
-                // sin razonamiento: gasta tokens de max_tokens y puede dejar la respuesta vacía
-                "reasoning", Map.of("enabled", false));
+        List<String> models = properties.models();
+        Map<String, Object> body = new LinkedHashMap<>();
+        if (models.size() == 1) {
+            body.put("model", models.get(0));
+        } else {
+            // lista de reserva de OpenRouter: si el primero falla, prueba el siguiente
+            body.put("models", models);
+        }
+        body.put("messages", chat);
+        body.put("response_format", Map.of("type", "json_object"));
+        body.put("temperature", 0.7);
+        body.put("max_tokens", 1200);
+        // razonamiento corto y fuera de la respuesta: algunos modelos no admiten desactivarlo
+        body.put("reasoning", Map.of("effort", "low", "exclude", true));
 
         long start = System.nanoTime();
         try {
@@ -61,22 +69,38 @@ public class OpenRouterChatModel implements ChatModel {
                     .body(body)
                     .retrieve()
                     .body(String.class);
-            String content = json.readTree(raw).path("choices").path(0).path("message").path("content").asString(null);
+            JsonNode parsed = json.readTree(raw);
+            String content = parsed.path("choices").path(0).path("message").path("content").asString(null);
             if (content == null || content.isBlank()) {
                 log.warn("OpenRouter: respuesta sin contenido (modelo={})", properties.model());
                 throw new AssistantUnavailableException();
             }
-            log.info("OpenRouter: modelo={} mensajes={} duracion={}ms", properties.model(), messages.size(),
+            String used = parsed.path("model").asString(properties.model());
+            log.info("OpenRouter: modelo={} mensajes={} duracion={}ms", used, messages.size(),
                     (System.nanoTime() - start) / 1_000_000);
             return content;
-        } catch (HttpClientErrorException.TooManyRequests e) {
-            log.warn("OpenRouter: sin cupo (429, modelo={})", properties.model());
-            throw new AssistantRateLimitedException(e);
+        } catch (RestClientResponseException e) {
+            // código y error.message de OpenRouter, recortado; nunca la clave ni la conversación
+            log.warn("OpenRouter: error {} ({}, modelo={}, duracion={}ms)", e.getStatusCode().value(),
+                    errorMessage(e), properties.model(), (System.nanoTime() - start) / 1_000_000);
+            if (e.getStatusCode().value() == 429) {
+                throw new AssistantRateLimitedException(e);
+            }
+            throw new AssistantUnavailableException(e);
         } catch (RestClientException | JacksonException | IllegalArgumentException e) {
             // solo la clase: el mensaje podría arrastrar cabeceras o el cuerpo de la petición
             log.warn("OpenRouter: fallo {} (modelo={}, duracion={}ms)", e.getClass().getSimpleName(),
                     properties.model(), (System.nanoTime() - start) / 1_000_000);
             throw new AssistantUnavailableException(e);
+        }
+    }
+
+    private String errorMessage(RestClientResponseException e) {
+        try {
+            String message = json.readTree(e.getResponseBodyAsString()).path("error").path("message").asString("");
+            return message.length() > 200 ? message.substring(0, 200) : message;
+        } catch (JacksonException | IllegalArgumentException ex) {
+            return "";
         }
     }
 }

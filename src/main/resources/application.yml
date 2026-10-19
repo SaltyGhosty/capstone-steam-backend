@@ -81,7 +81,7 @@ app:
   openrouter:
     # Chat recomendador. Sin clave el asistente responde "no disponible" y no se hace ninguna llamada.
     api-key: ${OPENROUTER_API_KEY:}
-    model: ${OPENROUTER_MODEL:google/gemma-4-31b-it:free}
+    model: ${OPENROUTER_MODEL:minimax/minimax-m3.1-flash:free,google/gemma-4-31b-it:free}
     base-url: https://openrouter.ai/api/v1
     timeout: 30s
     global-per-hour: 200 # tope de mensajes por hora entre todos los usuarios
