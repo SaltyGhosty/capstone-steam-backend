@@ -35,6 +35,7 @@ import com.capstone.steam.user.UserRepository;
 public class FriendService {
 
     static final int MIN_QUERY_LENGTH = 2;
+    static final int MAX_QUERY_LENGTH = 50;
     static final int MAX_SEARCH_RESULTS = 20;
     static final int PROFILE_LIBRARY_LIMIT = 100;
 
@@ -56,6 +57,9 @@ public class FriendService {
         String term = q == null ? "" : q.trim();
         if (term.length() < MIN_QUERY_LENGTH) {
             throw new BadRequestException("friend.queryTooShort");
+        }
+        if (term.length() > MAX_QUERY_LENGTH) {
+            throw new BadRequestException("friend.queryTooLong");
         }
         List<User> found = userRepository.searchPlayers(likePattern(term), viewerId,
                 PageRequest.of(0, MAX_SEARCH_RESULTS));
@@ -88,8 +92,10 @@ public class FriendService {
     public FriendRequestsResponse requests(Long userId) {
         return new FriendRequestsResponse(
                 friendshipRepository.findIncoming(userId).stream()
+                        .filter(f -> isPlayer(f.other(userId)))
                         .map(f -> FriendRequestResponse.from(f, userId)).toList(),
                 friendshipRepository.findOutgoing(userId).stream()
+                        .filter(f -> isPlayer(f.other(userId)))
                         .map(f -> FriendRequestResponse.from(f, userId)).toList());
     }
 
@@ -143,7 +149,11 @@ public class FriendService {
     /** El solicitante cancela su solicitud pendiente. */
     @Transactional
     public void cancel(Long userId, Long requestId) {
-        friendshipRepository.delete(pendingFor(requestId, userId, false));
+        pendingFor(requestId, userId, false);
+        // DELETE condicionado a PENDING: si el otro la aceptó entre medias, 0 filas y 404
+        if (friendshipRepository.deletePending(requestId) == 0) {
+            throw NotFoundException.of("friendRequest", requestId);
+        }
     }
 
     @Transactional
@@ -162,6 +172,8 @@ public class FriendService {
         return friendshipRepository.findById(requestId)
                 .filter(f -> f.getStatus() == FriendshipStatus.PENDING)
                 .filter(f -> (asAddressee ? f.getAddressee() : f.getRequester()).getId().equals(userId))
+                // si alguno de los dos ya no es jugador activo, la solicitud es invisible
+                .filter(f -> isPlayer(f.getRequester()) && isPlayer(f.getAddressee()))
                 .orElseThrow(() -> NotFoundException.of("friendRequest", requestId));
     }
 

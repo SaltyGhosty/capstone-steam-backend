@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
@@ -31,4 +32,9 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
              where f.status = com.capstone.steam.friend.FriendshipStatus.PENDING and f.requester.id = :userId
              order by f.createdAt desc""")
     List<Friendship> findOutgoing(Long userId);
+
+    /** Borra solo si sigue PENDING (atómico): una amistad aceptada entre medias no se pierde. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from Friendship f where f.id = :id and f.status = com.capstone.steam.friend.FriendshipStatus.PENDING")
+    int deletePending(Long id);
 }
