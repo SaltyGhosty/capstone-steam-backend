@@ -1,6 +1,8 @@
 package com.capstone.steam.recommendation;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -8,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Conexión con OpenRouter (API compatible con OpenAI).
  *
  * @param apiKey        clave de OpenRouter; vacía = el asistente está desactivado
- * @param model         modelo, por defecto uno {@code :free}
+ * @param model         modelo, o varios separados por comas (el primero es el preferido y los demás, la reserva)
  * @param baseUrl       raíz de la API (se cambia en tests)
  * @param timeout       tiempo máximo de cada petición
  * @param globalPerHour tope de mensajes por hora entre todos los usuarios (por defecto 200)
@@ -32,6 +34,14 @@ public record OpenRouterProperties(String apiKey, String model, String baseUrl, 
 
     public boolean enabled() {
         return apiKey != null && !apiKey.isBlank();
+    }
+
+    /** Los modelos de {@code model}: partido por comas, sin espacios sobrantes ni vacíos. */
+    public List<String> models() {
+        if (model == null) {
+            return List.of();
+        }
+        return Arrays.stream(model.split(",")).map(String::trim).filter(m -> !m.isEmpty()).toList();
     }
 
     /** Nunca imprime la clave. */

@@ -34,7 +34,7 @@ services:
       - key: OPENROUTER_API_KEY
         sync: false # clave de OpenRouter; vacía = el chat recomendador dice "no disponible"
       - key: OPENROUTER_MODEL
-        value: google/gemma-4-31b-it:free
+        value: minimax/minimax-m3.1-flash:free,google/gemma-4-31b-it:free
 
 databases:
   - name: capstone-steam-db
