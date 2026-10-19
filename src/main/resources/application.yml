@@ -78,6 +78,12 @@ app:
     url: ${CLOUDINARY_URL:}
     folder: arcade/covers
     timeout: 20s
+  openrouter:
+    # Chat recomendador. Sin clave el asistente responde "no disponible" y no se hace ninguna llamada.
+    api-key: ${OPENROUTER_API_KEY:}
+    model: ${OPENROUTER_MODEL:google/gemma-4-31b-it:free}
+    base-url: https://openrouter.ai/api/v1
+    timeout: 30s
   admin:
     username: ${ADMIN_USERNAME:admin}
     email: ${ADMIN_EMAIL:admin@capstone-steam.local}
