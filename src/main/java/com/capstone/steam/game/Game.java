@@ -130,9 +130,9 @@ public class Game {
                 .divide(HUNDRED, 2, RoundingMode.HALF_UP);
     }
 
-    /** Porcentaje de reseñas positivas (0-100), o 0 si no tiene reseñas. */
+    /** Porcentaje de reseñas positivas (0-100, hacia abajo), o 0 si no tiene reseñas. */
     public int getPositivePercent() {
-        return reviewCount == 0 ? 0 : (int) Math.round(100.0 * positiveCount / reviewCount);
+        return reviewCount == 0 ? 0 : (int) (100L * positiveCount / reviewCount);
     }
 
     public ReviewScore getReviewScore() {
