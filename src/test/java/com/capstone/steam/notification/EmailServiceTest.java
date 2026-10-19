@@ -14,7 +14,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 
@@ -303,5 +306,29 @@ class EmailServiceTest {
         ArgumentCaptor<MimeMessage> sent = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(sent.capture());
         return sent.getValue();
+    }
+
+    @Test
+    void maskEmailKeepsFirstLetterAndDomain() {
+        assertThat(EmailService.maskEmail("lucho@gmail.com")).isEqualTo("l***@gmail.com");
+        assertThat(EmailService.maskEmail("a@b.test")).isEqualTo("a***@b.test");
+        assertThat(EmailService.maskEmail(null)).isEqualTo("***");
+        assertThat(EmailService.maskEmail("")).isEqualTo("***");
+        assertThat(EmailService.maskEmail("sin-arroba")).isEqualTo("***");
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void logsNeverContainTheFullRecipientAddress(CapturedOutput output) {
+        var service = new EmailService(mailSender, "tienda@capstone.test", "ARCADE", STORE, "smtp-user@gmail.com");
+
+        service.sendWelcome("ana@test.com", "Ana", "es");
+        doThrow(new MailSendException("550 rejected: ana@test.com")).when(mailSender).send(any(MimeMessage.class));
+        service.sendWelcome("ana@test.com", "Ana", "es");
+        service.sendWelcome("demo@demo.capstone-steam.local", "Demo", "es");
+
+        assertThat(output.getAll())
+                .doesNotContain("ana@test.com", "demo@demo.capstone-steam.local")
+                .contains("a***@test.com", "d***@demo.capstone-steam.local");
     }
 }

@@ -86,12 +86,13 @@ public class EmailService {
     }
 
     private void send(String to, Email email) {
+        String masked = maskEmail(to);
         if (!enabled) {
-            log.info("[correo desactivado] para={} asunto=\"{}\"", to, email.subject());
+            log.info("[correo desactivado] para={} asunto=\"{}\"", masked, email.subject());
             return;
         }
         if (isReservedDomain(to)) {
-            log.info("[correo no enviado: dominio reservado] para={} asunto=\"{}\"", to, email.subject());
+            log.info("[correo no enviado: dominio reservado] para={} asunto=\"{}\"", masked, email.subject());
             return;
         }
         try {
@@ -102,10 +103,21 @@ public class EmailService {
             helper.setSubject(email.subject());
             helper.setText(email.html(), true);
             mailSender.send(message);
-            log.info("Correo enviado: para={} asunto=\"{}\"", to, email.subject());
+            log.info("Correo enviado: para={} asunto=\"{}\"", masked, email.subject());
         } catch (MailException | MessagingException | UnsupportedEncodingException ex) {
-            log.error("No se pudo enviar el correo a {} (\"{}\"): {}", to, email.subject(), ex.getMessage());
+            // el servidor SMTP suele repetir la dirección en su error ("Invalid Addresses: ...")
+            String reason = ex.getMessage() == null ? null : ex.getMessage().replace(to, masked);
+            log.error("No se pudo enviar el correo a {} (\"{}\"): {}", masked, email.subject(), reason);
         }
+    }
+
+    /**
+     * El email del destinatario es un dato personal: en el log solo sale la primera letra y el
+     * dominio ("l***@gmail.com"). Sin arroba o vacío, "***".
+     */
+    static String maskEmail(String email) {
+        int at = email == null ? -1 : email.lastIndexOf('@');
+        return at < 1 ? "***" : email.charAt(0) + "***" + email.substring(at);
     }
 
     /**
