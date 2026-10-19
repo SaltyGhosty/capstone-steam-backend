@@ -129,7 +129,7 @@ cp .env.example .env    # y rellena los valores
 | `STEAM_SYNC_ENABLED` | Opcional | Sincroniza precio y descuento con la API pública de Steam al arrancar y cada 6 h (por defecto `true`); el admin también puede lanzarlo a mano |
 | `STEAM_SYNC_CRON` | Opcional | Frecuencia de la sincronización con Steam (cron de Spring, por defecto `0 0 */6 * * *`) |
 | `CORS_ALLOWED_ORIGINS` | Opcional | URL del frontend (por defecto `http://localhost:5173`) |
-| `CLOUDINARY_URL` | Opcional | `cloudinary://<api_key>:<api_secret>@<cloud_name>`, de una cuenta gratuita de Cloudinary. Si está vacía, la subida de portadas se desactiva sola (se pueden seguir pegando URLs) |
+| `CLOUDINARY_URL` | Opcional | `cloudinary://<api_key>:<api_secret>@<cloud_name>`, de una cuenta gratuita de Cloudinary. Si está vacía, la subida de portadas se desactiva sola (se pueden seguir pegando URLs)  La API key necesita permiso de subida (acción *create*); una clave con permisos limitados da 403 |
 | `OPENROUTER_API_KEY` | Opcional | Clave de [openrouter.ai/keys](https://openrouter.ai/keys). Si está vacía, el asistente se desactiva solo y responde 503 sin hacer ninguna llamada de red |
 | `OPENROUTER_MODEL` | Opcional | Modelo del asistente: uno o varios separados por comas, que OpenRouter prueba en orden si uno está saturado (por defecto `minimax/minimax-m3.1-flash:free,google/gemma-4-31b-it:free`). Los modelos `:free` exigen activar una opción de privacidad en la cuenta de OpenRouter |
 | `app.openrouter.global-per-hour` / `cooldown` | En `application.yml` | Tope de mensajes por hora entre todos los usuarios (200) y la pausa tras un 429 de OpenRouter (5 min), para no agotar el cupo gratuito |
