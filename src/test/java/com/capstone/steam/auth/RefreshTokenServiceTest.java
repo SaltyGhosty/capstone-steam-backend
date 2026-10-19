@@ -189,4 +189,11 @@ class RefreshTokenServiceTest {
 
         verify(repository).revokeAllForUser(eq(7L), eq(NOW));
     }
+
+    @Test
+    void purgeExpiredUsesNowMinusGraceAsCutoffAndReturnsTheCount() {
+        when(repository.deleteExpiredFamilies(NOW.minus(Duration.ofDays(1)))).thenReturn(4);
+
+        assertThat(service.purgeExpired(Duration.ofDays(1))).isEqualTo(4);
+    }
 }

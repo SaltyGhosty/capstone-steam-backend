@@ -60,6 +60,10 @@ app:
     secret: ${JWT_SECRET:}
     expiration: ${JWT_EXPIRATION:PT15M}
     refresh-expiration: ${JWT_REFRESH_EXPIRATION:P7D}
+  auth:
+    # Purga diaria de refresh_tokens: solo familias enteras caducadas hace más de grace (respeta la detección de reutilización)
+    refresh-purge-cron: ${REFRESH_PURGE_CRON:0 30 3 * * *}
+    refresh-purge-grace: ${REFRESH_PURGE_GRACE:P1D}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   payments:
