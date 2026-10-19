@@ -67,6 +67,11 @@ app:
     country: es # euros
     base-url: https://store.steampowered.com
     timeout: 10s
+  cloudinary:
+    # cloudinary://<api_key>:<api_secret>@<cloud_name>; vacío = no se pueden subir portadas como archivo
+    url: ${CLOUDINARY_URL:}
+    folder: arcade/covers
+    timeout: 20s
   admin:
     username: ${ADMIN_USERNAME:admin}
     email: ${ADMIN_EMAIL:admin@capstone-steam.local}
