@@ -203,6 +203,18 @@ class AuthIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void avatarUrlMustBeHttpOrHttps() throws Exception {
+        String token = register("freeman", "freeman@blackmesa.com");
+
+        mvc.perform(patch("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"avatarUrl\":\"ftp://a.test/a.png\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"avatarUrl\":\"https://a.test/a.png\"}"))
+                .andExpect(status().isOk());
+    }
+
     private String register(String username, String email) throws Exception {
         String body = mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                         {"username":"%s","email":"%s","password":"password123"}""".formatted(username, email)))

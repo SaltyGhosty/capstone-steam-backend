@@ -167,6 +167,23 @@ class CatalogIntegrationTest {
     }
 
     @Test
+    void coverUrlMustBeHttpOrHttps() throws Exception {
+        for (String unsafe : new String[] {"file:///C:/x.png", "ftp://a.test/x.png", "javascript:alert(1)"}) {
+            mvc.perform(auth(post("/api/developer/games"), devToken).contentType(MediaType.APPLICATION_JSON)
+                            .content(gameWithCover("Unsafe cover", unsafe)))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(auth(post("/api/developer/games"), devToken).contentType(MediaType.APPLICATION_JSON)
+                        .content(gameWithCover("Safe cover", "HTTPS://img.test/c.jpg")))
+                .andExpect(status().isCreated());
+    }
+
+    private String gameWithCover(String title, String coverUrl) {
+        return """
+                {"title":"%s","price":9.99,"genreIds":[%d],"coverUrl":"%s"}""".formatted(title, rpgId, coverUrl);
+    }
+
+    @Test
     void invalidSearchParamsReturn400() throws Exception {
         mvc.perform(get("/api/games").param("sort", "cheapest")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/games").param("minPrice", "20").param("maxPrice", "10")).andExpect(status().isBadRequest());

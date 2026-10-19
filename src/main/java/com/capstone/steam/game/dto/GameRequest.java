@@ -27,7 +27,7 @@ public record GameRequest(
         @NotNull @DecimalMin("0.00") @Digits(integer = 8, fraction = 2) BigDecimal price,
         @Min(0) @Max(100) Integer discountPercent,
         LocalDate releaseDate,
-        @URL @Size(max = 500) String coverUrl,
+        @URL(regexp = "(?i)^https?://.+") @Size(max = 500) String coverUrl,
         @Positive Integer steamAppId,
         Set<Long> genreIds,
         Long version) {
