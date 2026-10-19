@@ -78,6 +78,16 @@ class RecommendationIntegrationTest {
     }
 
     @Test
+    void aNullMessageInTheListIs400NotA500() throws Exception {
+        String token = register("chat_null");
+
+        chat(token, "{\"messages\":[null]}", "es").andExpect(status().isBadRequest());
+        chat(token, "{\"messages\":[{\"role\":\"user\",\"content\":\"a\"},null,{\"role\":\"user\",\"content\":\"b\"}]}", "es")
+                .andExpect(status().isBadRequest());
+        verify(model, never()).complete(anyString(), any());
+    }
+
+    @Test
     void rejectedMessagesDoNotCountAgainstTheLimit() throws Exception {
         String token = register("chat_nocount");
         when(model.complete(anyString(), any())).thenReturn("{\"reply\":\"ok\",\"gameIds\":[]}");
