@@ -1,5 +1,6 @@
 package com.capstone.steam.recommendation;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -26,6 +27,7 @@ public class RecommendationCatalog {
 
     static final int MAX_DESCRIPTION = 160;
     static final int MAX_TITLE = 100;
+    static final int MAX_GAMES = 200;
 
     /** Las líneas del prompt y los juegos por id, listos para devolverse al cliente. */
     record Snapshot(List<String> lines, Map<Long, GameSummaryResponse> games) {
@@ -41,7 +43,11 @@ public class RecommendationCatalog {
 
     @Transactional(readOnly = true)
     public Snapshot load(Locale locale) {
-        List<Game> published = games.findWithDetailsByStatusOrderByIdAsc(GameStatus.PUBLISHED);
+        // tope para que el prompt no crezca sin fin: los más reseñados primero, y a igualdad el id menor
+        List<Game> published = games.findWithDetailsByStatusOrderByIdAsc(GameStatus.PUBLISHED).stream()
+                .sorted(Comparator.comparingInt(Game::getReviewCount).reversed().thenComparing(Game::getId))
+                .limit(MAX_GAMES)
+                .toList();
         List<String> lines = published.stream().map(g -> line(g, locale)).toList();
         Map<Long, GameSummaryResponse> byId = published.stream()
                 .collect(Collectors.toUnmodifiableMap(Game::getId, GameSummaryResponse::from, (a, b) -> a));
