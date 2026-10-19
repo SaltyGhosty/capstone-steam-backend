@@ -71,6 +71,42 @@ class ChatRateLimiterTest {
     }
 
     @Test
+    void theGlobalCapPerHourIs503ForEveryoneAndRecoversAfterTheWindow() {
+        limiter = new ChatRateLimiter(clock, 3, Duration.ofMinutes(5));
+        limiter.acquire(1L);
+        limiter.acquire(2L);
+        limiter.acquire(3L);
+
+        assertThatThrownBy(() -> limiter.acquire(4L)).isInstanceOf(AssistantUnavailableException.class);
+        assertThatThrownBy(() -> limiter.acquire(1L)).isInstanceOf(AssistantUnavailableException.class);
+
+        clock.advance(Duration.ofHours(1));
+        assertThatCode(() -> limiter.acquire(4L)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void aRejectedGlobalRequestDoesNotUseUpTheUserQuota() {
+        limiter = new ChatRateLimiter(clock, 1, Duration.ofMinutes(5));
+        limiter.acquire(1L);
+        assertThatThrownBy(() -> limiter.acquire(2L)).isInstanceOf(AssistantUnavailableException.class);
+
+        clock.advance(Duration.ofHours(1));
+        limiter.acquire(2L);
+        assertThat(limiter.trackedUsers()).isEqualTo(1);
+    }
+
+    @Test
+    void afterACooldownStartsEveryoneGets503UntilItEnds() {
+        limiter.startCooldown();
+
+        assertThatThrownBy(() -> limiter.acquire(1L)).isInstanceOf(AssistantUnavailableException.class);
+        clock.advance(Duration.ofMinutes(4));
+        assertThatThrownBy(() -> limiter.acquire(2L)).isInstanceOf(AssistantUnavailableException.class);
+        clock.advance(Duration.ofMinutes(1));
+        assertThatCode(() -> limiter.acquire(1L)).doesNotThrowAnyException();
+    }
+
+    @Test
     void emptyEntriesAreRemovedSoTheMapDoesNotGrowForever() {
         for (long user = 1; user <= 50; user++) {
             limiter.acquire(user);

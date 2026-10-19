@@ -7,11 +7,16 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -185,6 +190,40 @@ class RecommendationServiceTest {
         assertThat(ask("{\"reply\":\"a\",\"gameIds\":[\"x\",null,{\"a\":1},1.5,3]}").games())
                 .extracting("id").containsExactly(3L);
         assertThat(ask("{\"reply\":\"a\"}").games()).isEmpty();
+    }
+
+    @Test
+    void request201InTheHourIs503WithoutCallingTheModel() {
+        when(model.complete(anyString(), any())).thenReturn("{\"reply\":\"ok\",\"gameIds\":[]}");
+        for (long user = 1; user <= 200; user++) {
+            service.chat(user, user("hola"));
+        }
+
+        assertThatThrownBy(() -> service.chat(201L, user("hola"))).isInstanceOf(AssistantUnavailableException.class);
+        verify(model, times(200)).complete(anyString(), any());
+    }
+
+    @Test
+    void aQuota429FromTheModelStopsCallsDuringTheCooldownAndThenResumes() {
+        Instant[] now = {Instant.parse("2026-10-19T10:00:00Z")};
+        Clock clock = new Clock() {
+            @Override public ZoneId getZone() { return ZoneOffset.UTC; }
+            @Override public Clock withZone(ZoneId zone) { return this; }
+            @Override public Instant instant() { return now[0]; }
+        };
+        RecommendationService timed = new RecommendationService(new RecommendationCatalog(games, JsonMapper.builder().build()),
+                model, new ChatRateLimiter(clock), JsonMapper.builder().build());
+        when(model.complete(anyString(), any())).thenThrow(new AssistantRateLimitedException(null))
+                .thenReturn("{\"reply\":\"ok\",\"gameIds\":[]}");
+
+        assertThatThrownBy(() -> timed.chat(1L, user("hola"))).isInstanceOf(AssistantUnavailableException.class);
+        now[0] = now[0].plus(Duration.ofMinutes(4));
+        assertThatThrownBy(() -> timed.chat(2L, user("hola"))).isInstanceOf(AssistantUnavailableException.class);
+        verify(model, times(1)).complete(anyString(), any());
+
+        now[0] = now[0].plus(Duration.ofMinutes(1));
+        assertThat(timed.chat(2L, user("hola")).reply()).isEqualTo("ok");
+        verify(model, times(2)).complete(anyString(), any());
     }
 
     @Test

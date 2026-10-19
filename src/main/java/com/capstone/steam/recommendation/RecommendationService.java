@@ -58,7 +58,13 @@ public class RecommendationService {
         Locale locale = LocaleContextHolder.getLocale();
         RecommendationCatalog.Snapshot snapshot = catalog.load(locale);
         long start = System.nanoTime();
-        String raw = model.complete(systemPrompt(snapshot.lines(), locale), messages);
+        String raw;
+        try {
+            raw = model.complete(systemPrompt(snapshot.lines(), locale), messages);
+        } catch (AssistantRateLimitedException e) {
+            limiter.startCooldown();
+            throw e;
+        }
 
         ChatResponse response = parse(raw, snapshot.games());
         log.info("Asistente: mensajes={} juegos={} duracion={}ms", messages.size(), response.games().size(),

@@ -7,6 +7,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -66,6 +67,9 @@ public class OpenRouterChatModel implements ChatModel {
             log.info("OpenRouter: modelo={} mensajes={} duracion={}ms", properties.model(), messages.size(),
                     (System.nanoTime() - start) / 1_000_000);
             return content;
+        } catch (HttpClientErrorException.TooManyRequests e) {
+            log.warn("OpenRouter: sin cupo (429, modelo={})", properties.model());
+            throw new AssistantRateLimitedException(e);
         } catch (RestClientException | JacksonException | IllegalArgumentException e) {
             // solo la clase: el mensaje podría arrastrar cabeceras o el cuerpo de la petición
             log.warn("OpenRouter: fallo {} (modelo={}, duracion={}ms)", e.getClass().getSimpleName(),
