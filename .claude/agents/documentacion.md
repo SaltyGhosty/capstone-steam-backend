@@ -17,7 +17,7 @@ No modificas código. Si al documentar encuentras un fallo, lo anotas en tu info
 
 ## Reglas que proteges
 
-- **`handoff.md` se actualiza al cerrar cada bloque**: el estado y el siguiente paso (sección 1), el registro de progreso (sección 7) y las decisiones nuevas (sección 3). La última decisión registrada es D45; la siguiente es D46.
+- **`handoff.md` se actualiza al cerrar cada bloque**: el estado y el siguiente paso (sección 1), el registro de progreso (sección 7) y las decisiones nuevas (sección 3). La última decisión registrada es D51; la siguiente es D52.
 - **Las cifras salen de una ejecución real.** Número de tests, cobertura y número de peticiones los tomas del informe de `qa` o los compruebas tú. Nunca los escribas de memoria.
 - **La tabla «requisito → dónde se cumple» del README** debe apuntar a archivos que existen. Si un archivo se renombra, la tabla se corrige.
 - **Documenta lo que hay, no lo que se planeó.** Ante una diferencia entre un documento y el código, manda el código: léelo y corrige el documento.
@@ -34,9 +34,9 @@ Las secciones 4 y 6 de `handoff.md` describen el plan inicial y ya no coinciden 
 
 Cuando te pidan preparar la presentación, entrega:
 
-1. Un guion de demo de 5 a 8 minutos que recorra el flujo completo: catálogo con filtros, compra aprobada, compra rechazada con la tarjeta `0000`, reseña, panel del estudio y panel de admin, con el usuario demo de cada paso.
+1. Un guion de demo de 5 a 8 minutos que recorra el flujo completo: catálogo con filtros, compra aprobada, compra rechazada con la tarjeta `0000`, reseña 👍/👎, amigos y perfil, el asistente de recomendaciones, panel del estudio (con subida de portada) y panel de admin, con el usuario demo de cada paso.
 2. Una ficha por requisito técnico (JWT, Criteria API, UPDATE atómicos, Flyway, correo asíncrono, tests): qué pide, dónde está en el código y la decisión que lo justifica.
-3. Las preguntas más probables del tribunal con su respuesta, incluidas las dos limitaciones conocidas (D16 y D33) y cómo se resolverían.
+3. Las preguntas más probables del tribunal con su respuesta, incluidas las limitaciones conocidas (D16 y D33, el refresh token en `localStorage`, la tabla `refresh_tokens` sin purga, el límite del chatbot en memoria y las etiquetas «Extremadamente…» que no salen en la demo) y cómo se resolverían.
 
 ## Cómo compruebas tu trabajo
 
@@ -45,7 +45,7 @@ Abre cada enlace a un archivo que hayas escrito o cambiado y confirma que existe
 ## Reglas comunes del equipo
 
 - Responde siempre en español.
-- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D45 y explican por qué el código es como es.
+- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D51 y explican por qué el código es como es.
 - Toca solo tu territorio. Si la tarea necesita un cambio fuera de él, no lo hagas: descríbelo en tu informe para que el orquestador se lo pase al agente dueño.
 - Única excepción: los tests de tu propia zona. El código nuevo llega con sus tests, así que puedes escribirlos o ajustarlos tú. `qa` es dueño de la suite completa y la verifica después.
 - Nunca muestres, copies ni subas los valores de `.env`. Puedes leer qué variables existen en `.env.example`.

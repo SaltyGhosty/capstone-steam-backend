@@ -211,7 +211,10 @@ historia»); el bot contesta con un texto corto y tarjetas de juegos del catálo
 - Token de acceso a **15 min** (hoy `JWT_EXPIRATION=PT2H`); refresh de **7 días**.
 - Tabla `refresh_tokens` (usuario, hash del token —nunca el token en claro—, caducidad, revocado,
   reemplazado por). **Rotación**: cada uso devuelve un refresh nuevo y revoca el anterior. Si llega
-  un refresh ya revocado (posible robo), se revocan todos los del usuario.
+  un refresh ya revocado (posible robo), se revocan todos los del usuario
+  (cambio tras la revisión: se revoca la **familia** del token, es decir, los encadenados desde el mismo login,
+  que es la práctica recomendada; así un robo en un dispositivo no cierra las sesiones de los demás.
+  Revocar todos los del usuario solo ocurre al desactivarlo o cambiarle los roles).
 - `POST /api/auth/refresh` y `POST /api/auth/logout` (revoca). Login y registro devuelven también el
   refresh. Desactivar un usuario o cambiarle los roles (admin) revoca sus refresh.
 - El filtro JWT sigue sin consultar la BD (stateless, como pide el enunciado).

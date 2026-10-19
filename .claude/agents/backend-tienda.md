@@ -12,6 +12,8 @@ Dentro de `src/main/java/com/capstone/steam/`:
 
 - `game/` (controllers de catálogo, developer y admin; `GameManagementService`, `CatalogService`, `StorefrontRules`). La carpeta `game/search/` es de `base-de-datos`.
 - `genre/`, `cart/`, `wishlist/`, `library/`, `review/`
+- `friend/` (amistades y perfil público), `cover/` (subida de portadas a Cloudinary) y `recommendation/` (chat recomendador con OpenRouter)
+- `game/ReviewScore.java` (etiquetas de reseñas con las reglas de Steam)
 - `common/` (`GlobalExceptionHandler`, excepciones, `PageResponse`, `Slugs`)
 - `config/OpenApiConfig.java`
 
@@ -25,20 +27,23 @@ Dentro de `src/main/java/com/capstone/steam/`:
 - **Estados del juego (D24).** El developer mueve DRAFT ↔ PUBLISHED (publicar exige al menos un género). Solo el admin retira (DELISTED) y vuelve a publicar. Solo se borran borradores sin ventas. El `PUT` acepta `version` y responde 409 si está desactualizada. Un juego ajeno da 403.
 - **Slug (D23).** Se genera del título con `Slugs` y no cambia al renombrar.
 - **Carrito y wishlist (D25).** `PUT`/`DELETE` idempotentes. `StorefrontRules.requireAcquirable` exige juego PUBLISHED (si no, 404), que no sea tuyo como developer (409) y que no lo tengas ya (409).
-- **Reseñas (D26).** Solo reseña quien tiene el juego (403) y una vez por juego (409). El rating cambia con `applyRatingDelta` en la misma transacción. Construye la respuesta antes del UPDATE atómico.
+- **Reseñas (D26, D46).** Solo reseña quien tiene el juego (403) y una vez por juego (409). Una reseña es 👍/👎 (`recommended`) con `language`; no hay estrellas. Los contadores `review_count` y `positive_count` cambian con `applyReviewDelta` en la misma transacción. Editar y borrar leen la reseña con `findByIdForUpdate`. Construye la respuesta antes del UPDATE atómico.
+- **Amigos (D49).** Solo cuentas jugador (activas, sin DEVELOPER ni ADMIN). La biblioteca y los amigos de un perfil solo se devuelven si es público, el que mira es amigo o es él mismo; la regla vive en el backend.
+- **Portadas (D50).** Se valida dueño, tamaño (5 MB) y tipo por bytes mágicos antes de llamar al almacén; sin `CLOUDINARY_URL` la subida se desactiva sola.
+- **Asistente (D51).** Solo recomienda juegos publicados del catálogo (descarta los ids inventados); sin clave o sin cupo responde 503; límite de 20 mensajes por hora y usuario, en memoria.
 - **Tiempo de juego (D40).** «Jugar» suma minutos con el UPDATE atómico `addPlaytime`, sin leer antes la fila.
 
 Si necesitas una consulta nueva, una columna o un índice, pídeselo a `base-de-datos` en tu informe. Si cambias o añades un endpoint, avisa a `frontend` (tipos y `endpoints.ts`) y a `qa` (tests y colección de Postman).
 
 ## Trabajo opcional pendiente en tu zona
 
-- Subida de portadas (por ejemplo con Cloudinary) en lugar de enlazar URLs.
-- Amigos y descargas, que aparecen en el diseño original y no están implementados.
+- Pendiente del usuario: probar de verdad Cloudinary (`CLOUDINARY_URL`) y OpenRouter (`OPENROUTER_API_KEY`); en los tests están simulados.
+- Las descargas, que aparecen en el diseño original, se descartaron a propósito: ARCADE es un escaparate, no un lanzador.
 
 ## Cómo compruebas tu trabajo
 
 ```powershell
-.\mvnw.cmd -q test "-Dtest=CatalogIntegrationTest,StorefrontIntegrationTest,GameManagementServiceTest,CartServiceTest,ReviewServiceTest,SlugsTest"
+.\mvnw.cmd -q test "-Dtest=CatalogIntegrationTest,StorefrontIntegrationTest,GameManagementServiceTest,CartServiceTest,ReviewServiceTest,ReviewScoreTest,FriendIntegrationTest,CoverIntegrationTest,RecommendationServiceTest,SlugsTest"
 ```
 
 Antes de dar la tarea por terminada, ejecuta la suite completa: `.\mvnw.cmd -q verify` (falla si la cobertura de líneas baja del 80 %).
@@ -46,7 +51,7 @@ Antes de dar la tarea por terminada, ejecuta la suite completa: `.\mvnw.cmd -q v
 ## Reglas comunes del equipo
 
 - Responde siempre en español.
-- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D45 y explican por qué el código es como es.
+- Antes de empezar, lee en `handoff.md` las decisiones que afectan a tu zona. Se citan como D1 a D51 y explican por qué el código es como es.
 - Toca solo tu territorio. Si la tarea necesita un cambio fuera de él, no lo hagas: descríbelo en tu informe para que el orquestador se lo pase al agente dueño.
 - Única excepción: los tests de tu propia zona. El código nuevo llega con sus tests, así que puedes escribirlos o ajustarlos tú. `qa` es dueño de la suite completa y la verifica después.
 - Nunca muestres, copies ni subas los valores de `.env`. Puedes leer qué variables existen en `.env.example`.
