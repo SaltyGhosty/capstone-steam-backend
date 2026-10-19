@@ -1,5 +1,6 @@
 package com.capstone.steam.recommendation;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -14,6 +15,8 @@ import com.capstone.steam.game.GameStatus;
 import com.capstone.steam.game.dto.GameSummaryResponse;
 import com.capstone.steam.genre.Genre;
 
+import tools.jackson.databind.json.JsonMapper;
+
 /**
  * Lee el catálogo publicado en una transacción corta y lo devuelve ya copiado en objetos inmutables:
  * así la llamada al modelo (lenta) no retiene ninguna conexión de la base de datos.
@@ -22,15 +25,18 @@ import com.capstone.steam.genre.Genre;
 public class RecommendationCatalog {
 
     static final int MAX_DESCRIPTION = 160;
+    static final int MAX_TITLE = 100;
 
     /** Las líneas del prompt y los juegos por id, listos para devolverse al cliente. */
     record Snapshot(List<String> lines, Map<Long, GameSummaryResponse> games) {
     }
 
     private final GameRepository games;
+    private final JsonMapper json;
 
-    public RecommendationCatalog(GameRepository games) {
+    public RecommendationCatalog(GameRepository games, JsonMapper json) {
         this.games = games;
+        this.json = json;
     }
 
     @Transactional(readOnly = true)
@@ -42,20 +48,28 @@ public class RecommendationCatalog {
         return new Snapshot(lines, byId);
     }
 
-    private static String line(Game g, Locale locale) {
-        return g.getId() + " | " + g.getTitle() + " | "
-                + g.getGenres().stream().map(Genre::getSlug).sorted().collect(Collectors.joining(",")) + " | "
-                + g.getFinalPrice().toPlainString() + " | "
-                + (g.getReviewCount() == 0 ? "no reviews" : g.getPositivePercent() + "% (" + g.getReviewCount() + ")")
-                + " | " + shorten(g.getDescription(locale));
+    /** Un juego como una línea JSON: Jackson escapa todo, así un título no puede abrir una línea nueva. */
+    private String line(Game g, Locale locale) {
+        Map<String, Object> fields = new LinkedHashMap<>();
+        fields.put("id", g.getId());
+        fields.put("title", flatten(g.getTitle(), MAX_TITLE));
+        fields.put("genres", g.getGenres().stream().map(Genre::getSlug).sorted().toList());
+        fields.put("price", g.getFinalPrice());
+        fields.put("positive", g.getPositivePercent());
+        fields.put("reviews", g.getReviewCount());
+        fields.put("description", flatten(g.getDescription(locale), MAX_DESCRIPTION));
+        return json.writeValueAsString(fields);
     }
 
-    /** Una sola línea y como mucho 160 caracteres. */
-    private static String shorten(String description) {
-        if (description == null) {
+    /**
+     * Texto de la tienda aplanado: sin caracteres de control ni saltos de línea, con los espacios
+     * colapsados, sin {@code <} ni {@code >} (para que no cierre el delimitador del catálogo) y cortado.
+     */
+    static String flatten(String text, int max) {
+        if (text == null) {
             return "";
         }
-        String flat = description.replaceAll("\\s+", " ").strip();
-        return flat.length() <= MAX_DESCRIPTION ? flat : flat.substring(0, MAX_DESCRIPTION);
+        String flat = text.replaceAll("[\\p{Cntrl}\\s<>]+", " ").strip();
+        return flat.length() <= max ? flat : flat.substring(0, max).stripTrailing();
     }
 }
