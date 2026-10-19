@@ -82,6 +82,7 @@ for (const s of data.studios) {
 
 const gameIds = {};
 const gameSlugs = {};
+const gameStatus = {}; // key -> estado real en la BD (un admin pudo retirar un juego)
 for (const g of data.games) {
   const token = studioTokens[g.studio];
   const own = (await call('GET', '/api/developer/games?size=100', { token })).content;
@@ -108,7 +109,12 @@ for (const g of data.games) {
     } });
     log(`~ ${g.title}: traducciones y AppID de Steam`);
   }
-  if (!g.draft && game.status === 'DRAFT') await call('POST', `/api/developer/games/${game.id}/publish`, { token });
+  if (!g.draft && game.status === 'DRAFT') {
+    const published = await call('POST', `/api/developer/games/${game.id}/publish`, { token });
+    game = { ...game, status: published?.status ?? 'PUBLISHED' };
+  }
+  gameStatus[g.key] = game.status;
+  if (!g.draft && game.status !== 'PUBLISHED') console.warn(`  ! ${g.title}: está ${game.status} en la BD, se salta al comprar y reseñar`);
   gameIds[g.key] = game.id;
   gameSlugs[g.key] = game.slug;
 }
@@ -116,6 +122,9 @@ for (const g of data.games) {
 // ---------------------------------------------------------------- jugadores
 const playerTokens = {};
 for (const p of data.players) playerTokens[p.username] = (await account(p.username, p.displayName, 'PLAYER')).token;
+
+/** Solo se puede comprar, reseñar o guardar un juego publicado. */
+const live = (key) => gameStatus[key] === 'PUBLISHED';
 
 async function owned(token, key) {
   return (await call('GET', `/api/library/status/${gameIds[key]}`, { token })).owned;
@@ -134,7 +143,7 @@ async function buy(token, keys, card) {
 for (const [player, keys] of Object.entries(data.purchases)) {
   const token = playerTokens[player];
   const pending = [];
-  for (const key of keys) if (!(await owned(token, key))) pending.push(key);
+  for (const key of keys) if (live(key) && !(await owned(token, key))) pending.push(key);
   if (pending.length) {
     // de dos en dos, para que cada jugador tenga un historial con varios pedidos
     for (let i = 0; i < pending.length; i += 2) await buy(token, pending.slice(i, i + 2), VALID_CARD);
@@ -145,7 +154,7 @@ for (const [player, keys] of Object.entries(data.purchases)) {
 for (const [player, keys] of Object.entries(data.failedPayments)) {
   const token = playerTokens[player];
   const orders = (await call('GET', '/api/orders?size=100', { token })).content;
-  if (orders.some((o) => o.status === 'FAILED')) continue;
+  if (orders.some((o) => o.status === 'FAILED') || !keys.every(live)) continue;
   const status = await buy(token, keys, DECLINED_CARD);
   await call('DELETE', '/api/cart', { token });
   log(`${player}: pago rechazado (${status})`);
@@ -165,6 +174,7 @@ for (const [player, minutesByGame] of Object.entries(data.playtime)) {
 }
 
 for (const r of data.reviews) {
+  if (!live(r.game)) continue;
   try {
     await call('POST', '/api/reviews', { token: playerTokens[r.player], body: {
       gameId: gameIds[r.game], recommended: r.recommended, body: r.body, language: r.language,
@@ -186,10 +196,10 @@ for (const r of data.reviews) {
 }
 
 for (const [player, keys] of Object.entries(data.wishlists)) {
-  for (const key of keys) await call('PUT', `/api/wishlist/${gameIds[key]}`, { token: playerTokens[player] });
+  for (const key of keys.filter(live)) await call('PUT', `/api/wishlist/${gameIds[key]}`, { token: playerTokens[player] });
 }
 for (const [player, keys] of Object.entries(data.carts)) {
-  for (const key of keys) await call('PUT', `/api/cart/items/${gameIds[key]}`, { token: playerTokens[player] });
+  for (const key of keys.filter(live)) await call('PUT', `/api/cart/items/${gameIds[key]}`, { token: playerTokens[player] });
 }
 
 // ---------------------------------------------------------------- reseñadores
@@ -200,7 +210,7 @@ const reviewers = ['es', 'en', 'it'].flatMap((lang) => Array.from({ length: perL
   lang, username: `${prefix}_${lang}_${String(i + 1).padStart(2, '0')}`, displayName: names[lang][i],
 })));
 const usernames = reviewers.map((r) => r.username);
-const published = data.games.filter((g) => !g.draft); // un borrador no se puede comprar
+const published = data.games.filter((g) => !g.draft && live(g.key)); // ni un borrador ni uno retirado se pueden comprar
 const plan = {}; // username -> [{ game, recommended }]
 for (const g of published) {
   // los textos se reparten juego a juego para que no se repita ninguno dentro del mismo juego
