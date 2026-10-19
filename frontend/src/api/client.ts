@@ -169,7 +169,9 @@ async function request<T>(path: string, options: RequestOptions, canRefresh: boo
   if (res.status === 401 && token) {
     if (canRefresh && !path.startsWith('/api/auth/') && getRefreshToken()) {
       // Otra petición ya renovó los tokens mientras esta volaba: basta con repetirla
-      const renewed = getToken() !== token || (await refreshSession());
+      // (solo vale si hay un token nuevo; sin token la sesión se cerró y no se repite sin credenciales)
+      const current = getToken();
+      const renewed = (current !== null && current !== token) || (await refreshSession());
       if (renewed) return request<T>(path, options, false);
       // refreshSession ya cerró la sesión y avisó una sola vez
     } else if (getToken() === token) {
