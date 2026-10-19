@@ -80,7 +80,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setUser(me);
         await loadUserData();
       })
-      .catch(() => clearSession())
+      .catch((e: unknown) => {
+        // Solo un 401 invalida la sesión; un fallo de red o un 5xx no debe cerrarla
+        if (e instanceof ApiError && e.status === 401) clearSession();
+      })
       .finally(() => setBooting(false));
   }, [clearSession, loadUserData]);
 
