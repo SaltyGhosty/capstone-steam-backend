@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Valida scripts/demo-data.json. Sale con código 1 y lista los errores si alguna regla falla.
 import { readFile } from 'node:fs/promises';
-import { assignReviews, reviewText } from './demo-reviews.mjs';
+import { assignReviews, gameReviewTexts, phraseText, reviewText, usablePhrases } from './demo-reviews.mjs';
 
 const data = JSON.parse(await readFile(new URL('./demo-data.json', import.meta.url), 'utf8'));
 const GENRES = ['action', 'adventure', 'horror', 'indie', 'platformer', 'puzzle', 'racing', 'rpg', 'shooter', 'simulation', 'sports', 'strategy'];
@@ -51,8 +51,10 @@ for (const lang of LANGS) {
   const names = rv?.names?.[lang] ?? [];
   check(names.length === perLanguage && new Set(names).size === perLanguage && names.every(nonEmpty), `reviewers.names.${lang}: hacen falta ${perLanguage} nombres únicos`);
   for (const vote of ['positive', 'negative']) {
-    const bank = data.reviewPhrases?.[lang]?.[vote] ?? [];
+    const bank = (data.reviewPhrases?.[lang]?.[vote] ?? []).map(phraseText);
     check(bank.length >= 15 && new Set(bank).size === bank.length && bank.every(nonEmpty), `reviewPhrases.${lang}.${vote}: hacen falta 15 frases únicas`);
+    const generic = (data.reviewPhrases?.[lang]?.[vote] ?? []).filter((e) => typeof e === 'string');
+    check(generic.length >= 15, `reviewPhrases.${lang}.${vote}: hacen falta 15 frases sin precio (las gratuitas no usan las de precio)`);
   }
 }
 
@@ -84,6 +86,23 @@ for (const g of rated) {
         const t = reviewText(data.reviewPhrases, g, lang, recommended, 'x');
         check(nonEmpty(t) && t === reviewText(data.reviewPhrases, g, lang, recommended, 'x'), `${g.key}: reviewText ${lang}/${recommended ? 'positivo' : 'negativo'} vacío o no determinista`);
       }
+    }
+  }
+}
+
+// ---- textos: sin repetir en un mismo juego y sin frases de precio en los gratuitos
+const PRICE_WORDS = /euro|€|precio|prezzo|price|cuesta|cost|compr|bought|buying|acquist|centesim|cent/i;
+const langOf = (username) => username.split('_')[1];
+for (const g of rated.filter((x) => !x.draft)) {
+  const texts = gameReviewTexts(data.reviewPhrases, g, assignReviews(g, usernames), langOf);
+  const all = texts.map((t) => t.text);
+  check(all.every(nonEmpty), `${g.key}: hay reseñas sin texto`);
+  check(new Set(all).size === all.length, `${g.key}: ${all.length - new Set(all).size} textos repetidos en el mismo juego`);
+  if (g.price === 0) {
+    const priced = all.filter((t) => PRICE_WORDS.test(t));
+    check(priced.length === 0, `${g.key}: es gratuito y ${priced.length} reseñas hablan de precio o compra (p. ej. «${priced[0]}»)`);
+    for (const lang of LANGS) for (const vote of [true, false]) {
+      check(usablePhrases(data.reviewPhrases, g, lang, vote).every((t) => !PRICE_WORDS.test(t)), `${g.key}: las frases usables (${lang}) incluyen precio`);
     }
   }
 }

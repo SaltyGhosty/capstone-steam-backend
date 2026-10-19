@@ -372,7 +372,10 @@
         "Una joya, lo recomiendo sin dudarlo.",
         "Muy bien cuidado en todos los detalles.",
         "Cada partida se me pasa volando.",
-        "Vale cada euro que he pagado por él.",
+        {
+          "text": "Vale cada euro que he pagado por él.",
+          "aboutPrice": true
+        },
         "La banda sonora acompaña de maravilla.",
         "Se siente fresco incluso después de muchas horas.",
         "Es de esos juegos que te dejan con ganas de más.",
@@ -382,16 +385,37 @@
         "Lo he recomendado a media familia.",
         "Visualmente me ha encantado.",
         "Ritmo perfecto, nunca se hace pesado.",
-        "Una de mis mejores compras en mucho tiempo.",
-        "Fácil de aprender y difícil de soltar."
+        {
+          "text": "Una de mis mejores compras en mucho tiempo.",
+          "aboutPrice": true
+        },
+        "Fácil de aprender y difícil de soltar.",
+        "Engancha desde el primer minuto y no suelta.",
+        "Los gráficos y la música forman un conjunto muy redondo.",
+        "Cada rato que le dedico me deja con buen sabor de boca.",
+        "Se juega solo o acompañado y en ambos casos funciona.",
+        "Me sorprendió para bien, no esperaba tanto.",
+        "Las mecánicas se entienden rápido y tienen mucha profundidad.",
+        "Te hace sentir que tu tiempo está bien empleado.",
+        "Hacía tiempo que un juego no me tenía tan pegado a la pantalla.",
+        {
+          "text": "A este precio es casi un regalo.",
+          "aboutPrice": true
+        }
       ],
       "negative": [
         "No me ha convencido, esperaba bastante más.",
         "Se hace repetitivo muy rápido.",
         "Tiene problemas de rendimiento en mi equipo.",
-        "Por este precio, esperaba algo más pulido.",
+        {
+          "text": "Por este precio, esperaba algo más pulido.",
+          "aboutPrice": true
+        },
         "Los fallos me han sacado de la partida más de una vez.",
-        "Le falta contenido para lo que cuesta.",
+        {
+          "text": "Le falta contenido para lo que cuesta.",
+          "aboutPrice": true
+        },
         "La curva de dificultad está mal ajustada.",
         "Los menús son incómodos y poco claros.",
         "Lo dejé a las pocas horas, sin ganas de volver.",
@@ -401,7 +425,22 @@
         "Los controles me parecen toscos.",
         "Prefiero otras opciones del mismo género.",
         "Tiene buenas ideas mal ejecutadas.",
-        "Me arrepiento un poco de haberlo comprado."
+        {
+          "text": "Me arrepiento un poco de haberlo comprado.",
+          "aboutPrice": true
+        },
+        "La idea es buena, pero se queda a medio camino.",
+        "Me aburrí a la tercera sesión.",
+        "Los tiempos de carga se me hicieron eternos.",
+        "Siento que le falta una buena capa de pulido.",
+        "El ritmo decae y acaba cansando.",
+        "Esperaba más variedad en lo que hay que hacer.",
+        "A ratos resulta frustrante sin motivo.",
+        "No logré engancharme, por mucho que lo intenté.",
+        {
+          "text": "Esperaba que valiera más la pena por lo que pide.",
+          "aboutPrice": true
+        }
       ]
     },
     "en": {
@@ -410,7 +449,10 @@
         "A real gem, I recommend it without hesitation.",
         "Polished in every little detail.",
         "Every session flies by.",
-        "Worth every cent I paid for it.",
+        {
+          "text": "Worth every cent I paid for it.",
+          "aboutPrice": true
+        },
         "The soundtrack fits perfectly.",
         "Still feels fresh after many hours.",
         "One of those games that leaves you wanting more.",
@@ -420,16 +462,37 @@
         "I have already recommended it to half my family.",
         "Visually, I loved it.",
         "Perfect pacing, it never drags.",
-        "One of my best purchases in a long time.",
-        "Easy to learn and hard to put down."
+        {
+          "text": "One of my best purchases in a long time.",
+          "aboutPrice": true
+        },
+        "Easy to learn and hard to put down.",
+        "It grabs you in the first minute and never lets go.",
+        "The visuals and the music make a really well-rounded package.",
+        "Every session leaves me with a smile.",
+        "Works great solo or with company.",
+        "It surprised me in a good way, I did not expect this much.",
+        "The mechanics are quick to grasp yet surprisingly deep.",
+        "It feels like time well spent.",
+        "It has been a while since a game kept me glued to the screen like this.",
+        {
+          "text": "At this price it is almost a gift.",
+          "aboutPrice": true
+        }
       ],
       "negative": [
         "It did not convince me, I expected much more.",
         "It gets repetitive very quickly.",
         "It runs poorly on my machine.",
-        "For this price I expected something more polished.",
+        {
+          "text": "For this price I expected something more polished.",
+          "aboutPrice": true
+        },
         "Bugs pulled me out of the game more than once.",
-        "Not enough content for what it costs.",
+        {
+          "text": "Not enough content for what it costs.",
+          "aboutPrice": true
+        },
         "The difficulty curve feels off.",
         "The menus are clumsy and unclear.",
         "I dropped it after a few hours and never went back.",
@@ -439,7 +502,22 @@
         "The controls feel clunky.",
         "I prefer other options in the same genre.",
         "Good ideas, poorly executed.",
-        "I slightly regret buying it."
+        {
+          "text": "I slightly regret buying it.",
+          "aboutPrice": true
+        },
+        "Nice idea, but it stops halfway.",
+        "I got bored by the third session.",
+        "The loading times felt endless.",
+        "It needs a good coat of polish.",
+        "The pace drops and ends up tiring.",
+        "I expected more variety in what you actually do.",
+        "Sometimes it is frustrating for no good reason.",
+        "I could not get into it, however hard I tried.",
+        {
+          "text": "I expected it to be worth more for what it asks.",
+          "aboutPrice": true
+        }
       ]
     },
     "it": {
@@ -448,7 +526,10 @@
         "Una vera gemma, lo consiglio senza esitazioni.",
         "Curato in ogni minimo dettaglio.",
         "Ogni partita passa in un lampo.",
-        "Vale ogni centesimo speso.",
+        {
+          "text": "Vale ogni centesimo speso.",
+          "aboutPrice": true
+        },
         "La colonna sonora accompagna alla perfezione.",
         "Sembra ancora fresco dopo molte ore.",
         "È uno di quei giochi che ti lasciano con la voglia di continuare.",
@@ -458,16 +539,37 @@
         "L’ho già consigliato a mezza famiglia.",
         "Dal punto di vista visivo mi è piaciuto tantissimo.",
         "Ritmo perfetto, non diventa mai pesante.",
-        "Uno dei miei migliori acquisti da molto tempo.",
-        "Facile da imparare e difficile da mollare."
+        {
+          "text": "Uno dei miei migliori acquisti da molto tempo.",
+          "aboutPrice": true
+        },
+        "Facile da imparare e difficile da mollare.",
+        "Ti prende dal primo minuto e non ti molla.",
+        "Grafica e musica formano un insieme davvero riuscito.",
+        "Ogni sessione mi lascia con il sorriso.",
+        "Funziona benissimo da solo o in compagnia.",
+        "Mi ha sorpreso in positivo, non mi aspettavo tanto.",
+        "Le meccaniche si capiscono subito ma hanno una bella profondità.",
+        "Ti dà la sensazione di aver speso bene il tuo tempo.",
+        "Era da un po’ che un gioco non mi teneva incollato allo schermo.",
+        {
+          "text": "A questo prezzo è quasi un regalo.",
+          "aboutPrice": true
+        }
       ],
       "negative": [
         "Non mi ha convinto, mi aspettavo molto di più.",
         "Diventa ripetitivo molto in fretta.",
         "Gira male sul mio computer.",
-        "Per questo prezzo mi aspettavo qualcosa di più rifinito.",
+        {
+          "text": "Per questo prezzo mi aspettavo qualcosa di più rifinito.",
+          "aboutPrice": true
+        },
         "I bug mi hanno buttato fuori dalla partita più di una volta.",
-        "Manca contenuto rispetto a quanto costa.",
+        {
+          "text": "Manca contenuto rispetto a quanto costa.",
+          "aboutPrice": true
+        },
         "La curva di difficoltà è sbilanciata.",
         "I menu sono scomodi e poco chiari.",
         "L’ho mollato dopo poche ore e non ci sono più tornato.",
@@ -477,7 +579,22 @@
         "I controlli sembrano rigidi.",
         "Preferisco altre proposte dello stesso genere.",
         "Buone idee, realizzate male.",
-        "Mi pento un po’ di averlo comprato."
+        {
+          "text": "Mi pento un po’ di averlo comprato.",
+          "aboutPrice": true
+        },
+        "L’idea è buona, ma si ferma a metà strada.",
+        "Mi sono annoiato alla terza sessione.",
+        "I tempi di caricamento mi sono sembrati infiniti.",
+        "Gli manca una bella mano di rifinitura.",
+        "Il ritmo cala e alla lunga stanca.",
+        "Mi aspettavo più varietà in quello che si fa.",
+        "A tratti è frustrante senza motivo.",
+        "Non sono riuscito a entrarci, per quanto ci abbia provato.",
+        {
+          "text": "Mi aspettavo che valesse di più per quanto chiede.",
+          "aboutPrice": true
+        }
       ]
     }
   },

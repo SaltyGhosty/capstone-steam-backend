@@ -9,7 +9,7 @@
 // Los datos están en scripts/demo-data.json. Las portadas se enlazan desde el CDN de Steam y cada juego
 // queda enlazado por su AppID: el backend sincroniza después precio y descuento con la tienda de Steam.
 import { readFile } from 'node:fs/promises';
-import { assignReviews, reviewText } from './demo-reviews.mjs';
+import { assignReviews, gameReviewTexts } from './demo-reviews.mjs';
 
 const apiArg = process.argv.indexOf('--api');
 const API = (apiArg > 0 ? process.argv[apiArg + 1] : 'http://localhost:8081').replace(/\/$/, '');
@@ -203,7 +203,11 @@ const usernames = reviewers.map((r) => r.username);
 const published = data.games.filter((g) => !g.draft); // un borrador no se puede comprar
 const plan = {}; // username -> [{ game, recommended }]
 for (const g of published) {
-  for (const { username, recommended } of assignReviews(g, usernames)) (plan[username] ??= []).push({ game: g, recommended });
+  // los textos se reparten juego a juego para que no se repita ninguno dentro del mismo juego
+  const langOf = (u) => u.split('_')[1];
+  for (const { username, recommended, text } of gameReviewTexts(data.reviewPhrases, g, assignReviews(g, usernames), langOf)) {
+    (plan[username] ??= []).push({ game: g, recommended, text });
+  }
 }
 
 for (const r of reviewers) {
@@ -222,11 +226,11 @@ for (const r of reviewers) {
   }
 
   let reviewed = 0;
-  for (const { game, recommended } of assigned) {
+  for (const { game, recommended, text } of assigned) {
     try {
       await call('POST', '/api/reviews', { token, body: {
         gameId: gameIds[game.key], recommended, language: r.lang,
-        body: reviewText(data.reviewPhrases, game, r.lang, recommended, r.username),
+        body: text,
       } });
       reviewed++;
     } catch (e) {
