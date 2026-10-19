@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type { GameDetail } from '@/api/types';
@@ -55,6 +55,24 @@ describe('subir portada', () => {
     expect((body.get('file') as File).name).toBe('portada.png');
     await waitFor(() => expect(screen.getByLabelText('URL de la portada')).toHaveValue(COVER));
     expect(screen.getByText(/v4/)).toBeInTheDocument();
+  });
+
+  it('un archivo con type vacío sí se envía (el servidor lo valida por su contenido)', async () => {
+    const fetchMock = mockFetch({
+      'GET /api/developer/games/1': { body: game },
+      'GET /api/genres': { body: [] },
+      'GET /api/uploads/covers/status': { body: { enabled: true } },
+      'POST /api/developer/games/1/cover': { body: { ...game, coverUrl: COVER, version: 4 } },
+    });
+    renderRoutes({ '/developer/games/:id': <DeveloperGameForm /> }, '/developer/games/1');
+
+    const input = await screen.findByLabelText('Subir portada');
+    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'portada.png', { type: '' });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) =>
+      String(url).endsWith('/api/developer/games/1/cover') && (init as RequestInit | undefined)?.method === 'POST')).toBe(true));
+    expect(screen.queryByText('La portada tiene que ser una imagen JPEG, PNG o WebP')).not.toBeInTheDocument();
   });
 
   it('un archivo de más de 5 MB muestra el error sin llamar al servidor', async () => {
