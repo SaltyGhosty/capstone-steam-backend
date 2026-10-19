@@ -4,6 +4,7 @@ import { API_DOCS_URL } from '@/api/client';
 import { useStore } from '@/context/StoreContext';
 import { useI18n } from '@/i18n';
 import { initials } from '@/lib/format';
+import AssistantChat from './AssistantChat';
 import Icon, { type IconName } from './Icon';
 import LanguageSwitcher from './LanguageSwitcher';
 
@@ -171,6 +172,8 @@ export default function Layout() {
         </div>
         <Footer />
       </main>
+
+      <AssistantChat />
 
       {toast && (
         <div key={toast.id} className={`toast ${toast.kind}`} role="status">

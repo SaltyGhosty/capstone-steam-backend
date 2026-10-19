@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 export type IconName =
-  | 'bag' | 'bell' | 'cart' | 'chevron' | 'close' | 'code' | 'compass' | 'download' | 'edit' | 'gift' | 'grid'
+  | 'bag' | 'bell' | 'cart' | 'chat' | 'chevron' | 'close' | 'code' | 'compass' | 'download' | 'edit' | 'gift' | 'grid'
   | 'heart' | 'home' | 'library' | 'logout' | 'play' | 'plus' | 'receipt' | 'search' | 'settings' | 'shield' | 'star'
   | 'tag' | 'thumb' | 'trash' | 'users';
 
@@ -9,6 +9,7 @@ const paths: Record<IconName, ReactNode> = {
   bag: <><path d="M6 8h12l-1 12H7L6 8Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>,
   bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></>,
   cart: <><path d="M3 4h2l2.2 10h9.7l2-7H6" /><circle cx="9" cy="19" r="1" /><circle cx="17" cy="19" r="1" /></>,
+  chat: <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12Z" />,
   chevron: <path d="m9 18 6-6-6-6" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   code: <path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" />,
