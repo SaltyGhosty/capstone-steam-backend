@@ -38,12 +38,12 @@ class GameCriteriaRepositoryTest {
     private User developer;
 
     /*
-     *  tÃ­tulo             gÃ©neros            precio  dto  final  lanzamiento  media  ventas
-     *  Hollow Knight      indie, platformer  15.00    0   15.00  2017-02-24   5.0    3
-     *  Hades              action, indie      25.00   40   15.00  2020-09-17   4.0    5
-     *  Elden Ring         action, rpg        60.00    0   60.00  2022-02-25   -      10
-     *  100% Orange Juice  indie               5.00    0    5.00  (null)       3.0    0
-     *  Secret Draft       action (DRAFT)      1.00    0    1.00  2024-01-01   -      0
+     *  título             géneros            precio  dto  final  lanzamiento  reseñas (+)  ventas
+     *  Hollow Knight      indie, platformer  15.00    0   15.00  2017-02-24   30 (28)      3
+     *  Hades              action, indie      25.00   40   15.00  2020-09-17   20 (16)      5
+     *  Elden Ring         action, rpg        60.00    0   60.00  2022-02-25   -            10
+     *  100% Orange Juice  indie               5.00    0    5.00  (null)       2 (2)        0
+     *  Secret Draft       action (DRAFT)      1.00    0    1.00  2024-01-01   -            0
      */
     @BeforeEach
     void seed() {
@@ -56,9 +56,9 @@ class GameCriteriaRepositoryTest {
         em.persist(draft);
         em.flush();
 
-        games.applyReviewDelta(hollow.getId(), 2, 2);
-        games.applyReviewDelta(hades.getId(), 1, 1);
-        games.applyReviewDelta(orange.getId(), 0, 1);
+        games.applyReviewDelta(hollow.getId(), 28, 30);  // 93 %, 30 reseñas
+        games.applyReviewDelta(hades.getId(), 16, 20);   // 80 %, 20 reseñas
+        games.applyReviewDelta(orange.getId(), 2, 2);    // 100 %, pero solo 2 reseñas
         increment(hollow, 3);
         increment(hades, 5);
         increment(elden, 10);
@@ -97,7 +97,14 @@ class GameCriteriaRepositoryTest {
     @Test
     void onSaleAndMinPositivePercentFilters() {
         assertThat(titles(criteria().onSale().build(), GameSort.TITLE)).containsExactly("Hades");
-        assertThat(titles(criteria().minPositivePercent(50).build(), GameSort.TITLE)).containsExactly("Hades", "Hollow Knight");
+        assertThat(titles(criteria().minPositivePercent(85).build(), GameSort.TITLE)).containsExactly("Hollow Knight");
+    }
+
+    @Test
+    void minPositivePercentIgnoresGamesWithFewerThanTenReviews() {
+        // 100 Orange Juice tiene 2 de 2 positivas, pero no llega a 10 reseñas
+        assertThat(titles(criteria().minPositivePercent(0).build(), GameSort.TITLE))
+                .containsExactly("Hades", "Hollow Knight");
     }
 
     @Test

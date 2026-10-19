@@ -194,6 +194,9 @@ class CatalogIntegrationTest {
         mvc.perform(get("/api/games").param("sort", "cheapest")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/games").param("minPrice", "20").param("maxPrice", "10")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/games").param("size", "500")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/games").param("minPositivePercent", "101")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/games").param("minPositivePercent", "-1")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/games").param("minPositivePercent", "80")).andExpect(status().isOk());
     }
 
     @Test

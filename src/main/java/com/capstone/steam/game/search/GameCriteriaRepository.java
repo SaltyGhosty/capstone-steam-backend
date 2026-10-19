@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import com.capstone.steam.game.Game;
 import com.capstone.steam.game.GameStatus;
+import com.capstone.steam.game.ReviewScore;
 import com.capstone.steam.genre.Genre;
 
 import jakarta.persistence.EntityManager;
@@ -110,8 +111,9 @@ public class GameCriteriaRepository {
         }
 
         if (c.minPositivePercent() != null) {
+            // Con menos de 10 reseñas no hay puntuación y el juego no pasa el filtro.
             // positivas / total >= min / 100  <=>  positivas * 100 >= min * total (sin división: nunca divide entre 0)
-            predicates.add(cb.gt(game.get("reviewCount"), 0));
+            predicates.add(cb.ge(game.<Integer>get("reviewCount"), ReviewScore.MIN_REVIEWS));
             predicates.add(cb.ge(cb.prod(game.<Number>get("positiveCount"), cb.literal(100)),
                     cb.prod(game.<Number>get("reviewCount"), cb.literal(c.minPositivePercent()))));
         }
@@ -133,6 +135,10 @@ public class GameCriteriaRepository {
                 Expression<Number> positiveRatio = cb.quot(
                         cb.prod(game.<Number>get("positiveCount"), cb.literal(BigDecimal.ONE)),
                         cb.nullif(game.<Integer>get("reviewCount"), 0));
+                // primero los juegos con puntuación (10+ reseñas): 1 reseña al 100 % no supera a 30 al 95 %
+                orders.add(cb.asc(cb.<Integer>selectCase()
+                        .when(cb.ge(game.<Integer>get("reviewCount"), ReviewScore.MIN_REVIEWS), 0)
+                        .otherwise(1)));
                 orders.add(nullsLast(cb, positiveRatio));
                 orders.add(cb.desc(positiveRatio));
                 orders.add(cb.desc(game.get("reviewCount")));
