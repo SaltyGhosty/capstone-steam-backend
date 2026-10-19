@@ -177,6 +177,23 @@ class RecommendationServiceTest {
     }
 
     @Test
+    void ifTheFirstBraceIsNotTheAnswerItTriesTheNextOne() {
+        ChatResponse response = ask("texto {no json} {\"reply\":\"hola\",\"gameIds\":[1]}");
+
+        assertThat(response.reply()).isEqualTo("hola");
+        assertThat(response.games()).extracting("id").containsExactly(1L);
+        assertThat(ask("{\"otro\":1} y luego {\"reply\":\"vale\"}").reply()).isEqualTo("vale");
+    }
+
+    @Test
+    void aReplyWithALiteralNewlineInsideTheStringIsAccepted() {
+        ChatResponse response = ask("{\"reply\":\"línea 1\nlínea 2\",\"gameIds\":[3]}");
+
+        assertThat(response.reply()).isEqualTo("línea 1\nlínea 2");
+        assertThat(response.games()).extracting("id").containsExactly(3L);
+    }
+
+    @Test
     void somethingThatIsNotJsonOrAnEmptyReplyIsUnavailable() {
         for (String bad : new String[] {"lo siento, no sé", "{\"reply\":\"  \",\"gameIds\":[1]}",
                 "{\"gameIds\":[1]}", "{\"reply\":5}", "{roto", ""}) {

@@ -19,6 +19,7 @@ import com.capstone.steam.recommendation.dto.ChatMessage.Role;
 import com.capstone.steam.recommendation.dto.ChatResponse;
 
 import tools.jackson.core.JacksonException;
+import tools.jackson.core.json.JsonReadFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -39,12 +40,15 @@ public class RecommendationService {
     private final ChatModel model;
     private final ChatRateLimiter limiter;
     private final JsonMapper json;
+    /** Solo para leer la respuesta del modelo: admite caracteres de control sin escapar dentro de las cadenas. */
+    private final JsonMapper lenient;
 
     public RecommendationService(RecommendationCatalog catalog, ChatModel model, ChatRateLimiter limiter, JsonMapper json) {
         this.catalog = catalog;
         this.model = model;
         this.limiter = limiter;
         this.json = json;
+        this.lenient = json.rebuild().enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS).build();
     }
 
     /** Sin transacción: el catálogo se lee en {@link RecommendationCatalog} y el modelo se llama después. */
@@ -151,21 +155,30 @@ public class RecommendationService {
 
     private JsonNode firstJsonObject(String raw) {
         int start = raw == null ? -1 : raw.indexOf('{');
-        if (start < 0) {
-            throw new AssistantUnavailableException();
-        }
-        int end = endOfObject(raw, start);
-        if (end < 0) {
-            throw new AssistantUnavailableException();
-        }
-        try {
-            JsonNode root = json.readTree(raw.substring(start, end + 1));
-            if (!root.isObject()) {
-                throw new AssistantUnavailableException();
+        while (start >= 0) {
+            int end = endOfObject(raw, start);
+            if (end > 0) {
+                JsonNode root = tryRead(raw.substring(start, end + 1));
+                if (root != null && root.isObject() && root.has("reply")) {
+                    return root;
+                }
             }
-            return root;
-        } catch (JacksonException e) {
-            throw new AssistantUnavailableException(e);
+            // este {…} no era la respuesta: prueba con la siguiente llave
+            start = raw.indexOf('{', start + 1);
+        }
+        throw new AssistantUnavailableException();
+    }
+
+    /** Lee un objeto; si falla por un salto de línea literal dentro de una cadena, lo reintenta más permisivo. */
+    private JsonNode tryRead(String candidate) {
+        try {
+            return json.readTree(candidate);
+        } catch (JacksonException strict) {
+            try {
+                return lenient.readTree(candidate);
+            } catch (JacksonException e) {
+                return null;
+            }
         }
     }
 
