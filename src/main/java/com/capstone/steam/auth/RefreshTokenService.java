@@ -117,6 +117,12 @@ public class RefreshTokenService {
         repository.revokeAllForUser(userId, clock.instant());
     }
 
+    /** Borra las familias cuyos tokens caducaron todos hace más de {@code grace}. Devuelve las filas borradas. */
+    @Transactional
+    public int purgeExpired(Duration grace) {
+        return repository.deleteExpiredFamilies(clock.instant().minus(grace));
+    }
+
     private static String newRawToken() {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);

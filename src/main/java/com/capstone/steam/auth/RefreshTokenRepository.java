@@ -33,4 +33,15 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update RefreshToken t set t.replacedById = :replacedById where t.id = :id")
     int linkReplacement(Long id, Long replacedById);
+
+    /**
+     * Purga por familias enteras: solo borra las familias cuyos tokens caducaron todos antes de
+     * {@code cutoff}. Nunca borra un token suelto de una familia con algún token vigente, para que
+     * reutilizar un token robado siga tirando la familia viva (D48).
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            delete from RefreshToken t where t.familyId in (
+                select r.familyId from RefreshToken r group by r.familyId having max(r.expiresAt) < :cutoff)""")
+    int deleteExpiredFamilies(Instant cutoff);
 }
