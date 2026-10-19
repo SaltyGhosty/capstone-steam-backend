@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import com.capstone.steam.game.Game;
+import com.capstone.steam.game.ReviewScore;
 import com.capstone.steam.genre.dto.GenreResponse;
 
 /** Tarjeta del catálogo. */
@@ -18,8 +19,9 @@ public record GameSummaryResponse(
         int discountPercent,
         BigDecimal finalPrice,
         LocalDate releaseDate,
-        double averageRating,
-        int ratingCount,
+        int reviewCount,
+        int positivePercent,
+        ReviewScore reviewScore,
         List<GenreResponse> genres,
         String developerName) {
 
@@ -33,8 +35,9 @@ public record GameSummaryResponse(
                 game.getDiscountPercent(),
                 game.getFinalPrice(),
                 game.getReleaseDate(),
-                roundRating(game.getAverageRating()),
-                game.getRatingCount(),
+                game.getReviewCount(),
+                game.getPositivePercent(),
+                game.getReviewScore(),
                 genres(game),
                 game.getDeveloper().getDisplayName());
     }
@@ -44,9 +47,5 @@ public record GameSummaryResponse(
                 .map(GenreResponse::from)
                 .sorted(Comparator.comparing(GenreResponse::name))
                 .toList();
-    }
-
-    static double roundRating(double rating) {
-        return Math.round(rating * 10) / 10.0;
     }
 }

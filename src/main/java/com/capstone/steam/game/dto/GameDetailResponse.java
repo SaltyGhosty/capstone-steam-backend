@@ -9,6 +9,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 
 import com.capstone.steam.game.Game;
 import com.capstone.steam.game.GameStatus;
+import com.capstone.steam.game.ReviewScore;
 import com.capstone.steam.genre.dto.GenreResponse;
 
 /**
@@ -30,8 +31,9 @@ public record GameDetailResponse(
         BigDecimal finalPrice,
         LocalDate releaseDate,
         GameStatus status,
-        double averageRating,
-        int ratingCount,
+        int reviewCount,
+        int positivePercent,
+        ReviewScore reviewScore,
         long salesCount,
         List<GenreResponse> genres,
         DeveloperInfo developer,
@@ -60,8 +62,9 @@ public record GameDetailResponse(
                 game.getFinalPrice(),
                 game.getReleaseDate(),
                 game.getStatus(),
-                GameSummaryResponse.roundRating(game.getAverageRating()),
-                game.getRatingCount(),
+                game.getReviewCount(),
+                game.getPositivePercent(),
+                game.getReviewScore(),
                 game.getSalesCount(),
                 GameSummaryResponse.genres(game),
                 new DeveloperInfo(game.getDeveloper().getId(), game.getDeveloper().getDisplayName()),

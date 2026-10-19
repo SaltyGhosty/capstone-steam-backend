@@ -62,8 +62,8 @@ class ReviewServiceTest {
     void createRequiresTheGameInTheLibrary() {
         when(libraryRepository.existsByUserIdAndGameId(AUTHOR_ID, GAME_ID)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.create(AUTHOR_ID, request(5))).isInstanceOf(ForbiddenException.class);
-        verify(gameRepository, never()).applyRatingDelta(anyLong(), anyLong(), anyInt());
+        assertThatThrownBy(() -> service.create(AUTHOR_ID, request(true))).isInstanceOf(ForbiddenException.class);
+        verify(gameRepository, never()).applyReviewDelta(anyLong(), anyInt(), anyInt());
     }
 
     @Test
@@ -71,59 +71,59 @@ class ReviewServiceTest {
         when(libraryRepository.existsByUserIdAndGameId(AUTHOR_ID, GAME_ID)).thenReturn(true);
         when(reviewRepository.existsByUserIdAndGameId(AUTHOR_ID, GAME_ID)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.create(AUTHOR_ID, request(5))).isInstanceOf(ConflictException.class);
-        verify(gameRepository, never()).applyRatingDelta(anyLong(), anyLong(), anyInt());
+        assertThatThrownBy(() -> service.create(AUTHOR_ID, request(true))).isInstanceOf(ConflictException.class);
+        verify(gameRepository, never()).applyReviewDelta(anyLong(), anyInt(), anyInt());
     }
 
     @Test
-    void createAddsRatingAndOneToTheCounters() {
+    void createAddsOneReviewAndOnePositiveWhenRecommended() {
         when(libraryRepository.existsByUserIdAndGameId(AUTHOR_ID, GAME_ID)).thenReturn(true);
 
-        service.create(AUTHOR_ID, request(4));
+        service.create(AUTHOR_ID, request(true));
 
-        verify(gameRepository).applyRatingDelta(GAME_ID, 4, 1);
+        verify(gameRepository).applyReviewDelta(GAME_ID, 1, 1);
     }
 
     @Test
-    void updateAppliesOnlyTheDifference() {
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(existingReview(2)));
+    void updateChangingTheVoteMovesOnePositive() {
+        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
 
-        service.update(AUTHOR_ID, REVIEW_ID, request(5));
+        service.update(AUTHOR_ID, REVIEW_ID, request(false));
 
-        verify(gameRepository).applyRatingDelta(GAME_ID, 3, 0);
+        verify(gameRepository).applyReviewDelta(GAME_ID, -1, 0);
     }
 
     @Test
     void updateByAnotherUserIsForbidden() {
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(existingReview(2)));
+        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
 
-        assertThatThrownBy(() -> service.update(OTHER_ID, REVIEW_ID, request(1))).isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> service.update(OTHER_ID, REVIEW_ID, request(false))).isInstanceOf(ForbiddenException.class);
     }
 
     @Test
-    void deleteByAdminSubtractsRatingAndOne() {
-        Review review = existingReview(3);
+    void deleteByAdminSubtractsThePositiveAndOneReview() {
+        Review review = existingReview(true);
         when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
 
         service.delete(OTHER_ID, true, REVIEW_ID);
 
         verify(reviewRepository).delete(review);
-        verify(gameRepository).applyRatingDelta(GAME_ID, -3, -1);
+        verify(gameRepository).applyReviewDelta(GAME_ID, -1, -1);
     }
 
     @Test
     void deleteByNonAuthorNonAdminIsForbidden() {
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(existingReview(3)));
+        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(existingReview(true)));
 
         assertThatThrownBy(() -> service.delete(OTHER_ID, false, REVIEW_ID)).isInstanceOf(ForbiddenException.class);
         verify(reviewRepository, never()).delete(any());
     }
 
-    private Review existingReview(int rating) {
-        return new Review(author, game, rating, true, "texto");
+    private Review existingReview(boolean recommended) {
+        return new Review(author, game, recommended, "texto", "es");
     }
 
-    private static ReviewRequest request(int rating) {
-        return new ReviewRequest(GAME_ID, rating, true, "  Muy bueno  ");
+    private static ReviewRequest request(boolean recommended) {
+        return new ReviewRequest(GAME_ID, recommended, "  Muy bueno  ", "es");
     }
 }

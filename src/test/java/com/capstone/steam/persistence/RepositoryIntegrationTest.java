@@ -121,18 +121,28 @@ class RepositoryIntegrationTest {
     }
 
     @Test
-    void applyRatingDeltaHandlesCreateEditAndDelete() {
+    void applyReviewDeltaHandlesCreateEditAndDelete() {
         Game game = em.persist(newGame("rated", "5.00"));
         em.flush();
 
-        games.applyRatingDelta(game.getId(), 4, 1);   // reseÃ±a de 4
-        games.applyRatingDelta(game.getId(), 2, 1);   // reseÃ±a de 2
-        games.applyRatingDelta(game.getId(), 1, 0);   // la de 2 pasa a 3
-        Game afterEdits = games.findById(game.getId()).orElseThrow();
-        assertThat(afterEdits.getAverageRating()).isEqualTo(3.5);
+        games.applyReviewDelta(game.getId(), 1, 1);   // reseña positiva
+        games.applyReviewDelta(game.getId(), 0, 1);   // reseña negativa
+        Game afterCreates = games.findById(game.getId()).orElseThrow();
+        assertThat(afterCreates.getReviewCount()).isEqualTo(2);
+        assertThat(afterCreates.getPositiveCount()).isEqualTo(1);
+        assertThat(afterCreates.getPositivePercent()).isEqualTo(50);
 
-        games.applyRatingDelta(game.getId(), -3, -1); // se borra la de 3
-        assertThat(games.findById(game.getId()).orElseThrow().getAverageRating()).isEqualTo(4.0);
+        games.applyReviewDelta(game.getId(), 1, 0);   // la negativa pasa a positiva
+        assertThat(games.findById(game.getId()).orElseThrow().getPositivePercent()).isEqualTo(100);
+
+        games.applyReviewDelta(game.getId(), -1, -1); // se borra una positiva
+        Game afterDelete = games.findById(game.getId()).orElseThrow();
+        assertThat(afterDelete.getReviewCount()).isEqualTo(1);
+        assertThat(afterDelete.getPositiveCount()).isEqualTo(1);
+        assertThat(afterDelete.getPositivePercent()).isEqualTo(100);
+
+        games.applyReviewDelta(game.getId(), -1, -1); // y la otra: sin reseñas no hay división entre 0
+        assertThat(games.findById(game.getId()).orElseThrow().getPositivePercent()).isZero();
     }
 
     @Test

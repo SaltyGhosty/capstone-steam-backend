@@ -34,12 +34,12 @@ public class Review {
     @JoinColumn(name = "game_id", nullable = false)
     private Game game;
 
-    /** De 1 a 5. */
-    @Column(nullable = false)
-    private int rating;
-
     @Column(nullable = false)
     private boolean recommended;
+
+    /** Idioma en que está escrita: es, en o it. */
+    @Column(nullable = false, length = 5)
+    private String language;
 
     @Column(length = 5000)
     private String body;
@@ -55,12 +55,12 @@ public class Review {
     protected Review() {
     }
 
-    public Review(User user, Game game, int rating, boolean recommended, String body) {
+    public Review(User user, Game game, boolean recommended, String body, String language) {
         this.user = user;
         this.game = game;
-        this.rating = rating;
         this.recommended = recommended;
         this.body = body;
+        this.language = language;
     }
 
     public Long getId() {
@@ -75,20 +75,20 @@ public class Review {
         return game;
     }
 
-    public int getRating() {
-        return rating;
-    }
-
-    public void setRating(int rating) {
-        this.rating = rating;
-    }
-
     public boolean isRecommended() {
         return recommended;
     }
 
     public void setRecommended(boolean recommended) {
         this.recommended = recommended;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
     }
 
     public String getBody() {

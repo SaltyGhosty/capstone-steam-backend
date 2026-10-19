@@ -16,13 +16,15 @@ import com.capstone.steam.game.GameRepository;
 import com.capstone.steam.library.LibraryRepository;
 import com.capstone.steam.review.dto.ReviewRequest;
 import com.capstone.steam.review.dto.ReviewResponse;
+import com.capstone.steam.user.User;
 import com.capstone.steam.user.UserRepository;
 
 /**
- * Reseñas. La media del juego se mantiene con {@link GameRepository#applyRatingDelta} en la misma
- * transacción: si la reseña falla (p. ej. duplicada), el delta hace rollback con ella.
+ * Reseñas. Los contadores del juego (reseñas y positivas) se mantienen con
+ * {@link GameRepository#applyReviewDelta} en la misma transacción: si la reseña falla (p. ej.
+ * duplicada), el delta hace rollback con ella.
  *
- * <p>applyRatingDelta limpia el contexto de persistencia (clearAutomatically), así que la
+ * <p>applyReviewDelta limpia el contexto de persistencia (clearAutomatically), así que la
  * respuesta se construye ANTES de llamarlo, mientras las entidades siguen gestionadas.
  */
 @Service
@@ -67,11 +69,13 @@ public class ReviewService {
             throw new ConflictException("review.alreadyReviewed");
         }
 
-        Review review = reviewRepository.saveAndFlush(new Review(userRepository.getReferenceById(userId), game,
-                request.rating(), request.recommended(), trimToNull(request.body())));
+        User author = userRepository.getReferenceById(userId);
+        String language = request.language() != null ? request.language() : author.getLocale();
+        Review review = reviewRepository.saveAndFlush(
+                new Review(author, game, request.recommended(), trimToNull(request.body()), language));
         ReviewResponse response = ReviewResponse.from(review);
 
-        gameRepository.applyRatingDelta(game.getId(), request.rating(), 1);
+        gameRepository.applyReviewDelta(game.getId(), positive(request.recommended()), 1);
         return response;
     }
 
@@ -81,15 +85,17 @@ public class ReviewService {
         if (!review.getUser().getId().equals(userId)) {
             throw new ForbiddenException("review.authorOnlyEdit");
         }
-        int ratingDelta = request.rating() - review.getRating();
+        int positiveDelta = positive(request.recommended()) - positive(review.isRecommended());
 
-        review.setRating(request.rating());
         review.setRecommended(request.recommended());
         review.setBody(trimToNull(request.body()));
+        if (request.language() != null) {
+            review.setLanguage(request.language());
+        }
         ReviewResponse response = ReviewResponse.from(reviewRepository.saveAndFlush(review));
 
-        if (ratingDelta != 0) {
-            gameRepository.applyRatingDelta(review.getGame().getId(), ratingDelta, 0);
+        if (positiveDelta != 0) {
+            gameRepository.applyReviewDelta(review.getGame().getId(), positiveDelta, 0);
         }
         return response;
     }
@@ -102,9 +108,13 @@ public class ReviewService {
             throw new ForbiddenException("review.authorOrAdminDelete");
         }
         Long gameId = review.getGame().getId();
-        int rating = review.getRating();
+        int positive = positive(review.isRecommended());
         reviewRepository.delete(review);
-        gameRepository.applyRatingDelta(gameId, -rating, -1);
+        gameRepository.applyReviewDelta(gameId, -positive, -1);
+    }
+
+    private static int positive(boolean recommended) {
+        return recommended ? 1 : 0;
     }
 
     private Review findReview(Long reviewId) {

@@ -93,11 +93,11 @@ public class Game {
     @Column(name = "sales_count", nullable = false, insertable = false, updatable = false)
     private long salesCount;
 
-    @Column(name = "rating_sum", nullable = false, insertable = false, updatable = false)
-    private long ratingSum;
+    @Column(name = "review_count", nullable = false, insertable = false, updatable = false)
+    private int reviewCount;
 
-    @Column(name = "rating_count", nullable = false, insertable = false, updatable = false)
-    private int ratingCount;
+    @Column(name = "positive_count", nullable = false, insertable = false, updatable = false)
+    private int positiveCount;
 
     @Version
     @Column(nullable = false)
@@ -130,9 +130,13 @@ public class Game {
                 .divide(HUNDRED, 2, RoundingMode.HALF_UP);
     }
 
-    /** Media de 1 a 5, o 0 si no tiene reseñas. */
-    public double getAverageRating() {
-        return ratingCount == 0 ? 0 : (double) ratingSum / ratingCount;
+    /** Porcentaje de reseñas positivas (0-100), o 0 si no tiene reseñas. */
+    public int getPositivePercent() {
+        return reviewCount == 0 ? 0 : (int) Math.round(100.0 * positiveCount / reviewCount);
+    }
+
+    public ReviewScore getReviewScore() {
+        return ReviewScore.of(positiveCount, reviewCount);
     }
 
     public boolean isPublished() {
@@ -273,12 +277,12 @@ public class Game {
         return salesCount;
     }
 
-    public long getRatingSum() {
-        return ratingSum;
+    public int getReviewCount() {
+        return reviewCount;
     }
 
-    public int getRatingCount() {
-        return ratingCount;
+    public int getPositiveCount() {
+        return positiveCount;
     }
 
     public Long getVersion() {

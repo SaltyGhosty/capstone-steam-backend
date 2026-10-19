@@ -13,7 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Verifica que las migraciones V1-V5 se aplican sobre H2 y que las
+ * Verifica que las migraciones V1-V8 se aplican sobre H2 y que las
  * restricciones clave del esquema funcionan.
  */
 @SpringBootTest
@@ -28,10 +28,10 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV7() {
+    void appliesAllMigrationsUpToV8() {
         var applied = flyway.info().applied();
-        assertThat(applied).hasSize(7);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("7");
+        assertThat(applied).hasSize(8);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("8");
     }
 
     @Test
@@ -55,7 +55,7 @@ class FlywayMigrationTest {
     }
 
     @Test
-    void rejectsInvalidDiscountAndRating() {
+    void rejectsInvalidDiscountAndReviewLanguage() {
         long devId = insertUser("dev");
 
         assertThatThrownBy(() -> jdbc.update("""
@@ -67,8 +67,18 @@ class FlywayMigrationTest {
         long gameId = jdbc.queryForObject("SELECT id FROM games WHERE slug = 'ok'", Long.class);
 
         assertThatThrownBy(() -> jdbc.update(
-                "INSERT INTO reviews (user_id, game_id, rating, recommended) VALUES (?, ?, 6, TRUE)", devId, gameId))
+                "INSERT INTO reviews (user_id, game_id, recommended, language) VALUES (?, ?, TRUE, 'fr')", devId, gameId))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void rejectsMorePositiveThanTotalReviews() {
+        long devId = insertUser("dev2");
+        jdbc.update("INSERT INTO games (title, slug, developer_id, price) VALUES ('Cnt', 'cnt', ?, 10.00)", devId);
+
+        assertThatThrownBy(() -> jdbc.update("UPDATE games SET review_count = 1, positive_count = 2 WHERE slug = 'cnt'"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        jdbc.update("UPDATE games SET review_count = 2, positive_count = 2 WHERE slug = 'cnt'");
     }
 
     @Test

@@ -48,16 +48,16 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     int incrementSalesCount(Collection<Long> gameIds);
 
     /**
-     * Crear una reseña: (rating, +1). Borrarla: (-rating, -1).
-     * Editarla: (nuevo - antiguo, 0).
+     * Crear una reseña: (1 si es positiva y 0 si no, +1). Borrarla: (-1 o 0, -1).
+     * Editarla cambiando el voto: (+1 o -1, 0).
      */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
             update Game g
-               set g.ratingSum = g.ratingSum + :sumDelta,
-                   g.ratingCount = g.ratingCount + :countDelta
+               set g.positiveCount = g.positiveCount + :positiveDelta,
+                   g.reviewCount = g.reviewCount + :countDelta
              where g.id = :gameId""")
-    int applyRatingDelta(Long gameId, long sumDelta, int countDelta);
+    int applyReviewDelta(Long gameId, int positiveDelta, int countDelta);
 
     /** Descuento masivo sobre los juegos publicados de un developer. Esto sí es una edición, así que sube la versión. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)

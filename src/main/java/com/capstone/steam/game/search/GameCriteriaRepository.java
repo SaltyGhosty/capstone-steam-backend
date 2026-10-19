@@ -109,11 +109,11 @@ public class GameCriteriaRepository {
             predicates.add(cb.lessThanOrEqualTo(game.get("releaseDate"), c.releasedBefore()));
         }
 
-        if (c.minRating() != null) {
-            // media >= min  <=>  rating_sum >= min * rating_count (sin división: nunca divide entre 0)
-            predicates.add(cb.gt(game.get("ratingCount"), 0));
-            predicates.add(cb.ge(game.get("ratingSum"),
-                    cb.prod(game.<Number>get("ratingCount"), cb.literal(c.minRating()))));
+        if (c.minPositivePercent() != null) {
+            // positivas / total >= min / 100  <=>  positivas * 100 >= min * total (sin división: nunca divide entre 0)
+            predicates.add(cb.gt(game.get("reviewCount"), 0));
+            predicates.add(cb.ge(cb.prod(game.<Number>get("positiveCount"), cb.literal(100)),
+                    cb.prod(game.<Number>get("reviewCount"), cb.literal(c.minPositivePercent()))));
         }
 
         return predicates.toArray(Predicate[]::new);
@@ -129,13 +129,13 @@ public class GameCriteriaRepository {
             case PRICE_ASC -> orders.add(cb.asc(finalPriceTimes100(cb, game)));
             case PRICE_DESC -> orders.add(cb.desc(finalPriceTimes100(cb, game)));
             case TOP_RATED -> {
-                // media = sum * 1.0 / nullif(count, 0): los juegos sin reseñas (NULL) van al final
-                Expression<Number> average = cb.quot(
-                        cb.prod(game.<Number>get("ratingSum"), cb.literal(BigDecimal.ONE)),
-                        cb.nullif(game.<Integer>get("ratingCount"), 0));
-                orders.add(nullsLast(cb, average));
-                orders.add(cb.desc(average));
-                orders.add(cb.desc(game.get("ratingCount")));
+                // % positivo = positivas * 1.0 / nullif(total, 0): los juegos sin reseñas (NULL) van al final
+                Expression<Number> positiveRatio = cb.quot(
+                        cb.prod(game.<Number>get("positiveCount"), cb.literal(BigDecimal.ONE)),
+                        cb.nullif(game.<Integer>get("reviewCount"), 0));
+                orders.add(nullsLast(cb, positiveRatio));
+                orders.add(cb.desc(positiveRatio));
+                orders.add(cb.desc(game.get("reviewCount")));
             }
             case BEST_SELLING -> orders.add(cb.desc(game.get("salesCount")));
             case TITLE -> orders.add(cb.asc(cb.lower(game.get("title"))));

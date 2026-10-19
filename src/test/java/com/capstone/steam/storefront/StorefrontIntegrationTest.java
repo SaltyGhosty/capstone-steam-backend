@@ -141,34 +141,37 @@ class StorefrontIntegrationTest {
     }
 
     @Test
-    void reviewLifecycleKeepsGameRatingInSync() throws Exception {
+    void reviewLifecycleKeepsGameCountersInSync() throws Exception {
         // sin tener el juego -> 403
         mvc.perform(auth(post("/api/reviews"), playerToken).contentType(MediaType.APPLICATION_JSON)
-                        .content(reviewJson(5)))
+                        .content(reviewJson(true)))
                 .andExpect(status().isForbidden());
 
         grantToPlayer();
         String created = mvc.perform(auth(post("/api/reviews"), playerToken).contentType(MediaType.APPLICATION_JSON)
-                        .content(reviewJson(5)))
+                        .content(reviewJson(true)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.author.displayName").value("player"))
                 .andReturn().getResponse().getContentAsString();
         int reviewId = JsonPath.read(created, "$.id");
 
         mvc.perform(get("/api/games/celeste"))
-                .andExpect(jsonPath("$.averageRating").value(5.0))
-                .andExpect(jsonPath("$.ratingCount").value(1));
+                .andExpect(jsonPath("$.reviewCount").value(1))
+                .andExpect(jsonPath("$.positivePercent").value(100))
+                .andExpect(jsonPath("$.reviewScore").value("NONE"));
 
         // segunda reseña del mismo juego -> 409
         mvc.perform(auth(post("/api/reviews"), playerToken).contentType(MediaType.APPLICATION_JSON)
-                        .content(reviewJson(1)))
+                        .content(reviewJson(false)))
                 .andExpect(status().isConflict());
 
         mvc.perform(auth(put("/api/reviews/" + reviewId), playerToken).contentType(MediaType.APPLICATION_JSON)
-                        .content(reviewJson(3)))
+                        .content(reviewJson(false)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.rating").value(3));
-        mvc.perform(get("/api/games/celeste")).andExpect(jsonPath("$.averageRating").value(3.0));
+                .andExpect(jsonPath("$.recommended").value(false));
+        mvc.perform(get("/api/games/celeste"))
+                .andExpect(jsonPath("$.reviewCount").value(1))
+                .andExpect(jsonPath("$.positivePercent").value(0));
 
         // listado público de reseñas
         mvc.perform(get("/api/games/celeste/reviews"))
@@ -180,17 +183,18 @@ class StorefrontIntegrationTest {
         mvc.perform(auth(delete("/api/reviews/" + reviewId), devToken)).andExpect(status().isForbidden());
         mvc.perform(auth(delete("/api/reviews/" + reviewId), adminToken)).andExpect(status().isNoContent());
         mvc.perform(get("/api/games/celeste"))
-                .andExpect(jsonPath("$.averageRating").value(0.0))
-                .andExpect(jsonPath("$.ratingCount").value(0));
+                .andExpect(jsonPath("$.reviewCount").value(0))
+                .andExpect(jsonPath("$.positivePercent").value(0));
     }
 
     @Test
-    void invalidRatingReturns400() throws Exception {
+    void invalidReviewReturns400() throws Exception {
         grantToPlayer();
         mvc.perform(auth(post("/api/reviews"), playerToken).contentType(MediaType.APPLICATION_JSON)
-                        .content(reviewJson(6)))
+                        .content("""
+                                {"gameId":%d,"body":"Sin voto"}""".formatted(gameId)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.rating").exists());
+                .andExpect(jsonPath("$.errors.recommended").exists());
     }
 
     // ------------------------------------------------------------------
@@ -200,9 +204,9 @@ class StorefrontIntegrationTest {
                 .andExpect(status().isCreated());
     }
 
-    private String reviewJson(int rating) {
+    private String reviewJson(boolean recommended) {
         return """
-                {"gameId":%d,"rating":%d,"recommended":true,"body":"Precioso"}""".formatted(gameId, rating);
+                {"gameId":%d,"recommended":%b,"body":"Precioso","language":"es"}""".formatted(gameId, recommended);
     }
 
     private static MockHttpServletRequestBuilder auth(MockHttpServletRequestBuilder request, String token) {

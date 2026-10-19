@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
@@ -15,6 +15,7 @@ import jakarta.validation.constraints.Size;
  *
  * @param genres  slugs de género; el juego debe tener AL MENOS uno
  * @param minPrice/maxPrice se aplican al precio final (con descuento)
+ * @param minPositivePercent porcentaje mínimo de reseñas positivas (0-100)
  */
 public record GameSearchCriteria(
         @Size(max = 100) String q,
@@ -25,7 +26,7 @@ public record GameSearchCriteria(
         Long developerId,
         LocalDate releasedAfter,
         LocalDate releasedBefore,
-        @DecimalMin("1.0") @DecimalMax("5.0") Double minRating) {
+        @Min(0) @Max(100) Integer minPositivePercent) {
 
     public static GameSearchCriteria empty() {
         return new GameSearchCriteria(null, null, null, null, null, null, null, null, null);

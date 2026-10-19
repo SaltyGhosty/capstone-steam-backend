@@ -7,9 +7,9 @@ import com.capstone.steam.review.Review;
 public record ReviewResponse(
         Long id,
         Long gameId,
-        int rating,
         boolean recommended,
         String body,
+        String language,
         Author author,
         Instant createdAt,
         Instant updatedAt) {
@@ -18,8 +18,9 @@ public record ReviewResponse(
     }
 
     public static ReviewResponse from(Review review) {
-        return new ReviewResponse(review.getId(), review.getGame().getId(), review.getRating(), review.isRecommended(),
-                review.getBody(), new Author(review.getUser().getId(), review.getUser().getDisplayName()),
+        return new ReviewResponse(review.getId(), review.getGame().getId(), review.isRecommended(),
+                review.getBody(), review.getLanguage(),
+                new Author(review.getUser().getId(), review.getUser().getDisplayName()),
                 review.getCreatedAt(), review.getUpdatedAt());
     }
 }

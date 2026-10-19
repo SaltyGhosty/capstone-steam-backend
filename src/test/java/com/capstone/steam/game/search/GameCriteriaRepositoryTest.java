@@ -56,9 +56,9 @@ class GameCriteriaRepositoryTest {
         em.persist(draft);
         em.flush();
 
-        games.applyRatingDelta(hollow.getId(), 10, 2);
-        games.applyRatingDelta(hades.getId(), 4, 1);
-        games.applyRatingDelta(orange.getId(), 3, 1);
+        games.applyReviewDelta(hollow.getId(), 2, 2);
+        games.applyReviewDelta(hades.getId(), 1, 1);
+        games.applyReviewDelta(orange.getId(), 0, 1);
         increment(hollow, 3);
         increment(hades, 5);
         increment(elden, 10);
@@ -95,9 +95,9 @@ class GameCriteriaRepositoryTest {
     }
 
     @Test
-    void onSaleAndMinRatingFilters() {
+    void onSaleAndMinPositivePercentFilters() {
         assertThat(titles(criteria().onSale().build(), GameSort.TITLE)).containsExactly("Hades");
-        assertThat(titles(criteria().minRating(4.0).build(), GameSort.TITLE)).containsExactly("Hades", "Hollow Knight");
+        assertThat(titles(criteria().minPositivePercent(50).build(), GameSort.TITLE)).containsExactly("Hades", "Hollow Knight");
     }
 
     @Test
@@ -107,7 +107,7 @@ class GameCriteriaRepositoryTest {
     }
 
     @Test
-    void sortsByFinalPriceRatingAndSales() {
+    void sortsByFinalPricePositivePercentAndSales() {
         // Hollow Knight y Hades empatan a 15.00: desempata el id
         assertThat(titles(GameSearchCriteria.empty(), GameSort.PRICE_ASC))
                 .containsExactly("100% Orange Juice", "Hollow Knight", "Hades", "Elden Ring");
@@ -162,17 +162,17 @@ class GameCriteriaRepositoryTest {
         private BigDecimal minPrice;
         private BigDecimal maxPrice;
         private Boolean onSale;
-        private Double minRating;
+        private Integer minPositivePercent;
 
         CriteriaBuilder q(String value) { this.q = value; return this; }
         CriteriaBuilder genres(String... slugs) { this.genres = List.of(slugs); return this; }
         CriteriaBuilder minPrice(String value) { this.minPrice = new BigDecimal(value); return this; }
         CriteriaBuilder maxPrice(String value) { this.maxPrice = new BigDecimal(value); return this; }
         CriteriaBuilder onSale() { this.onSale = true; return this; }
-        CriteriaBuilder minRating(double value) { this.minRating = value; return this; }
+        CriteriaBuilder minPositivePercent(int value) { this.minPositivePercent = value; return this; }
 
         GameSearchCriteria build() {
-            return new GameSearchCriteria(q, genres, minPrice, maxPrice, onSale, null, null, null, minRating);
+            return new GameSearchCriteria(q, genres, minPrice, maxPrice, onSale, null, null, null, minPositivePercent);
         }
     }
 }
