@@ -34,6 +34,8 @@ export interface User {
   createdAt: string;
   locale: Locale;
   profilePublic: boolean;
+  /** false hasta que el dueño pulsa el enlace del correo (sin verificar no puede iniciar sesión). */
+  emailVerified: boolean;
 }
 
 export interface RegisterRequest {
@@ -51,6 +53,13 @@ export interface UpdateProfileRequest {
   avatarUrl?: string;
   locale?: Locale;
   profilePublic?: boolean;
+}
+
+/** Registro con verificación de email: cuenta creada pero sin sesión hasta pulsar el enlace del correo. */
+export interface RegisterResponse {
+  id: number;
+  email: string;
+  verificationRequired: true;
 }
 
 export interface AuthResponse {

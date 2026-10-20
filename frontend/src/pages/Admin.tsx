@@ -149,6 +149,15 @@ function UsersTab() {
     }
   };
 
+  const verifyEmail = async (u: User) => {
+    try {
+      replace(await adminApi.verifyEmail(u.id));
+      notify(t('admin.verified', { user: u.username }));
+    } catch (e) {
+      notifyError(e);
+    }
+  };
+
   const grant = async (e: FormEvent, u: User) => {
     e.preventDefault();
     const gameId = Number(gift[u.id]);
@@ -187,6 +196,12 @@ function UsersTab() {
                   title={u.enabled ? t('admin.disable') : t('admin.enable')}>
                   {u.enabled ? t('admin.active') : t('admin.inactive')}
                 </button>
+                {!u.emailVerified && (
+                  <div className="chips">
+                    <span className="badge pending">{t('admin.unverified')}</span>
+                    <button className="chip" onClick={() => verifyEmail(u)}>{t('admin.verify')}</button>
+                  </div>
+                )}
               </td>
               <td>
                 <form className="inline-form" onSubmit={(e) => grant(e, u)}>

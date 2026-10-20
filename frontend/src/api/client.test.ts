@@ -219,4 +219,22 @@ describe('cliente de la API', () => {
     expect(error.status).toBe(0);
     expect(error.message).toMatch(/backend/);
   });
+
+  it('ApiError.code toma el code del ProblemDetail para distinguir errores del mismo status', async () => {
+    mockFetch({ 'POST /api/auth/login': { status: 403, body: { detail: 'Sin verificar', code: 'auth.emailNotVerified' } } });
+
+    const error = await api<never>('/api/auth/login', { method: 'POST', body: {} }).catch((e: unknown) => e as ApiError);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(403);
+    expect(error.code).toBe('auth.emailNotVerified');
+  });
+
+  it('sin code en la respuesta, ApiError.code queda undefined', async () => {
+    mockFetch({ 'GET /api/cart': { status: 404, body: { detail: 'No existe' } } });
+
+    const error = await api<never>('/api/cart').catch((e: unknown) => e as ApiError);
+
+    expect(error.code).toBeUndefined();
+  });
 });

@@ -11,7 +11,8 @@ export function mockFetch(routes: Routes) {
     const route = routes[key];
     if (!route) return new Response(JSON.stringify({ detail: `Sin mock para ${key}` }), { status: 500 });
     const { status = 200, body } = typeof route === 'function' ? route(init) : route;
-    return new Response(body === undefined ? '' : JSON.stringify(body), { status });
+    // un 204 no puede llevar cuerpo (ni siquiera vacío): el constructor de Response lo rechaza
+    return new Response(body === undefined && status !== 204 ? '' : body === undefined ? null : JSON.stringify(body), { status });
   });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;

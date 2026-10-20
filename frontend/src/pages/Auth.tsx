@@ -1,24 +1,12 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { ApiError } from '@/api/client';
 import type { AccountType } from '@/api/types';
+import AuthShell from '@/components/AuthShell';
 import { FieldError } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
 import { useI18n } from '@/i18n';
-
-function AuthShell({ eyebrow, title, children, footer }: { eyebrow: string; title: string; children: ReactNode; footer: ReactNode }) {
-  return (
-    <div className="auth">
-      <div className="auth-card panel">
-        <span className="brand-mark"><span /></span>
-        <p className="eyebrow">{eyebrow}</p>
-        <h2>{title}</h2>
-        {children}
-        <p className="auth-footer">{footer}</p>
-      </div>
-    </div>
-  );
-}
+import { ResendVerification } from './EmailVerification';
 
 function useRedirectTarget() {
   const location = useLocation();
@@ -32,6 +20,8 @@ export function Login() {
   const target = useRedirectTarget();
   const [form, setForm] = useState({ login: '', password: '' });
   const [error, setError] = useState('');
+  // La cuenta existe pero falta pulsar el enlace del correo: se ofrece reenviarlo
+  const [unverified, setUnverified] = useState(false);
   const [busy, setBusy] = useState(false);
 
   if (user) return <Navigate to={target} replace />;
@@ -40,12 +30,17 @@ export function Login() {
     e.preventDefault();
     setBusy(true);
     setError('');
+    setUnverified(false);
     try {
       await login(form.login.trim(), form.password);
       notify(t('auth.welcomeBack'));
       navigate(target, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('auth.loginFailed'));
+      if (err instanceof ApiError && err.code === 'auth.emailNotVerified') {
+        setUnverified(true);
+      } else {
+        setError(err instanceof ApiError ? err.message : t('auth.loginFailed'));
+      }
     } finally {
       setBusy(false);
     }
@@ -66,6 +61,13 @@ export function Login() {
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="primary full" disabled={busy}>{busy ? t('auth.entering') : t('auth.enter')}</button>
       </form>
+      {unverified && (
+        <>
+          <p className="form-error" role="alert">{t('verify.notVerified')}</p>
+          {/* si escribió un email se usa tal cual; si escribió un usuario, el reenvío pide el email */}
+          <ResendVerification email={form.login.includes('@') ? form.login.trim() : undefined} />
+        </>
+      )}
     </AuthShell>
   );
 }
@@ -91,8 +93,13 @@ export function Register() {
     setError('');
     try {
       // Los correos salen en el idioma elegido con las banderas; se puede cambiar luego en Ajustes
-      await register({ ...form, displayName: form.displayName.trim() || undefined, locale: lang });
+      const result = await register({ ...form, displayName: form.displayName.trim() || undefined, locale: lang });
       notify(t('auth.created'));
+      // Con verificación de email no hay sesión: primero hay que pulsar el enlace del correo
+      if (result.verificationRequired) {
+        navigate(`/check-email?email=${encodeURIComponent(result.email)}`, { replace: true });
+        return;
+      }
       navigate(form.accountType === 'DEVELOPER' ? '/developer' : target, { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {

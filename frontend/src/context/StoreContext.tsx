@@ -15,7 +15,10 @@ interface StoreValue {
   booting: boolean;
   hasRole: (role: Role) => boolean;
   login: (login: string, password: string) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
+  /** verificationRequired: la cuenta existe pero no hay sesión hasta verificar el email. */
+  register: (data: RegisterRequest) => Promise<{ verificationRequired: boolean; email: string }>;
+  /** Canjea el enlace del correo e inicia la sesión. */
+  verifyEmail: (token: string) => Promise<User>;
   logout: () => void;
   setUser: (user: User) => void;
 
@@ -118,7 +121,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const register = useCallback<StoreValue['register']>(
     async (data) => {
       const res = await authApi.register(data);
+      // Con la verificación de email activa no hay sesión: hay que pulsar el enlace del correo
+      if ('verificationRequired' in res) return { verificationRequired: true, email: res.email };
       await startSession(res.accessToken, res.refreshToken, res.user);
+      return { verificationRequired: false, email: res.user.email };
+    },
+    [startSession],
+  );
+
+  const verifyEmail = useCallback<StoreValue['verifyEmail']>(
+    async (token) => {
+      const res = await authApi.verifyEmail(token);
+      await startSession(res.accessToken, res.refreshToken, res.user);
+      return res.user;
     },
     [startSession],
   );
@@ -196,12 +211,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<StoreValue>(
     () => ({
-      user, booting, hasRole, login, register, logout, setUser,
+      user, booting, hasRole, login, register, verifyEmail, logout, setUser,
       cart, refreshCart, addToCart, removeFromCart,
       wishlistIds, toggleWishlist,
       toast, notify, notifyError, requireLogin,
     }),
-    [user, booting, hasRole, login, register, logout, cart, refreshCart, addToCart, removeFromCart,
+    [user, booting, hasRole, login, register, verifyEmail, logout, cart, refreshCart, addToCart, removeFromCart,
       wishlistIds, toggleWishlist, toast, notify, notifyError, requireLogin],
   );
 

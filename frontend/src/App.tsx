@@ -9,6 +9,7 @@ import Cart from '@/pages/Cart';
 import { Library, Wishlist } from '@/pages/Collection';
 import { DeveloperGameForm, DeveloperGames } from '@/pages/Developer';
 import Discover from '@/pages/Discover';
+import { CheckEmail, VerifyEmail } from '@/pages/EmailVerification';
 import Friends from '@/pages/Friends';
 import GameDetail from '@/pages/GameDetail';
 import { OrderDetail, OrderList } from '@/pages/Orders';
@@ -33,6 +34,8 @@ export default function App() {
         <Route path="games/:slug" element={<GameDetail />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
+        <Route path="check-email" element={<CheckEmail />} />
+        <Route path="verify-email" element={<VerifyEmail />} />
 
         <Route path="library" element={<RequireAuth><Library /></RequireAuth>} />
         <Route path="wishlist" element={<RequireAuth><Wishlist /></RequireAuth>} />

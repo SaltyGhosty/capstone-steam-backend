@@ -2,7 +2,7 @@
 import { api } from './client';
 import type {
   AuthResponse, Cart, CatalogQuery, ChatMessage, ChatResponse, GameDetail, GameRequest, GameStatus, GameSummary, Genre,
-  LibraryEntry, Locale, Order, OrderSummary, Ownership, PageResponse, PaymentMethod, RegisterRequest, Review, ReviewRequest, Role,
+  LibraryEntry, Locale, Order, OrderSummary, Ownership, PageResponse, PaymentMethod, RegisterRequest, RegisterResponse, Review, ReviewRequest, Role,
   FriendRequest, FriendRequests, FriendResponse, PublicProfile, SearchHit, SteamSyncResult, UpdateProfileRequest, User,
   WishlistItem,
 } from './types';
@@ -12,8 +12,15 @@ const page = (p = 0, size = 20) => ({ page: p, size });
 export const authApi = {
   login: (login: string, password: string) =>
     api<AuthResponse>('/api/auth/login', { method: 'POST', body: { login, password } }),
+  /** Con la verificación de email activa no devuelve sesión sino un RegisterResponse. */
   register: (body: RegisterRequest) =>
-    api<AuthResponse>('/api/auth/register', { method: 'POST', body }),
+    api<AuthResponse | RegisterResponse>('/api/auth/register', { method: 'POST', body }),
+  /** Canjea el enlace del correo: verifica el email y devuelve la sesión. */
+  verifyEmail: (token: string) =>
+    api<AuthResponse>('/api/auth/verify-email', { method: 'POST', body: { token } }),
+  /** Siempre 204, exista o no la cuenta. */
+  resendVerification: (email: string) =>
+    api<void>('/api/auth/resend-verification', { method: 'POST', body: { email } }),
   /** Revoca el refresh token en el servidor (204). */
   logout: (refreshToken: string) =>
     api<void>('/api/auth/logout', { method: 'POST', body: { refreshToken }, keepalive: true }),
@@ -127,6 +134,7 @@ export const adminApi = {
   setRoles: (id: number, roles: Role[]) => api<User>(`/api/admin/users/${id}/roles`, { method: 'PUT', body: { roles } }),
   setEnabled: (id: number, enabled: boolean) =>
     api<User>(`/api/admin/users/${id}/enabled`, { method: 'PATCH', body: { enabled } }),
+  verifyEmail: (id: number) => api<User>(`/api/admin/users/${id}/verify-email`, { method: 'POST' }),
   grantGame: (userId: number, gameId: number) =>
     api<LibraryEntry>(`/api/admin/users/${userId}/library/${gameId}`, { method: 'POST' }),
   createGenre: (name: string) => api<Genre>('/api/admin/genres', { method: 'POST', body: { name } }),
