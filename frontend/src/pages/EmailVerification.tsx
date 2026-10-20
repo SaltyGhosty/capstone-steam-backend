@@ -73,34 +73,59 @@ export function VerifyEmail() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const token = params.get('token');
-  const [failed, setFailed] = useState(!token);
-  // La promesa se guarda para que el doble montaje de React en desarrollo (StrictMode) no gaste
-  // el token dos veces: la segunda petición daría «no válido» justo después de iniciar sesión
-  const attempt = useRef<Promise<User> | null>(null);
+  // null = verificando; 'invalid' = el backend dijo 400 (usado, caducado o inexistente); otro texto = fallo
+  // distinto (red, 5xx, 429, usuario ya cogido, cuenta desactivada), que se muestra tal cual con «Reintentar»
+  const [failure, setFailure] = useState<{ kind: 'invalid' } | { kind: 'other'; message: string } | null>(
+    token ? null : { kind: 'invalid' },
+  );
+  const [attemptNo, setAttemptNo] = useState(0);
+  // La promesa se guarda (con su token) para que el doble montaje de React en desarrollo (StrictMode) no gaste
+  // el enlace dos veces: la segunda petición daría «no válido» justo después de iniciar sesión.
+  const attempt = useRef<{ token: string; no: number; promise: Promise<User> } | null>(null);
 
   useEffect(() => {
     if (!token) return;
-    attempt.current ??= verifyEmail(token);
+    // el token no se queda en la barra de direcciones ni en el historial
+    window.history.replaceState(window.history.state, '', window.location.pathname);
+    if (attempt.current?.token !== token || attempt.current.no !== attemptNo) {
+      attempt.current = { token, no: attemptNo, promise: verifyEmail(token) };
+    }
     let active = true;
-    attempt.current
+    attempt.current.promise
       .then((user) => {
         if (!active) return;
         notify(t('verify.done'));
         navigate(user.roles.includes('ROLE_DEVELOPER') ? '/developer' : '/', { replace: true });
       })
-      .catch(() => {
-        if (active) setFailed(true);
+      .catch((err: unknown) => {
+        if (!active) return;
+        if (err instanceof ApiError && err.status === 400) setFailure({ kind: 'invalid' });
+        else setFailure({ kind: 'other', message: err instanceof ApiError ? err.message : t('common.somethingWrong') });
       });
     return () => {
       active = false;
     };
-  }, [token, verifyEmail, notify, navigate, t]);
+  }, [token, attemptNo, verifyEmail, notify, navigate, t]);
 
-  if (failed) {
+  const retry = () => {
+    setFailure(null);
+    setAttemptNo((n) => n + 1);
+  };
+
+  if (failure?.kind === 'invalid') {
     return (
       <AuthShell eyebrow={t('verify.eyebrow')} title={t('verify.invalid')}
         footer={<Link to="/login">{t('auth.loginTitle')}</Link>}>
         <ResendVerification />
+      </AuthShell>
+    );
+  }
+  if (failure?.kind === 'other') {
+    return (
+      <AuthShell eyebrow={t('verify.eyebrow')} title={t('verify.failedTitle')}
+        footer={<Link to="/login">{t('auth.loginTitle')}</Link>}>
+        <p className="form-error" role="alert">{failure.message}</p>
+        <button className="secondary full" onClick={retry}>{t('common.retry')}</button>
       </AuthShell>
     );
   }

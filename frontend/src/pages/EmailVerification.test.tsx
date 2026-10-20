@@ -1,6 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { useNavigate } from 'react-router';
+import { describe, expect, it, vi } from 'vitest';
 import { getRefreshToken, getToken } from '@/api/client';
 import { useStore } from '@/context/StoreContext';
 import { mockFetch, page } from '@/test/http';
@@ -100,6 +101,66 @@ describe('verificación de email', () => {
     expect(await screen.findByText(/Si la cuenta está pendiente/)).toBeInTheDocument();
     const resend = fetchMock.mock.calls.find(([url]) => String(url) === '/api/auth/resend-verification')!;
     expect(JSON.parse(String(resend[1]!.body))).toEqual({ email: 'ana@test.com' });
+  });
+
+  it('un fallo que no es 400 muestra su mensaje y deja reintentar sin llamarlo enlace inválido', async () => {
+    let calls = 0;
+    const fetchMock = mockFetch({
+      'POST /api/auth/verify-email': () => (++calls === 1
+        ? { status: 503, body: { detail: 'Servicio no disponible, inténtalo más tarde' } }
+        : { body: session() }),
+      ...sessionRoutes,
+    });
+    const { path } = renderRoutes({ '/verify-email': <VerifyEmail />, '/': <p>Inicio</p> }, '/verify-email?token=abc');
+
+    expect(await screen.findByText('Servicio no disponible, inténtalo más tarde')).toBeInTheDocument();
+    expect(screen.queryByText('El enlace no es válido o ha caducado.')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Tu email')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+    await waitFor(() => expect(path()).toBe('/'));
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/auth/verify-email')).toHaveLength(2);
+  });
+
+  it('un 409 (usuario ya cogido) tampoco se muestra como enlace inválido', async () => {
+    mockFetch({ 'POST /api/auth/verify-email': { status: 409, body: { detail: 'El nombre de usuario ya está en uso' } } });
+    renderRoutes({ '/verify-email': <VerifyEmail /> }, '/verify-email?token=abc');
+
+    expect(await screen.findByText('El nombre de usuario ya está en uso')).toBeInTheDocument();
+    expect(screen.queryByText('El enlace no es válido o ha caducado.')).not.toBeInTheDocument();
+  });
+
+  it('quita el token de la barra de direcciones', async () => {
+    const replaceState = vi.spyOn(window.history, 'replaceState');
+    mockFetch({ 'POST /api/auth/verify-email': { body: session() }, ...sessionRoutes });
+    const { path } = renderRoutes({ '/verify-email': <VerifyEmail />, '/': <p>Inicio</p> }, '/verify-email?token=abc');
+
+    await waitFor(() => expect(path()).toBe('/'));
+    expect(replaceState).toHaveBeenCalled();
+    expect(String(replaceState.mock.calls[0]![2])).not.toContain('token');
+    replaceState.mockRestore();
+  });
+
+  it('si cambia el token se canjea el nuevo', async () => {
+    const fetchMock = mockFetch({
+      'POST /api/auth/verify-email': (init) => (JSON.parse(String(init.body)).token === 'viejo'
+        ? { status: 400, body: { detail: 'El enlace no es válido o ha caducado.' } }
+        : { body: session() }),
+      ...sessionRoutes,
+    });
+    function GoToNew() {
+      const navigate = useNavigate();
+      return <button onClick={() => navigate('/verify-email?token=nuevo')}>ir</button>;
+    }
+    const { path } = renderRoutes({ '/verify-email': <><VerifyEmail /><GoToNew /></>, '/': <p>Inicio</p> }, '/verify-email?token=viejo');
+
+    await screen.findByText('El enlace no es válido o ha caducado.');
+    await userEvent.click(screen.getByRole('button', { name: 'ir' }));
+
+    await waitFor(() => expect(path()).toBe('/'));
+    const tokens = fetchMock.mock.calls.filter(([url]) => String(url) === '/api/auth/verify-email')
+      .map(([, init]) => JSON.parse(String(init!.body)).token);
+    expect(tokens).toEqual(['viejo', 'nuevo']);
   });
 
   it('/verify-email sin token muestra enlace inválido sin llamar a la API', () => {
