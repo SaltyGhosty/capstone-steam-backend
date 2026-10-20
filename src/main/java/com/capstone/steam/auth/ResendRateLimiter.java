@@ -26,7 +26,8 @@ public class ResendRateLimiter extends SlidingWindowLimiter {
     }
 
     ResendRateLimiter(Clock clock, int perHour, int maxEntries) {
-        super(clock, perHour, Duration.ofHours(1), maxEntries, "auth.resendRateLimited");
+        // Retry-After constante (la ventana entera): el valor exacto delataría la hora de la última actividad del email
+        super(clock, perHour, Duration.ofHours(1), maxEntries, "auth.resendRateLimited", false);
     }
 
     /** Emails con intentos en el mapa (para los tests). */

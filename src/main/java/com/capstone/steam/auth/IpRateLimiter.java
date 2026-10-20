@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 public class IpRateLimiter extends SlidingWindowLimiter {
 
     static final int MAX_ENTRIES = 100_000;
+    private static final java.util.regex.Pattern IPV6_LITERAL =
+            java.util.regex.Pattern.compile("^[0-9A-Fa-f:.]+(%[A-Za-z0-9._-]+)?$");
 
     @Autowired
     public IpRateLimiter(Clock clock, IpLimitProperties properties) {
@@ -31,7 +33,8 @@ public class IpRateLimiter extends SlidingWindowLimiter {
     }
 
     static String keyOf(String remoteAddr) {
-        if (remoteAddr == null || !remoteAddr.contains(":")) {
+        // solo un literal IPv6 se interpreta: InetAddress.getByName con otra cosa podría hacer una consulta DNS
+        if (remoteAddr == null || !remoteAddr.contains(":") || !IPV6_LITERAL.matcher(remoteAddr).matches()) {
             return remoteAddr == null ? "?" : remoteAddr;
         }
         try {
@@ -55,6 +58,6 @@ public class IpRateLimiter extends SlidingWindowLimiter {
     }
 
     IpRateLimiter(Clock clock, int perMinute) {
-        super(clock, perMinute, Duration.ofMinutes(1), MAX_ENTRIES, "auth.tooManyRequests");
+        super(clock, perMinute, Duration.ofMinutes(1), MAX_ENTRIES, "auth.tooManyRequests", true);
     }
 }

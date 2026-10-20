@@ -26,13 +26,20 @@ public class SlidingWindowLimiter {
     private final Duration window;
     private final int maxEntries;
     private final String errorCode;
+    private final boolean exactRetryAfter;
     private volatile Instant nextSweep;
     /** Último barrido completo hecho por tener el mapa lleno: como mucho uno por segundo. */
     private volatile Instant lastFullSweep = Instant.MIN;
     private final java.util.concurrent.atomic.AtomicInteger fullSweeps = new java.util.concurrent.atomic.AtomicInteger();
 
-    /** @param errorCode clave del texto 429 en messages*.properties */
-    protected SlidingWindowLimiter(Clock clock, int max, Duration window, int maxEntries, String errorCode) {
+    /**
+     * @param errorCode       clave del texto 429 en messages*.properties
+     * @param exactRetryAfter {@code true}: Retry-After es el tiempo real hasta que caduque el intento más antiguo;
+     *                        {@code false}: siempre la ventana entera (no delata la hora de la última actividad)
+     */
+    protected SlidingWindowLimiter(Clock clock, int max, Duration window, int maxEntries, String errorCode,
+            boolean exactRetryAfter) {
+        this.exactRetryAfter = exactRetryAfter;
         this.clock = clock;
         this.max = max;
         this.window = window;
@@ -58,7 +65,7 @@ public class SlidingWindowLimiter {
             }
         }
         boolean[] allowed = {false};
-        long[] retryAfter = {1};
+        long[] retryAfter = {window.toSeconds()};
         hits.compute(key, (k, queue) -> {
             Deque<Instant> q = queue == null ? new ArrayDeque<>() : queue;
             evictOld(q, now);
@@ -67,7 +74,9 @@ public class SlidingWindowLimiter {
                 allowed[0] = true;
             } else {
                 // cuando caduque el intento más antiguo de la ventana vuelve a haber hueco
-                retryAfter[0] = Duration.between(now, q.peekFirst().plus(window)).toSeconds() + 1;
+                if (exactRetryAfter && !q.isEmpty()) { // con max = 0 la cola está vacía: se queda la ventana entera
+                    retryAfter[0] = Duration.between(now, q.peekFirst().plus(window)).toSeconds() + 1;
+                }
             }
             return q.isEmpty() ? null : q;
         });

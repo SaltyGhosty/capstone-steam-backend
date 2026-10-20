@@ -30,6 +30,39 @@ class IpRateLimiterTest {
     }
 
     @Test
+    void aNonLiteralStringIsUsedAsIsWithoutAnyLookup() {
+        // «unknown:1» no es una IP: no se pasa a InetAddress (podría hacer una consulta DNS), se usa tal cual
+        assertThat(IpRateLimiter.keyOf("unknown:1")).isEqualTo("unknown:1");
+        assertThat(IpRateLimiter.keyOf("host.example.com:8080")).isEqualTo("host.example.com:8080");
+    }
+
+    @Test
+    void theIpLimitRetryAfterIsTheRealTimeUntilThereIsRoom() {
+        IpRateLimiter limiter = new IpRateLimiter(Clock.systemUTC(), 1);
+        limiter.checkAddress("203.0.113.1");
+
+        assertThatThrownBy(() -> limiter.checkAddress("203.0.113.1"))
+                .isInstanceOfSatisfying(com.capstone.steam.common.exception.RateLimitedException.class,
+                        e -> assertThat(e.getRetryAfterSeconds()).isBetween(1L, 61L));
+    }
+
+    @Test
+    void aLimitOfZeroRejectsEverythingInsteadOfFailingWithANullPointer() {
+        IpRateLimiter limiter = new IpRateLimiter(Clock.systemUTC(), 0);
+
+        assertThatThrownBy(() -> limiter.checkAddress("203.0.113.1"))
+                .isInstanceOfSatisfying(com.capstone.steam.common.exception.RateLimitedException.class,
+                        e -> assertThat(e.getRetryAfterSeconds()).isEqualTo(60L));
+    }
+
+    @Test
+    void thePropertiesRejectALimitBelowOne() {
+        var validator = jakarta.validation.Validation.buildDefaultValidatorFactory().getValidator();
+        assertThat(validator.validate(new IpLimitProperties(0))).isNotEmpty();
+        assertThat(validator.validate(new IpLimitProperties(60))).isEmpty();
+    }
+
+    @Test
     void anIpv4MappedIpv6AddressUsesTheIpv4Key() {
         assertThat(IpRateLimiter.keyOf("::ffff:203.0.113.7")).isEqualTo("203.0.113.7");
     }

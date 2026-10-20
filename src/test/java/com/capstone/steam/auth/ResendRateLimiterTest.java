@@ -118,7 +118,7 @@ class ResendRateLimiterTest {
     }
 
     @Test
-    void theRejectionCarriesTheSecondsUntilThereIsRoomAgain() {
+    void theEmailLimitAlwaysSendsTheWholeWindowAsRetryAfter() {
         limiter.check("ana@test.com");
         clock.advance(Duration.ofMinutes(10));
         limiter.check("ana@test.com");
@@ -126,7 +126,7 @@ class ResendRateLimiterTest {
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> limiter.check("ana@test.com"))
                 .isInstanceOfSatisfying(com.capstone.steam.common.exception.RateLimitedException.class,
-                        e -> assertThat(e.getRetryAfterSeconds()).isBetween(3000L, 3001L)); // caduca el primero en 50 min
+                        e -> assertThat(e.getRetryAfterSeconds()).isEqualTo(3600L)); // constante: no delata cuándo fue el último intento
     }
 
     @Test

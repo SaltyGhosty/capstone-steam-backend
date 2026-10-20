@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 428 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 89 tests en 15 archivos · CI en GitHub Actions |
+| **Tests** | Backend: 432 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 89 tests en 15 archivos · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 74 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -314,7 +314,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 428 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 432 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
@@ -371,7 +371,7 @@ node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD>                    
 node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD> --api https://tu-api.onrender.com # contra el despliegue
 ```
 
-El seed espera (lo que diga `Retry-After`) y reintenta si la API le responde 429 por el límite por IP (contra producción tarda unos minutos; no hace falta tocar variables de Render); otros 429 los trata como error. Valida la cuenta de admin **antes de registrar la primera cuenta**, para no dejar cuentas sin verificar, y si relanzas el seed tras una ejecución a medias verifica con el admin las cuentas que quedaron pendientes (no las vuelve a registrar). La API exige verificar el email de las cuentas nuevas, así que el seed las verifica con la cuenta de admin (`POST /api/admin/users/{id}/verify-email`). La contraseña va en `--admin-password` o en la variable `ADMIN_PASSWORD` (el usuario, por defecto `admin`, en `--admin-login`). Sin ella, el seed termina con «Falta --admin-password» en cuanto necesita verificar una cuenta. En una base ya sembrada, relanzarlo no crea nada y no necesita la contraseña.
+El seed espera (lo que diga `Retry-After`) y reintenta si la API le responde 429 por el límite por IP (contra producción tarda unos minutos; no hace falta tocar variables de Render); otros 429 los trata como error. Valida la cuenta de admin **antes de registrar la primera cuenta**, para no dejar cuentas sin verificar, y si relanzas el seed tras una ejecución a medias verifica con el admin las cuentas que quedaron pendientes (no las vuelve a registrar). La API exige verificar el email de las cuentas nuevas, así que el seed las verifica con la cuenta de admin (`POST /api/admin/users/{id}/verify-email`). La contraseña va en `--admin-password` o en la variable `ADMIN_PASSWORD` (el usuario, por defecto `admin`, en `--admin-login`). Sin ella, el seed termina con «Falta --admin-password» antes de registrar la primera cuenta nueva (asume que la API exige verificar el email, como en dev y prod; solo los tests la desactivan). Solo verifica a mano cuentas cuyo email es el del seed. En una base ya sembrada, relanzarlo no crea nada y no necesita la contraseña.
 
 Las portadas, cápsulas e imágenes de cabecera se enlazan desde el CDN de Steam (`cdn.cloudflare.steamstatic.com`), tanto en la tienda como en el correo de recibo. Los nombres, las imágenes y las marcas pertenecen a sus respectivos estudios y editores; se usan solo como datos de demostración en este proyecto educativo. Los textos de las reseñas son propios; las descripciones de los juegos nuevos vienen de la tienda de Steam.
 

@@ -7,8 +7,8 @@
 //
 // La API exige verificar el email de las cuentas nuevas: el seed las verifica con la cuenta de admin
 // (POST /api/admin/users/{id}/verify-email). Su contraseña va en --admin-password o en la variable
-// ADMIN_PASSWORD; el usuario, por defecto «admin», en --admin-login. Sin contraseña de admin el seed
-// solo puede continuar si la API tiene la verificación desactivada.
+// ADMIN_PASSWORD; el usuario, por defecto «admin», en --admin-login. Se pide y se valida antes de registrar la
+// primera cuenta nueva: sin ella el seed termina sin registrar nada (solo los tests desactivan la verificación).
 //
 // Se puede repetir: lo que ya existe (usuarios, juegos, compras, reseñas…) se salta.
 // Para sembrar un backend con rechazo aleatorio de pagos, conviene arrancarlo con PAYMENT_FAILURE_RATE=0:
@@ -100,6 +100,10 @@ async function verifyExisting(username) {
   const page = await call('GET', `/api/admin/users?q=${encodeURIComponent(username)}&size=100`, { token });
   const found = page.content.find((u) => u.username.toLowerCase() === username.toLowerCase());
   if (!found) throw new Error(`La cuenta ${username} está sin verificar y no aparece en el listado de admin`);
+  // solo se verifica a mano una cuenta que es del seed (su email es el que el seed le pone), nunca la de otra persona
+  if (found.email !== `${username}@demo.capstone-steam.local`) {
+    throw new Error(`La cuenta ${username} existe con otro email (${found.email}): no es del seed y no se verifica`);
+  }
   try {
     await call('POST', `/api/admin/users/${found.id}/verify-email`, { token });
   } catch (e) {

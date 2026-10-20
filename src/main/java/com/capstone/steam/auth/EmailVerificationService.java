@@ -165,7 +165,10 @@ public class EmailVerificationService {
     public void resend(String email) {
         String key = normalize(email);
         rateLimiter.check(key);
-        userRepository.findByEmail(key).filter(user -> !user.isEmailVerified()).ifPresent(user -> {
+        // se bloquea la fila del usuario antes de leer sus enlaces, en el mismo orden que verify (usuario -> enlaces);
+        // la fila se lee ya con el bloqueo, así que el estado «verificada» es el actual
+        userRepository.findIdByEmail(key).flatMap(userRepository::findByIdForUpdate)
+                .filter(user -> !user.isEmailVerified()).ifPresent(user -> {
             List<EmailVerificationToken> all = tokens.findByUserIdOrderByIdDesc(user.getId());
             for (EmailVerificationToken source : pendingRegistrations(user.getId())) {
                 PendingRegistration data = source.pending();
