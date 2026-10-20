@@ -2,8 +2,13 @@
 // Carga el catálogo demo (juegos reales de Steam) a través de la API, como lo haría un usuario:
 // estudios que publican sus juegos, jugadores que compran, juegan, reseñan y guardan en la wishlist.
 //
-//   node scripts/seed-demo.mjs                              # contra http://localhost:8081
-//   node scripts/seed-demo.mjs --api https://mi-api.onrender.com
+//   node scripts/seed-demo.mjs --admin-password <pwd>                       # contra http://localhost:8081
+//   node scripts/seed-demo.mjs --admin-password <pwd> --api https://mi-api.onrender.com
+//
+// La API exige verificar el email de las cuentas nuevas: el seed las verifica con la cuenta de admin
+// (POST /api/admin/users/{id}/verify-email). Su contraseña va en --admin-password o en la variable
+// ADMIN_PASSWORD; el usuario, por defecto «admin», en --admin-login. Sin contraseña de admin el seed
+// solo puede continuar si la API tiene la verificación desactivada.
 //
 // Se puede repetir: lo que ya existe (usuarios, juegos, compras, reseñas…) se salta.
 // Para sembrar un backend con rechazo aleatorio de pagos, conviene arrancarlo con PAYMENT_FAILURE_RATE=0:
@@ -15,6 +20,9 @@ import { assignReviews, gameReviewTexts } from './demo-reviews.mjs';
 
 const apiArg = process.argv.indexOf('--api');
 const API = (apiArg > 0 ? process.argv[apiArg + 1] : 'http://localhost:8081').replace(/\/$/, '');
+const argValue = (name) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : undefined; };
+const ADMIN_LOGIN = argValue('--admin-login') ?? 'admin';
+const ADMIN_PASSWORD = argValue('--admin-password') ?? process.env.ADMIN_PASSWORD;
 const data = JSON.parse(await readFile(new URL('./demo-data.json', import.meta.url), 'utf8'));
 const VALID_CARD = '4242424242424242';
 const DECLINED_CARD = '4242424242420000';
@@ -22,7 +30,7 @@ const DECLINED_CARD = '4242424242420000';
 const coverUrl = (appId) => `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900_2x.jpg`;
 
 class HttpError extends Error {
-  constructor(status, detail) { super(`${status} ${detail}`); this.status = status; }
+  constructor(status, detail, code) { super(`${status} ${detail}`); this.status = status; this.code = code; }
 }
 
 // El token de acceso dura 15 min. Si caduca a mitad del seed se hace login de nuevo con la misma cuenta.
@@ -49,22 +57,44 @@ async function call(method, path, { token, body, accept = [] } = {}) {
   }
   const text = await res.text();
   const json = text ? JSON.parse(text) : null;
-  if (!res.ok && !accept.includes(res.status)) throw new HttpError(res.status, json?.detail ?? json?.title ?? text);
+  if (!res.ok && !accept.includes(res.status)) throw new HttpError(res.status, json?.detail ?? json?.title ?? text, json?.code);
   return json;
 }
 
-/** Inicia sesión y, si la cuenta no existe (401), la registra. Devuelve token, id y el usuario. */
+// Token del admin para verificar cuentas: se pide una vez y se renueva antes de que caduque (15 min).
+let adminSession = null;
+async function adminToken() {
+  if (!ADMIN_PASSWORD) {
+    console.error('Falta --admin-password: la API exige verificar el email');
+    process.exit(1);
+  }
+  if (!adminSession || Date.now() - adminSession.at > 10 * 60 * 1000) {
+    const res = await call('POST', '/api/auth/login', { body: { login: ADMIN_LOGIN, password: ADMIN_PASSWORD } });
+    adminSession = { token: res.accessToken, at: Date.now() };
+  }
+  return adminSession.token;
+}
+
+/**
+ * Inicia sesión y, si la cuenta no existe (401) o está pendiente de verificar (403 auth.emailNotVerified),
+ * la registra y, si la API pide verificar el email, la verifica con el admin. Devuelve token, id y el usuario.
+ */
 async function account(username, displayName, accountType) {
+  const login = () => call('POST', '/api/auth/login', { body: { login: username, password: data.password } });
   try {
-    const res = await call('POST', '/api/auth/login', { body: { login: username, password: data.password } });
+    const res = await login();
     sessionUser.set(res.accessToken, username);
     return { token: res.accessToken, created: false, id: res.user.id, user: res.user };
   } catch (e) {
-    if (e.status !== 401) throw e;
+    if (e.status !== 401 && !(e.status === 403 && e.code === 'auth.emailNotVerified')) throw e;
   }
-  const res = await call('POST', '/api/auth/register', { body: {
+  const reg = await call('POST', '/api/auth/register', { body: {
     username, displayName, accountType, password: data.password, email: `${username}@demo.capstone-steam.local`,
   } });
+  if (reg.verificationRequired) {
+    await call('POST', `/api/admin/users/${reg.id}/verify-email`, { token: await adminToken() });
+  }
+  const res = reg.verificationRequired ? await login() : reg;
   sessionUser.set(res.accessToken, username);
   return { token: res.accessToken, created: true, id: res.user.id, user: res.user };
 }
