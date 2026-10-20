@@ -12,6 +12,7 @@ import com.capstone.steam.auth.dto.LoginRequest;
 import com.capstone.steam.auth.dto.RefreshRequest;
 import com.capstone.steam.auth.dto.RegisterRequest;
 import com.capstone.steam.auth.dto.RegistrationResult;
+import com.capstone.steam.auth.dto.ResendVerificationRequest;
 import com.capstone.steam.auth.dto.VerifyEmailRequest;
 
 import jakarta.validation.Valid;
@@ -21,9 +22,11 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final AuthService authService;
+    private final EmailVerificationService verificationService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, EmailVerificationService verificationService) {
         this.authService = authService;
+        this.verificationService = verificationService;
     }
 
     @PostMapping("/register")
@@ -41,6 +44,13 @@ public class AuthController {
     @PostMapping("/verify-email")
     public AuthResponse verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
         return authService.verifyEmail(request.token());
+    }
+
+    /** Siempre 204: no revela si el email existe ni si ya está verificado. Máximo 3 por hora y email. */
+    @PostMapping("/resend-verification")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        verificationService.resend(request.email());
     }
 
     /** Canjea un refresh token por un acceso y un refresh nuevos. */

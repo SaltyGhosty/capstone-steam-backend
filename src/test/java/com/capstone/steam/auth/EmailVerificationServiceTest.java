@@ -43,7 +43,8 @@ class EmailVerificationServiceTest {
     @BeforeEach
     void setUp() {
         service = new EmailVerificationService(tokens, userRepository, events,
-                new EmailVerificationProperties(true, Duration.ofDays(1), 3), Clock.fixed(NOW, ZoneOffset.UTC));
+                new EmailVerificationProperties(true, Duration.ofDays(1), 3), Clock.fixed(NOW, ZoneOffset.UTC),
+                new ResendRateLimiter(Clock.fixed(NOW, ZoneOffset.UTC), 3));
     }
 
     private static User user(long id) {

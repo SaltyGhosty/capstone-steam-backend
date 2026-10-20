@@ -2,6 +2,7 @@ package com.capstone.steam.auth;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Locale;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.capstone.steam.common.exception.BadRequestException;
+import com.capstone.steam.notification.event.VerificationEmailEvent;
 import com.capstone.steam.user.User;
 import com.capstone.steam.user.UserRepository;
 
@@ -24,10 +26,13 @@ public class EmailVerificationService {
     private final ApplicationEventPublisher events;
     private final EmailVerificationProperties properties;
     private final Clock clock;
+    private final ResendRateLimiter rateLimiter;
 
     @Autowired
     public EmailVerificationService(EmailVerificationTokenRepository tokens, UserRepository userRepository,
-            ApplicationEventPublisher events, EmailVerificationProperties properties, Clock clock) {
+            ApplicationEventPublisher events, EmailVerificationProperties properties, Clock clock,
+            ResendRateLimiter rateLimiter) {
+        this.rateLimiter = rateLimiter;
         this.tokens = tokens;
         this.userRepository = userRepository;
         this.events = events;
@@ -64,6 +69,22 @@ public class EmailVerificationService {
         User user = userRepository.findWithRolesById(token.getUserId()).orElseThrow(EmailVerificationService::invalid);
         user.setEmailVerified(true);
         return user;
+    }
+
+    /**
+     * Reenvía el enlace. Responde igual exista o no la cuenta, esté o no verificada (el controlador
+     * devuelve siempre 204); solo una cuenta pendiente recibe un enlace nuevo, que anula el anterior.
+     * El límite por email se aplica antes de mirar la BD, así el 429 tampoco delata nada.
+     */
+    @Transactional
+    public void resend(String email) {
+        String key = email.trim().toLowerCase(Locale.ROOT);
+        rateLimiter.check(key);
+        userRepository.findByEmail(key).filter(user -> !user.isEmailVerified()).ifPresent(user -> {
+            String token = issue(user);
+            events.publishEvent(new VerificationEmailEvent(user.getEmail(), user.getDisplayName(), user.getLocale(),
+                    token));
+        });
     }
 
     /** ¿Tiene la cuenta un enlace que todavía no ha caducado? */

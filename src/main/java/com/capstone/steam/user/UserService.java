@@ -93,6 +93,14 @@ public class UserService {
         return UserResponse.from(user);
     }
 
+    /** El admin da el email por verificado (soporte y seed). Idempotente. */
+    @Transactional
+    public UserResponse verifyEmail(Long userId) {
+        User user = findWithRoles(userId);
+        user.setEmailVerified(true);
+        return UserResponse.from(user);
+    }
+
     private User findWithRoles(Long userId) {
         return userRepository.findWithRolesById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
     }

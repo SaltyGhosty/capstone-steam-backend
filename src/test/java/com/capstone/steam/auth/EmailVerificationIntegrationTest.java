@@ -33,6 +33,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.capstone.steam.notification.event.UserRegisteredEvent;
+import com.capstone.steam.notification.event.VerificationEmailEvent;
 import com.jayway.jsonpath.JsonPath;
 
 /** Flujo completo de la verificación de email con el interruptor activado (en los demás tests va desactivado). */
@@ -211,7 +212,120 @@ class EmailVerificationIntegrationTest {
                 .andExpect(jsonPath("$.code").doesNotExist());
     }
 
+    // ------------------------------------------------------------------ reenvío
+
+    @Test
+    void resendAlwaysReturns204() throws Exception {
+        register("pendiente", "pendiente@test.com").andExpect(status().isCreated());
+        register("hecha", "hecha@test.com").andExpect(status().isCreated());
+        verify(lastToken()).andExpect(status().isOk());
+        events.clear();
+
+        resend("nadie@test.com").andExpect(status().isNoContent());
+        resend("hecha@test.com").andExpect(status().isNoContent());
+        assertThat(events.stream(VerificationEmailEvent.class).count()).isZero();
+
+        resend("pendiente@test.com").andExpect(status().isNoContent());
+        VerificationEmailEvent event = events.stream(VerificationEmailEvent.class).findFirst().orElseThrow();
+        assertThat(event.email()).isEqualTo("pendiente@test.com");
+        assertThat(event.verificationToken()).hasSize(43);
+    }
+
+    @Test
+    void resendRejectsAMalformedEmail() throws Exception {
+        resend("no-es-un-email").andExpect(status().isBadRequest());
+        resend("").andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void resendInvalidatesThePreviousLink() throws Exception {
+        register("ana", "ana.reenvio@test.com").andExpect(status().isCreated());
+        String first = lastToken();
+
+        resend("ana.reenvio@test.com").andExpect(status().isNoContent());
+        String second = events.stream(VerificationEmailEvent.class).reduce((a, b) -> b).orElseThrow()
+                .verificationToken();
+
+        assertThat(second).isNotEqualTo(first);
+        verify(first).andExpect(status().isBadRequest());
+        verify(second).andExpect(status().isOk());
+    }
+
+    @Test
+    void resendNormalizesTheEmail() throws Exception {
+        register("ana", "ana.norm@test.com").andExpect(status().isCreated());
+
+        resend(" Ana.Norm@Test.com ").andExpect(status().isNoContent());
+        resend("ANA.NORM@test.com").andExpect(status().isNoContent());
+        resend("ana.norm@test.com").andExpect(status().isNoContent());
+        // las tres variantes cuentan como el mismo email
+        resend("  ana.norm@TEST.com").andExpect(status().isTooManyRequests());
+        assertThat(events.stream(VerificationEmailEvent.class).count()).isEqualTo(3);
+    }
+
+    @Test
+    void fourthResendInAnHourIs429() throws Exception {
+        register("ana", "ana.limite@test.com").andExpect(status().isCreated());
+
+        for (int i = 0; i < 3; i++) {
+            resend("ana.limite@test.com").andExpect(status().isNoContent());
+        }
+        resend("ana.limite@test.com").andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.detail").value("Has pedido demasiados correos. Inténtalo dentro de una hora."))
+                .andExpect(jsonPath("$.code").value("auth.resendRateLimited"));
+        // el 429 también sale para un email que no existe: no delata nada
+        for (int i = 0; i < 3; i++) {
+            resend("fantasma@test.com").andExpect(status().isNoContent());
+        }
+        resend("fantasma@test.com").andExpect(status().isTooManyRequests());
+
+        clock.now = clock.now.plus(Duration.ofHours(1)).plusSeconds(1);
+        resend("ana.limite@test.com").andExpect(status().isNoContent());
+    }
+
+    // ------------------------------------------------------------------ verificación por el admin
+
+    @Test
+    void adminCanVerifyAnAccount() throws Exception {
+        long id = id(register("ana", "ana.admin@test.com").andExpect(status().isCreated()));
+        login("ana", "password123").andExpect(status().isForbidden());
+
+        mvc.perform(post("/api/admin/users/" + id + "/verify-email").header(HttpHeaders.AUTHORIZATION, "Bearer " + admin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.emailVerified").value(true));
+        // idempotente
+        mvc.perform(post("/api/admin/users/" + id + "/verify-email").header(HttpHeaders.AUTHORIZATION, "Bearer " + admin()))
+                .andExpect(status().isOk());
+
+        login("ana", "password123").andExpect(status().isOk());
+        mvc.perform(post("/api/admin/users/999999/verify-email").header(HttpHeaders.AUTHORIZATION, "Bearer " + admin()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void nonAdminCannotVerify() throws Exception {
+        long id = id(register("ana", "ana.sinadmin@test.com").andExpect(status().isCreated()));
+        mvc.perform(post("/api/admin/users/" + id + "/verify-email")).andExpect(status().isUnauthorized());
+
+        register("jugador", "jugador@test.com").andExpect(status().isCreated());
+        String token = JsonPath.read(verify(lastToken()).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(), "$.accessToken");
+        mvc.perform(post("/api/admin/users/" + id + "/verify-email").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden());
+        login("ana", "password123").andExpect(status().isForbidden()); // sigue sin verificar
+    }
+
     // ------------------------------------------------------------------ utilidades
+
+    private String admin() throws Exception {
+        return JsonPath.read(login("admin", "Admin12345!").andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(), "$.accessToken");
+    }
+
+    private ResultActions resend(String email) throws Exception {
+        return mvc.perform(post("/api/auth/resend-verification").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"%s\"}".formatted(email)));
+    }
 
     private ResultActions register(String username, String email) throws Exception {
         return register(username, email, "password123", "PLAYER");
