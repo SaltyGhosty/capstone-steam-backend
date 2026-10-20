@@ -23,7 +23,10 @@ const BOOST_REGEN = 14;
 const BALL_DRAG = 0.5;
 const BALL_BOUNCE = 0.8;
 const BALL_MAX = 520;
-const AI_SPEED = 120;
+const AI_SPEED = 125;
+const AI_WOBBLE = 0.15;
+const AI_DISTRACT_EVERY = 5;
+const AI_DISTRACT_FOR = 0.8;
 
 export interface Car { x: number; y: number; angle: number; speed: number }
 export interface MatchState {
@@ -74,7 +77,7 @@ function drive(car: Car, dt: number, throttle: number, steer: number, turbo: boo
 }
 
 /** La IA se coloca detrás del balón (en línea con la portería que ataca) y empuja. */
-function aiInput(ai: Car, ball: MatchState['ball']) {
+function aiInput(ai: Car, ball: MatchState['ball'], elapsed: number) {
   const goalX = 0;
   const goalY = FIELD_H / 2;
   const gx = ball.x - goalX;
@@ -84,8 +87,11 @@ function aiInput(ai: Car, ball: MatchState['ball']) {
   const toBall = Math.hypot(ball.x - ai.x, ball.y - ai.y);
   // Cerca del balón va a por él; si no, a su punto de ataque
   const target = toBall < 60 ? ball : behind;
-  const diff = wrap(Math.atan2(target.y - ai.y, target.x - ai.x) - ai.angle);
-  return { steer: Math.abs(diff) < 0.05 ? 0 : Math.sign(diff), throttle: Math.abs(diff) < 1.3 ? 1 : 0 };
+  // Puntería imperfecta: el rumbo oscila, y cada pocos segundos se despista un momento
+  const wobble = toBall < 60 ? 0 : AI_WOBBLE * Math.sin(elapsed * 1.9);
+  const diff = wrap(Math.atan2(target.y - ai.y, target.x - ai.x) - ai.angle + wobble);
+  const distracted = elapsed % AI_DISTRACT_EVERY < AI_DISTRACT_FOR;
+  return { steer: Math.abs(diff) < 0.05 ? 0 : Math.sign(diff), throttle: !distracted && Math.abs(diff) < 1.3 ? 1 : 0 };
 }
 
 function carHitsBall(car: Car, ball: MatchState['ball']): { car: Car; ball: MatchState['ball'] } {
@@ -124,7 +130,7 @@ export function stepMatch(state: MatchState, dt: number, input: DemoInput): Matc
   const turbo = input.action && input.up && state.boost > 0;
   const boost = turbo ? Math.max(0, state.boost - BOOST_DRAIN * dt) : Math.min(100, state.boost + BOOST_REGEN * dt);
   let player = drive(state.player, dt, (input.up ? 1 : 0) - (input.down ? 1 : 0), (input.right ? 1 : 0) - (input.left ? 1 : 0), turbo);
-  const control = aiInput(state.ai, state.ball);
+  const control = aiInput(state.ai, state.ball, elapsed);
   let ai = drive(state.ai, dt, control.throttle, control.steer, false, AI_SPEED);
 
   let ball = {

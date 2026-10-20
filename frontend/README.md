@@ -74,7 +74,7 @@ Minijuegos propios (sin sprites, música ni nombres de los juegos reales) inspir
 | Slug | Juego | Controles | Fin |
 |---|---|---|---|
 | `celeste` | Plataformas: tres pantallas hasta la cumbre | ← → mover · Espacio saltar · X impulso en el aire | Llegar a la cumbre (tiempo y caídas) |
-| `vampire-survivors` | Supervivencia: el ataque es automático | Flechas o WASD | Aguantar 60 s o perder las 5 vidas |
+| `vampire-survivors` | Supervivencia: el ataque es automático | Flechas o WASD | Aguantar 60 s o perder las 6 vidas |
 | `rocket-league` | Fútbol 2D contra un coche rival | ↑ acelerar · ↓ frenar · ← → girar · Espacio turbo | Partido de 60 s |
 | `balatro` | Cartas: póquer por puntos (objetivo 300) | Ratón, teclado o toque | Superar el objetivo o quedarse sin manos (5 manos, 2 descartes) |
 
@@ -92,7 +92,7 @@ Minijuegos propios (sin sprites, música ni nombres de los juegos reales) inspir
 
 ## Tests
 
-`npm test`: 130 tests en 22 archivos.
+`npm test`: 145 tests en 22 archivos.
 
 | Archivo | Qué comprueba |
 |---|---|

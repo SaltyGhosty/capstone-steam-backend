@@ -10,7 +10,7 @@ export const ENEMY_RADIUS = 8;
 export const ATTACK_RADIUS = 95;
 
 const PLAYER_SPEED = 140;
-const START_HP = 5;
+const START_HP = 6;
 const INVULN_SECONDS = 1;
 const WAVE_EVERY = 15;
 const WAVE_SIZE = 8;
