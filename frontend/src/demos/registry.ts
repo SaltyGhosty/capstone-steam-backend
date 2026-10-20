@@ -28,7 +28,7 @@ export const DEMOS: DemoDefinition[] = [
     mechanicKey: 'demos.balatro.mechanic',
     controlsKey: 'demos.balatro.controls',
     needsKeyboard: false,
-    load: () => import('./placeholder/PlaceholderDemo'),
+    load: () => import('./balatro/BalatroDemo'),
   },
 ];
 
