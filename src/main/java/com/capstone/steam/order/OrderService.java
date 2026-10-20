@@ -119,7 +119,10 @@ public class OrderService {
         if (request.method() == PaymentMethod.CREDIT_CARD && request.cardNumber() == null) {
             throw new BadRequestException("order.cardRequired");
         }
-        Order order = findOwnOrder(userId, orderId);
+        // D33: lectura con bloqueo; un pago concurrente espera aquí, ve el estado final y da 409
+        // sin llamar a la pasarela. Pedido ajeno o inexistente: 404 (D31).
+        Order order = orderRepository.findOwnForUpdate(orderId, userId)
+                .orElseThrow(() -> NotFoundException.of("order", orderId));
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new ConflictException("order.notPayable", order.getStatus().name());
         }

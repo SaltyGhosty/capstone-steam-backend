@@ -1,6 +1,10 @@
 package com.capstone.steam.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -17,13 +21,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.capstone.steam.common.exception.ConflictException;
+import com.capstone.steam.common.exception.NotFoundException;
 import com.capstone.steam.game.Game;
+import com.capstone.steam.game.GameStatus;
 import com.capstone.steam.game.GameRepository;
 import com.capstone.steam.order.Order;
 import com.capstone.steam.order.OrderRepository;
+import com.capstone.steam.order.OrderService;
+import com.capstone.steam.order.PaymentMethod;
+import com.capstone.steam.order.dto.PayRequest;
+import com.capstone.steam.order.payment.PaymentGateway;
 import com.capstone.steam.user.User;
 import com.capstone.steam.user.UserRepository;
 
@@ -49,6 +61,10 @@ class AtomicUpdateConcurrencyTest {
     @Autowired private UserRepository users;
     @Autowired private GameRepository games;
     @Autowired private OrderRepository orders;
+    @Autowired private OrderService orderService;
+    @MockitoSpyBean private PaymentGateway gateway;
+
+    private Long userId;
 
     private Long gameId;
     private Long orderId;
@@ -62,6 +78,8 @@ class AtomicUpdateConcurrencyTest {
             Order order = new Order(user);
             order.addItem(game);
             orders.save(order);
+            game.setStatus(GameStatus.PUBLISHED);
+            userId = user.getId();
             gameId = game.getId();
             orderId = order.getId();
         });
@@ -83,6 +101,30 @@ class AtomicUpdateConcurrencyTest {
 
         assertThat(results).filteredOn(r -> r == 1).hasSize(1);
         assertThat(results).filteredOn(r -> r == 0).hasSize(THREADS - 1);
+    }
+
+    /** D33: el bloqueo pesimista hace que el pedido se cobre una sola vez, no solo que se marque una vez. */
+    @Test
+    void concurrentPaymentsOfTheSameOrderChargeTheGatewayExactlyOnce() throws Exception {
+        PayRequest card = new PayRequest(PaymentMethod.CREDIT_CARD, "4242424242424242");
+        List<Integer> results = runConcurrently(() -> {
+            try {
+                orderService.pay(userId, orderId, card);
+                return 200;
+            } catch (ConflictException e) {
+                return 409;
+            }
+        });
+
+        assertThat(results).filteredOn(r -> r == 200).hasSize(1);
+        assertThat(results).filteredOn(r -> r == 409).hasSize(THREADS - 1);
+        verify(gateway, times(1)).charge(any(), any(), any(), any());
+    }
+
+    @Test
+    void payingSomeoneElsesOrderIsStillNotFound() {
+        PayRequest card = new PayRequest(PaymentMethod.CREDIT_CARD, "4242424242424242");
+        assertThatThrownBy(() -> orderService.pay(userId + 9999, orderId, card)).isInstanceOf(NotFoundException.class);
     }
 
     /** Lanza THREADS tareas que arrancan a la vez (latch) y devuelve sus resultados. */

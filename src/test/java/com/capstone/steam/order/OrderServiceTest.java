@@ -79,6 +79,7 @@ class OrderServiceTest {
         order = new Order(user);
         order.addItem(game);
         lenient().when(orderRepository.findWithItemsById(ORDER_ID)).thenReturn(Optional.of(order));
+        lenient().when(orderRepository.findOwnForUpdate(ORDER_ID, USER_ID)).thenReturn(Optional.of(order));
         lenient().when(libraryRepository.findOwnedGameIds(anyLong(), anyCollection())).thenReturn(Set.of());
         lenient().when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(paymentGateway.newReference()).thenReturn("SIM-1");
