@@ -83,6 +83,25 @@ class ResendRateLimiterTest {
     }
 
     @Test
+    void theMapNeverGrowsPastItsCapAndDropsTheOldestEntries() {
+        limiter = new ResendRateLimiter(clock, 3, 10);
+        for (int i = 0; i < 50; i++) {
+            limiter.check("victima" + i + "@test.com");
+            clock.advance(Duration.ofSeconds(1));
+            assertThat(limiter.trackedEmails()).isLessThanOrEqualTo(10);
+        }
+        // los últimos siguen contando; los más antiguos se descartaron (y vuelven a tener todo su cupo)
+        for (int i = 0; i < 3; i++) {
+            limiter.check("victima0@test.com");
+        }
+        assertThatThrownBy(() -> {
+            for (int i = 0; i < 3; i++) {
+                limiter.check("victima49@test.com");
+            }
+        }).isInstanceOf(TooManyRequestsException.class);
+    }
+
+    @Test
     void idleEntriesAreSweptSoTheMapDoesNotGrowForever() {
         limiter.check("ana@test.com");
         limiter.check("leo@test.com");

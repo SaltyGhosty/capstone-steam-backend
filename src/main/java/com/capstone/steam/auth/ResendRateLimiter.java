@@ -23,10 +23,13 @@ public class ResendRateLimiter {
 
     static final Duration WINDOW = Duration.ofHours(1);
     private static final Duration SWEEP_EVERY = Duration.ofMinutes(5);
+    /** Tope de emails distintos en memoria: un atacante con millones de emails no puede llenar el heap. */
+    static final int MAX_ENTRIES = 10_000;
 
     private final ConcurrentHashMap<String, Deque<Instant>> hits = new ConcurrentHashMap<>();
     private final Clock clock;
     private final int perHour;
+    private final int maxEntries;
     private volatile Instant nextSweep;
 
     @Autowired
@@ -35,8 +38,13 @@ public class ResendRateLimiter {
     }
 
     ResendRateLimiter(Clock clock, int perHour) {
+        this(clock, perHour, MAX_ENTRIES);
+    }
+
+    ResendRateLimiter(Clock clock, int perHour, int maxEntries) {
         this.clock = clock;
         this.perHour = perHour;
+        this.maxEntries = maxEntries;
         this.nextSweep = clock.instant().plus(SWEEP_EVERY);
     }
 
@@ -44,6 +52,9 @@ public class ResendRateLimiter {
     public void check(String emailKey) {
         Instant now = clock.instant();
         sweepIfDue(now);
+        if (hits.size() >= maxEntries && !hits.containsKey(emailKey)) {
+            makeRoom(now);
+        }
         boolean[] allowed = {false};
         hits.compute(emailKey, (key, queue) -> {
             Deque<Instant> q = queue == null ? new ArrayDeque<>() : queue;
@@ -59,6 +70,33 @@ public class ResendRateLimiter {
         }
     }
 
+    /** Mapa lleno: barrido de lo caducado y, si sigue lleno, se descarta el 10 % de los más antiguos. */
+    private void makeRoom(Instant now) {
+        sweep(now);
+        if (hits.size() < maxEntries) {
+            return;
+        }
+        int toDrop = Math.max(1, maxEntries / 10);
+        hits.entrySet().stream()
+                .sorted(java.util.Comparator.comparing(e -> lastHit(e.getValue())))
+                .limit(toDrop)
+                .map(java.util.Map.Entry::getKey)
+                .toList()
+                .forEach(hits::remove);
+    }
+
+    private static Instant lastHit(Deque<Instant> queue) {
+        synchronized (queue) {
+            Instant last = queue.peekLast();
+            return last == null ? Instant.MIN : last;
+        }
+    }
+
+    /** Vacía el estado (para los tests). */
+    void clear() {
+        hits.clear();
+    }
+
     /** Emails con intentos en el mapa (para los tests). */
     int trackedEmails() {
         return hits.size();
@@ -69,6 +107,10 @@ public class ResendRateLimiter {
             return;
         }
         nextSweep = now.plus(SWEEP_EVERY);
+        sweep(now);
+    }
+
+    private void sweep(Instant now) {
         hits.keySet().forEach(key -> hits.computeIfPresent(key, (k, q) -> {
             evictOld(q, now);
             return q.isEmpty() ? null : q;

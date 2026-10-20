@@ -55,9 +55,9 @@ class EmailServiceTest {
     void neverSendsToReservedDomainsLikeTheDemoAccounts() {
         var service = new EmailService(mailSender, "tienda@capstone.test", "ARCADE", STORE, "smtp-user@gmail.com");
 
-        service.sendWelcome("demo_player@demo.capstone-steam.local", "Demo", "es", null);
-        service.sendWelcome("ana@example.com", "Ana", "es", null);
-        service.sendWelcome("bob@shop.test", "Bob", "es", null);
+        service.sendWelcome("demo_player@demo.capstone-steam.local", "Demo", "es", null, null);
+        service.sendWelcome("ana@example.com", "Ana", "es", null, null);
+        service.sendWelcome("bob@shop.test", "Bob", "es", null, null);
 
         verifyNoInteractions(mailSender);
         assertThat(EmailService.isReservedDomain("player@test.com")).isFalse(); // test.com es un dominio real
@@ -223,7 +223,7 @@ class EmailServiceTest {
     @Test
     void mailArrivesWithTheStoreNameAsSender() throws Exception {
         new EmailService(mailSender, "tienda@capstone.test", "Mi Tienda", STORE, "smtp-user@gmail.com")
-                .sendWelcome("a@test.com", "Ana", "es", null);
+                .sendWelcome("a@test.com", "Ana", "es", null, null);
 
         MimeMessage message = sentMessage();
         InternetAddress from = (InternetAddress) message.getFrom()[0];
@@ -236,7 +236,7 @@ class EmailServiceTest {
     @Test
     void emptySenderNameFallsBackToArcade() throws Exception {
         new EmailService(mailSender, "tienda@capstone.test", " ", STORE, "smtp-user@gmail.com")
-                .sendWelcome("a@test.com", "Ana", "es", null);
+                .sendWelcome("a@test.com", "Ana", "es", null, null);
 
         MimeMessage message = sentMessage();
         assertThat(((InternetAddress) message.getFrom()[0]).getPersonal()).isEqualTo("ARCADE");
@@ -267,7 +267,7 @@ class EmailServiceTest {
 
     @Test
     void userWithoutDisplayNameGetsAPlainGreeting() throws Exception {
-        new EmailService(mailSender, "", "ARCADE", STORE, "smtp-user@gmail.com").sendWelcome("a@test.com", null, "es", null);
+        new EmailService(mailSender, "", "ARCADE", STORE, "smtp-user@gmail.com").sendWelcome("a@test.com", null, "es", null, null);
 
         assertThat((String) sentMessage().getContent()).contains("¡Hola!").doesNotContain("¡Hola, ");
     }
@@ -283,7 +283,7 @@ class EmailServiceTest {
 
     @Test
     void emptyFromFallsBackToSmtpUsername() throws Exception {
-        new EmailService(mailSender, "", "ARCADE", STORE, "smtp-user@gmail.com").sendWelcome("a@test.com", "Ana", "es", null);
+        new EmailService(mailSender, "", "ARCADE", STORE, "smtp-user@gmail.com").sendWelcome("a@test.com", "Ana", "es", null, null);
 
         assertThat(((InternetAddress) sentMessage().getFrom()[0]).getAddress()).isEqualTo("smtp-user@gmail.com");
     }
@@ -291,7 +291,7 @@ class EmailServiceTest {
     @Test
     void mailFromIsTrimmed() throws Exception {
         new EmailService(mailSender, "  tienda@capstone.test 	", "ARCADE", STORE, "smtp-user@gmail.com")
-                .sendWelcome("a@test.com", "Ana", "es", null);
+                .sendWelcome("a@test.com", "Ana", "es", null, null);
 
         assertThat(((InternetAddress) sentMessage().getFrom()[0]).getAddress()).isEqualTo("tienda@capstone.test");
     }
@@ -309,7 +309,7 @@ class EmailServiceTest {
     @Test
     void withoutSmtpCredentialsNothingIsSent() {
         JavaMailSender untouched = mock(JavaMailSender.class);
-        new EmailService(untouched, "", "ARCADE", STORE, "").sendWelcome("a@test.com", "Ana", "es", null);
+        new EmailService(untouched, "", "ARCADE", STORE, "").sendWelcome("a@test.com", "Ana", "es", null, null);
         verifyNoInteractions(untouched);
     }
 
@@ -342,7 +342,7 @@ class EmailServiceTest {
         doThrow(connectionFailure()).doThrow(connectionFailure()).doNothing()
                 .when(mailSender).send(any(MimeMessage.class));
 
-        retryingService().sendWelcome("a@test.com", "Ana", "es", TOKEN);
+        retryingService().sendWelcome("a@test.com", "Ana", "es", TOKEN, "ana");
 
         verify(mailSender, times(3)).send(any(MimeMessage.class));
         assertThat(pauses).containsExactly(Duration.ofSeconds(2), Duration.ofSeconds(6));
@@ -353,7 +353,7 @@ class EmailServiceTest {
         doThrow(new MailSendException("fallo", new MailConnectException("Couldn't connect to host"))).doNothing()
                 .when(mailSender).send(any(MimeMessage.class));
 
-        retryingService().sendWelcome("a@test.com", "Ana", "es", null);
+        retryingService().sendWelcome("a@test.com", "Ana", "es", null, null);
 
         verify(mailSender, times(2)).send(any(MimeMessage.class));
     }
@@ -363,7 +363,7 @@ class EmailServiceTest {
         doThrow(connectionFailure()).when(mailSender).send(any(MimeMessage.class));
         var service = retryingService();
 
-        assertThatCode(() -> service.sendWelcome("a@test.com", "Ana", "es", TOKEN)).doesNotThrowAnyException();
+        assertThatCode(() -> service.sendWelcome("a@test.com", "Ana", "es", TOKEN, "ana")).doesNotThrowAnyException();
 
         verify(mailSender, times(3)).send(any(MimeMessage.class));
         assertThat(pauses).hasSize(2);
@@ -373,7 +373,7 @@ class EmailServiceTest {
     void doesNotRetryAuthenticationFailures() {
         doThrow(new MailAuthenticationException("535 credenciales")).when(mailSender).send(any(MimeMessage.class));
 
-        retryingService().sendWelcome("a@test.com", "Ana", "es", TOKEN);
+        retryingService().sendWelcome("a@test.com", "Ana", "es", TOKEN, "ana");
 
         verify(mailSender, times(1)).send(any(MimeMessage.class));
         assertThat(pauses).isEmpty();
@@ -384,7 +384,7 @@ class EmailServiceTest {
     void retryLogsTheAttemptWithAMaskedAddress(CapturedOutput output) {
         doThrow(connectionFailure()).doNothing().when(mailSender).send(any(MimeMessage.class));
 
-        retryingService().sendWelcome("ana@test.com", "Ana", "es", null);
+        retryingService().sendWelcome("ana@test.com", "Ana", "es", null, null);
 
         assertThat(output.getAll()).contains("Reintento 2/3 del correo a a***@test.com").doesNotContain("ana@test.com");
     }
@@ -392,7 +392,7 @@ class EmailServiceTest {
     @Test
     @ExtendWith(OutputCaptureExtension.class)
     void logsVerificationLinkOnlyWhenMailIsDisabled(CapturedOutput output) {
-        new EmailService(mailSender, "", "ARCADE", STORE, "").sendWelcome("ana@test.com", "Ana", "es", TOKEN);
+        new EmailService(mailSender, "", "ARCADE", STORE, "").sendWelcome("ana@test.com", "Ana", "es", TOKEN, "ana");
         assertThat(output.getAll()).contains(STORE + "/verify-email?token=" + TOKEN);
         verifyNoInteractions(mailSender);
     }
@@ -401,17 +401,17 @@ class EmailServiceTest {
     @ExtendWith(OutputCaptureExtension.class)
     void neverLogsTheTokenWhenMailIsEnabled(CapturedOutput output) {
         var service = retryingService();
-        service.sendWelcome("ana@test.com", "Ana", "es", TOKEN);
+        service.sendWelcome("ana@test.com", "Ana", "es", TOKEN, "ana");
         doThrow(connectionFailure()).when(mailSender).send(any(MimeMessage.class));
-        service.sendWelcome("ana@test.com", "Ana", "es", TOKEN);
-        service.sendWelcome("ana@example.com", "Ana", "es", TOKEN); // dominio reservado: tampoco
+        service.sendWelcome("ana@test.com", "Ana", "es", TOKEN, "ana");
+        service.sendWelcome("ana@example.com", "Ana", "es", TOKEN, "ana"); // dominio reservado: tampoco
 
         assertThat(output.getAll()).doesNotContain(TOKEN);
     }
 
     @Test
     void verificationMailCarriesTheLinkInTheRecipientsLanguage() throws Exception {
-        retryingService().sendWelcome("a@test.com", "Ana", "en", TOKEN);
+        retryingService().sendWelcome("a@test.com", "Ana", "en", TOKEN, "ana");
 
         MimeMessage message = sentMessage();
         assertThat(message.getSubject()).isEqualTo("Welcome to ARCADE! Confirm your email");
@@ -419,8 +419,17 @@ class EmailServiceTest {
     }
 
     @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void warnsWhenTheVerificationMailHasNoLinkBecauseThereIsNoStoreUrl(CapturedOutput output) throws Exception {
+        new EmailService(mailSender, "tienda@capstone.test", "ARCADE", "", "user@gmail.com")
+                .sendWelcome("ana@test.com", "Ana", "es", TOKEN, "ana");
+
+        assertThat(output.getAll()).contains("sale sin enlace", "a***@test.com").doesNotContain(TOKEN);
+    }
+
+    @Test
     void tokenIsUrlEncodedInTheLink() {
-        assertThat(EmailTemplates.welcome(new EmailTemplates.Brand("ARCADE", STORE), "Ana", "es", "a+b/c=").html())
+        assertThat(EmailTemplates.welcome(new EmailTemplates.Brand("ARCADE", STORE), "Ana", "es", "a+b/c=", "ana").html())
                 .contains("/verify-email?token=a%2Bb%2Fc%3D");
     }
 
@@ -445,10 +454,10 @@ class EmailServiceTest {
     void logsNeverContainTheFullRecipientAddress(CapturedOutput output) {
         var service = new EmailService(mailSender, "tienda@capstone.test", "ARCADE", STORE, "smtp-user@gmail.com");
 
-        service.sendWelcome("ana@test.com", "Ana", "es", null);
+        service.sendWelcome("ana@test.com", "Ana", "es", null, null);
         doThrow(new MailSendException("550 rejected: ana@test.com")).when(mailSender).send(any(MimeMessage.class));
-        service.sendWelcome("ana@test.com", "Ana", "es", null);
-        service.sendWelcome("demo@demo.capstone-steam.local", "Demo", "es", null);
+        service.sendWelcome("ana@test.com", "Ana", "es", null, null);
+        service.sendWelcome("demo@demo.capstone-steam.local", "Demo", "es", null, null);
 
         assertThat(output.getAll())
                 .doesNotContain("ana@test.com", "demo@demo.capstone-steam.local")

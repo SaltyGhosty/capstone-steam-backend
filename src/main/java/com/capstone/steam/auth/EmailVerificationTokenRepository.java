@@ -11,7 +11,10 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
 
     Optional<EmailVerificationToken> findByTokenHash(String tokenHash);
 
-    /** Anula los enlaces aún sin usar de un usuario (al emitir uno nuevo). */
+    /** El último enlace emitido a este usuario (el reenvío copia sus datos). */
+    Optional<EmailVerificationToken> findFirstByUserIdOrderByIdDesc(Long userId);
+
+    /** Anula los enlaces aún sin usar de un usuario (al verificar con uno, los demás dejan de valer). */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update EmailVerificationToken t set t.usedAt = :now where t.userId = :userId and t.usedAt is null")
     int invalidateActive(Long userId, Instant now);
@@ -20,8 +23,4 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update EmailVerificationToken t set t.usedAt = :now where t.id = :id and t.usedAt is null")
     int markUsedIfUnused(Long id, Instant now);
-
-    /** Caducidad del último enlace emitido a este usuario. */
-    @Query("select max(t.expiresAt) from EmailVerificationToken t where t.userId = :userId")
-    Optional<Instant> latestExpiry(Long userId);
 }

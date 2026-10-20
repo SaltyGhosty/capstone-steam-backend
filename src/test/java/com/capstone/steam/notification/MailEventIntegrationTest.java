@@ -99,7 +99,7 @@ class MailEventIntegrationTest {
     @Test
     void registrationEventWithATokenSendsTheVerificationMail() {
         transactionTemplate.executeWithoutResult(tx -> publisher.publishEvent(
-                new UserRegisteredEvent(998L, "nuevo@test.com", "Nuevo", "es", "tok_123")));
+                new UserRegisteredEvent(998L, "nuevo@test.com", "Nuevo", "es", "tok_123", "nuevo")));
 
         await().atMost(Duration.ofSeconds(5)).until(() -> sentBy.containsKey("¡Bienvenido a ARCADE! Confirma tu email"));
         assertThat(sentBy.get("¡Bienvenido a ARCADE! Confirma tu email")).startsWith("mail-");
@@ -108,7 +108,7 @@ class MailEventIntegrationTest {
     @Test
     void resendEventSendsTheVerificationMailInTheUsersLanguage() {
         transactionTemplate.executeWithoutResult(tx -> publisher.publishEvent(
-                new VerificationEmailEvent("nuevo@test.com", "Nuevo", "it", "tok_456")));
+                new VerificationEmailEvent("nuevo@test.com", "Nuevo", "it", "tok_456", "nuevo")));
 
         await().atMost(Duration.ofSeconds(5)).until(() -> sentBy.containsKey("Benvenuto su ARCADE! Conferma la tua email"));
     }
@@ -116,7 +116,7 @@ class MailEventIntegrationTest {
     @Test
     void rolledBackTransactionSendsNoMail() {
         transactionTemplate.executeWithoutResult(tx -> {
-            publisher.publishEvent(new UserRegisteredEvent(999L, "ghost@test.com", "Ghost", "es", null));
+            publisher.publishEvent(new UserRegisteredEvent(999L, "ghost@test.com", "Ghost", "es", null, null));
             tx.setRollbackOnly();
         });
 

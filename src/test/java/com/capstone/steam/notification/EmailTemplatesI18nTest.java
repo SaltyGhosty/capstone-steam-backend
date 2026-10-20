@@ -28,7 +28,7 @@ class EmailTemplatesI18nTest {
 
     @Test
     void welcomeInEnglish() {
-        Email email = EmailTemplates.welcome(BRAND, "Ana", "en", null);
+        Email email = EmailTemplates.welcome(BRAND, "Ana", "en", null, null);
 
         assertThat(email.subject()).isEqualTo("Welcome to ARCADE!");
         assertThat(email.html()).contains("<html lang=\"en\">", "Hi, Ana!", "Account created",
@@ -39,7 +39,7 @@ class EmailTemplatesI18nTest {
 
     @Test
     void welcomeInItalian() {
-        Email email = EmailTemplates.welcome(BRAND, "Ana", "it", null);
+        Email email = EmailTemplates.welcome(BRAND, "Ana", "it", null, null);
 
         assertThat(email.subject()).isEqualTo("Benvenuto su ARCADE!");
         assertThat(email.html()).contains("<html lang=\"it\">", "Ciao, Ana!", "Account creato",
@@ -50,7 +50,7 @@ class EmailTemplatesI18nTest {
 
     @Test
     void welcomeInSpanishIsUnchanged() {
-        Email email = EmailTemplates.welcome(BRAND, "Ana", "es", null);
+        Email email = EmailTemplates.welcome(BRAND, "Ana", "es", null, null);
 
         assertThat(email.subject()).isEqualTo("¡Bienvenido a ARCADE!");
         assertThat(email.html()).contains("<html lang=\"es\">", "¡Hola, Ana!", "Explorar el cat&aacute;logo", // botones y eyebrow van escapados
@@ -61,30 +61,39 @@ class EmailTemplatesI18nTest {
 
     @Test
     void welcomeWithTokenAsksToVerifyInSpanish() {
-        Email email = EmailTemplates.welcome(BRAND, "Ana", "es", "abc_DEF-123");
+        Email email = EmailTemplates.welcome(BRAND, "Ana", "es", "abc_DEF-123", "ana");
 
         assertThat(email.subject()).isEqualTo("¡Bienvenido a ARCADE! Confirma tu email");
         assertThat(email.html()).contains("href=\"https://arcade.test/verify-email?token=abc_DEF-123\"",
-                "Verificar mi email", "Tu cuenta de ARCADE está casi lista",
+                "Verificar mi email", "Confirma la cuenta «ana» de ARCADE",
                 "El enlace caduca en 24 horas")
                 .doesNotContain("/browse");
     }
 
     @Test
     void welcomeWithTokenInEnglishAndItalian() {
-        Email en = EmailTemplates.welcome(BRAND, "Ana", "en", "tok");
-        Email it = EmailTemplates.welcome(BRAND, "Ana", "it", "tok");
+        Email en = EmailTemplates.welcome(BRAND, "Ana", "en", "tok", "ana");
+        Email it = EmailTemplates.welcome(BRAND, "Ana", "it", "tok", "ana");
 
         assertThat(en.subject()).isEqualTo("Welcome to ARCADE! Confirm your email");
-        assertThat(en.html()).contains("/verify-email?token=tok", "Verify my email", "24 hours")
+        assertThat(en.html()).contains("/verify-email?token=tok", "Verify my email", "24 hours",
+                "Confirm the account “ana” on ARCADE")
                 .doesNotContain("Verificar mi email");
         assertThat(it.subject()).isEqualTo("Benvenuto su ARCADE! Conferma la tua email");
-        assertThat(it.html()).contains("/verify-email?token=tok", "Verifica la mia email", "24 ore");
+        assertThat(it.html()).contains("/verify-email?token=tok", "Verifica la mia email", "24 ore",
+                "Conferma l’account «ana» su ARCADE");
+    }
+
+    @Test
+    void verificationMailNamesTheAccountEscaped() {
+        Email email = EmailTemplates.welcome(BRAND, "Ana", "es", "tok", "<i>x</i>");
+
+        assertThat(email.html()).contains("&lt;i&gt;x&lt;/i&gt;").doesNotContain("<i>x</i>");
     }
 
     @Test
     void welcomeWithoutTokenIsTheClassicOne() {
-        Email email = EmailTemplates.welcome(BRAND, "Ana", "es", null);
+        Email email = EmailTemplates.welcome(BRAND, "Ana", "es", null, null);
 
         assertThat(email.subject()).isEqualTo("¡Bienvenido a ARCADE!");
         assertThat(email.html()).contains("https://arcade.test/browse").doesNotContain("verify-email");
@@ -165,7 +174,7 @@ class EmailTemplatesI18nTest {
     @ParameterizedTest
     @ValueSource(strings = { "es", "en", "it" })
     void userDataIsEscapedInEveryLanguage(String locale) {
-        Email welcome = EmailTemplates.welcome(BRAND, "<b>Hacker</b>", locale, null);
+        Email welcome = EmailTemplates.welcome(BRAND, "<b>Hacker</b>", locale, null, null);
         Email receipt = EmailTemplates.purchaseReceipt(BRAND, "<b>Hacker</b>", 1L, BigDecimal.TEN,
                 List.of(new OrderPaidEvent.Line("<script>x</script>", "javascript:alert(1)", BigDecimal.TEN)), locale);
 

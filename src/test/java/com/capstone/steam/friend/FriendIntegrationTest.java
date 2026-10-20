@@ -139,6 +139,17 @@ class FriendIntegrationTest {
     }
 
     @Test
+    void unverifiedAccountsCannotBeRequestedNorViewedNorSendRequests() throws Exception {
+        var leoUser = userRepository.findById(leoId).orElseThrow();
+        leoUser.setEmailVerified(false);
+        userRepository.saveAndFlush(leoUser);
+
+        mvc.perform(sendRequest(ana, "leo")).andExpect(status().isNotFound());
+        mvc.perform(auth(get("/api/users/leo/profile"), ana)).andExpect(status().isNotFound());
+        mvc.perform(sendRequest(leo, "ana")).andExpect(status().isForbidden());
+    }
+
+    @Test
     void requestThenAcceptMakesThemFriends() throws Exception {
         mvc.perform(sendRequest(ana, "leo"))
                 .andExpect(status().isCreated())

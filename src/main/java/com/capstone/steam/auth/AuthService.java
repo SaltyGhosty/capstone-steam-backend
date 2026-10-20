@@ -68,14 +68,34 @@ public class AuthService {
 
     /**
      * Nadie puede quedarse con un email o un usuario que no ha demostrado suyo:
-     * una cuenta verificada nunca se toca (409); una sin verificar se sustituye (mismo email) o se libera
-     * cuando su enlace caduca (mismo usuario).
+     * <ul>
+     *   <li>Una cuenta verificada nunca se toca (409).</li>
+     *   <li>Con el email de una cuenta <b>sin verificar</b> no se toca la fila: solo se emite otro enlace con los datos
+     *       de esta petición (límite de correos por email). Al verificar se aplican los datos del enlace pulsado.</li>
+     *   <li>Un usuario ocupado por otra cuenta sin verificar se libera solo si esa cuenta es vieja y no tiene datos.</li>
+     * </ul>
+     * Las filas implicadas se leen con bloqueo, siempre en orden de id (así dos registros cruzados no se interbloquean).
      */
     private RegisterResponse registerPendingVerification(RegisterRequest request) {
         String username = request.username().trim();
         String email = request.email().trim().toLowerCase(Locale.ROOT);
-        User byEmail = userRepository.findByEmail(email).orElse(null);
-        User byUsername = userRepository.findByUsernameIgnoreCase(username).orElse(null);
+        Long emailId = userRepository.findIdByEmail(email).orElse(null);
+        Long usernameId = userRepository.findIdByUsernameIgnoreCase(username).orElse(null);
+        User byEmail = null;
+        User byUsername = null;
+        for (Long id : java.util.stream.Stream.of(emailId, usernameId).filter(java.util.Objects::nonNull).distinct()
+                .sorted().toList()) {
+            User locked = userRepository.findByIdForUpdate(id).orElse(null);
+            if (locked == null) {
+                continue; // la borró otra petición entre la consulta y el bloqueo
+            }
+            if (id.equals(emailId)) {
+                byEmail = locked;
+            }
+            if (id.equals(usernameId)) {
+                byUsername = locked;
+            }
+        }
 
         if (byEmail != null && byEmail.isEmailVerified()) {
             throw new ConflictException("auth.emailTaken");
@@ -83,33 +103,31 @@ public class AuthService {
         if (byUsername != null && byUsername.isEmailVerified()) {
             throw new ConflictException("auth.usernameTaken");
         }
-        // usuario ocupado por OTRA cuenta sin verificar: solo se libera si su último enlace ya caducó
+        verificationService.checkRateLimit(email); // registro y reenvío comparten el cupo de correos por email
         if (byUsername != null && (byEmail == null || !byUsername.getId().equals(byEmail.getId()))) {
-            if (verificationService.hasLiveToken(byUsername.getId())) {
+            if (!verificationService.isReclaimable(byUsername)) {
                 throw new ConflictException("auth.usernameTaken");
             }
             userRepository.delete(byUsername); // sus enlaces caen por ON DELETE CASCADE
             userRepository.flush(); // el DELETE tiene que ir antes de reutilizar el nombre
         }
 
+        String displayName = request.displayName() != null && !request.displayName().isBlank()
+                ? request.displayName().trim() : username;
+        PendingRegistration data = new PendingRegistration(username, passwordEncoder.encode(request.password()),
+                displayName, request.locale() != null ? request.locale() : "es",
+                request.accountType() == AccountType.DEVELOPER);
         User user = byEmail;
         if (user == null) {
-            user = new User(username, email, passwordEncoder.encode(request.password()));
-        } else {
-            user.setUsername(username);
-            user.setPasswordHash(passwordEncoder.encode(request.password()));
-            user.setDisplayName(username);
-            user.setLocale("es");
-            user.getRoles().clear();
+            user = new User(username, email, data.passwordHash());
+            applyRegistration(user, request);
+            user.setEmailVerified(false);
+            userRepository.save(user);
         }
-        applyRegistration(user, request);
-        user.setEmailVerified(false);
-        userRepository.save(user);
 
-        String token = verificationService.issue(user);
-        events.publishEvent(new UserRegisteredEvent(user.getId(), user.getEmail(), user.getDisplayName(),
-                user.getLocale(), token));
-        return new RegisterResponse(user.getId(), user.getEmail(), true);
+        String token = verificationService.issue(user, data);
+        events.publishEvent(new UserRegisteredEvent(user.getId(), email, displayName, data.locale(), token, username));
+        return new RegisterResponse(user.getId(), email, true);
     }
 
     /** Nombre visible, idioma y roles de la petición de registro. */
@@ -141,7 +159,7 @@ public class AuthService {
         userRepository.save(user);
 
         // El correo de bienvenida sale solo si la transacción hace commit (listener AFTER_COMMIT)
-        events.publishEvent(new UserRegisteredEvent(user.getId(), user.getEmail(), user.getDisplayName(), user.getLocale(), null));
+        events.publishEvent(new UserRegisteredEvent(user.getId(), user.getEmail(), user.getDisplayName(), user.getLocale(), null, username));
 
         return issueToken(user);
     }
@@ -154,16 +172,19 @@ public class AuthService {
         User user = userRepository.findWithRolesById(principal.getId())
                 .orElseThrow(() -> NotFoundException.of("user", principal.getId()));
         // Solo tras acertar la contraseña (y con la cuenta activa, lo comprueba Spring antes): no se revela nada más
-        if (verification.required() && !user.isEmailVerified()) {
+        if (!user.isEmailVerified()) {
             throw new ForbiddenException("auth.emailNotVerified");
         }
         return issueToken(user);
     }
 
     /** Canjea el enlace del correo: verifica el email e inicia la sesión. */
-    @Transactional
+    @Transactional(noRollbackFor = ForbiddenException.class) // una cuenta desactivada queda verificada igualmente
     public AuthResponse verifyEmail(String rawToken) {
         User user = verificationService.verify(rawToken);
+        if (!user.isEnabled()) {
+            throw new ForbiddenException("error.disabled"); // verificada, pero sin sesión
+        }
         return issueToken(user);
     }
 

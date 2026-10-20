@@ -89,14 +89,20 @@ public class EmailService {
     }
 
     /** {@code locale}: es, en o it (el de {@code users.locale}); cualquier otro valor, o null, sale en español. */
-    public void sendWelcome(String to, String displayName, String locale, String verificationToken) {
+    public void sendWelcome(String to, String displayName, String locale, String verificationToken,
+            String username) {
         if (verificationToken != null && !enabled) {
             // Solo con el correo desactivado (desarrollo) el enlace sale en el log, para poder verificarse
             String path = EmailTemplates.verificationPath(verificationToken);
             log.info("[correo desactivado] enlace de verificación para {}: {}", maskEmail(to),
                     brand.storeUrl() == null ? path : brand.link(path));
         }
-        send(to, EmailTemplates.welcome(brand, displayName, locale, verificationToken));
+        if (verificationToken != null && brand.storeUrl() == null) {
+            // sin FRONTEND_URL ni un origen http en CORS el correo sale sin botón y no se puede verificar
+            log.warn("El correo de verificación para {} sale sin enlace: falta FRONTEND_URL (o un origen http en CORS_ALLOWED_ORIGINS)",
+                    maskEmail(to));
+        }
+        send(to, EmailTemplates.welcome(brand, displayName, locale, verificationToken, username));
     }
 
     public void sendPurchaseReceipt(String to, String displayName, Long orderId, BigDecimal total,

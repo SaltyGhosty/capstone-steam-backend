@@ -49,13 +49,26 @@ class FlywayMigrationTest {
     @Test
     void emailVerificationTokenHashIsUniqueAndDiesWithItsUser() {
         long userId = insertUser("verificador");
-        String sql = "INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) "
-                + "VALUES (?, 'h1', CURRENT_TIMESTAMP)";
+        String sql = "INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, username, password_hash) "
+                + "VALUES (?, 'h1', CURRENT_TIMESTAMP, 'nuevo', 'x')";
         jdbc.update(sql, userId);
         assertThatThrownBy(() -> jdbc.update(sql, userId)).isInstanceOf(DataIntegrityViolationException.class);
 
         jdbc.update("DELETE FROM users WHERE id = ?", userId);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM email_verification_tokens", Integer.class)).isZero();
+    }
+
+    @Test
+    void emailVerificationTokensCarryTheRegistrationDataWithAValidLocale() {
+        long userId = insertUser("datos");
+        jdbc.update("INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, username, password_hash, "
+                + "display_name, locale, developer) VALUES (?, 'h2', CURRENT_TIMESTAMP, 'otro', 'hash', 'Otro', 'it', TRUE)",
+                userId);
+        assertThat(jdbc.queryForObject("SELECT developer FROM email_verification_tokens WHERE token_hash = 'h2'",
+                Boolean.class)).isTrue();
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, "
+                + "username, password_hash, locale) VALUES (?, 'h3', CURRENT_TIMESTAMP, 'x', 'y', 'fr')", userId))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test

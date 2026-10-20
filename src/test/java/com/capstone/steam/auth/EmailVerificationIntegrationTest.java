@@ -13,6 +13,9 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 
+import jakarta.persistence.EntityManager;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -66,6 +69,15 @@ class EmailVerificationIntegrationTest {
     @Autowired private MutableClock clock;
     @Autowired private ApplicationEvents events;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private ResendRateLimiter limiter;
+    @Autowired private EntityManager em;
+
+    /** Reloj y límite de reenvíos son compartidos por todos los tests de la clase: cada test parte de cero. */
+    @BeforeEach
+    void resetSharedState() {
+        clock.now = Instant.now();
+        limiter.clear();
+    }
 
     // ------------------------------------------------------------------ registro y login
 
@@ -151,24 +163,116 @@ class EmailVerificationIntegrationTest {
     // ------------------------------------------------------------------ cuentas sin verificar
 
     @Test
-    void registeringAgainWithTheSameUnverifiedEmailReplacesTheAccount() throws Exception {
-        long firstId = id(register("ana", "ana@test.com").andExpect(status().isCreated()));
-        String firstToken = lastToken();
+    void attackerCannotTakeOverAnUnverifiedEmail() throws Exception {
+        long victimId = id(register("victima", "v@test.com", "ClaveVictima1", "PLAYER").andExpect(status().isCreated()));
+        String victimLink = lastToken();
 
-        long secondId = id(register("ana2", "Ana@Test.com", "otra-clave-123", "DEVELOPER")
-                .andExpect(status().isCreated()));
-        String secondToken = lastToken();
+        // el atacante se registra con el email de la víctima y otra contraseña: 201 igual que un registro nuevo
+        long attackerId = id(register("atacante", "v@test.com", "ClaveAtacante1", "DEVELOPER").andExpect(status().isCreated()));
+        String attackerLink = lastToken();
+        assertThat(attackerId).isEqualTo(victimId);
+        assertThat(attackerLink).isNotEqualTo(victimLink);
+        // la fila no se tocó
+        assertThat(jdbc.queryForObject("SELECT username FROM users WHERE id = ?", String.class, victimId))
+                .isEqualTo("victima");
+
+        // la víctima pulsa SU enlace: la cuenta queda con SUS datos
+        verify(victimLink).andExpect(status().isOk()).andExpect(jsonPath("$.user.username").value("victima"))
+                .andExpect(jsonPath("$.user.roles.length()").value(1));
+        login("victima", "ClaveVictima1").andExpect(status().isOk());
+        login("victima", "ClaveAtacante1").andExpect(status().isUnauthorized());
+        login("atacante", "ClaveAtacante1").andExpect(status().isUnauthorized());
+        // el enlace del atacante ya no vale
+        verify(attackerLink).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void registeringAgainWithTheSameUnverifiedEmailKeepsTheFirstLinkValid() throws Exception {
+        long firstId = id(register("ana", "ana@test.com").andExpect(status().isCreated()));
+        String firstLink = lastToken();
+
+        long secondId = id(register("ana2", "ana@test.com", "otra-clave-123", "DEVELOPER").andExpect(status().isCreated()));
 
         assertThat(secondId).isEqualTo(firstId);
-        assertThat(secondToken).isNotEqualTo(firstToken);
-        verify(firstToken).andExpect(status().isBadRequest());
-        verify(secondToken).andExpect(status().isOk())
+        verify(firstLink).andExpect(status().isOk()).andExpect(jsonPath("$.user.username").value("ana"));
+        login("ana", "password123").andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'ana@test.com'", Integer.class))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void theLinkAppliesItsOwnDataAndVerifyingOneLinkInvalidatesTheOthers() throws Exception {
+        register("ana", "ana@test.com", "password123", "PLAYER").andExpect(status().isCreated());
+        String first = lastToken();
+        register("ana2", "ana@test.com", "otra-clave-123", "DEVELOPER").andExpect(status().isCreated());
+        String second = lastToken();
+
+        verify(second).andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.username").value("ana2"))
                 .andExpect(jsonPath("$.user.roles[0]").value("ROLE_DEVELOPER"));
         login("ana2", "otra-clave-123").andExpect(status().isOk());
         login("ana2", "password123").andExpect(status().isUnauthorized());
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'ana@test.com'", Integer.class))
-                .isEqualTo(1);
+        verify(first).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void verifyFailsWith409IfUsernameWasTakenMeanwhile() throws Exception {
+        register("ana", "ana@test.com").andExpect(status().isCreated());
+        register("ana2", "ana@test.com").andExpect(status().isCreated());
+        String linkForAna2 = lastToken();
+        // otra persona coge «ana2» antes de que se pulse el enlace
+        register("ana2", "otra@test.com").andExpect(status().isCreated());
+
+        verify(linkForAna2).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("El nombre de usuario ya está en uso"));
+        // el enlace quedó sin usar y la cuenta sigue sin verificar
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM email_verification_tokens WHERE token_hash = ? AND used_at IS NULL",
+                Integer.class, TokenHashing.sha256Hex(linkForAna2))).isEqualTo(1);
+        login("ana", "password123").andExpect(status().isForbidden());
+    }
+
+    @Test
+    void reRegistrationIsRateLimited() throws Exception {
+        for (int i = 0; i < 3; i++) {
+            register("ana" + i, "ana@test.com").andExpect(status().isCreated());
+        }
+        register("ana3", "ana@test.com").andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("auth.resendRateLimited"));
+
+        clock.now = clock.now.plus(Duration.ofHours(1)).plusSeconds(1);
+        register("ana3", "ana@test.com").andExpect(status().isCreated());
+    }
+
+    @Test
+    void resendCopiesTheDataOfTheLatestLink() throws Exception {
+        register("ana", "ana@test.com").andExpect(status().isCreated());
+        register("ana2", "ana@test.com", "otra-clave-123", "PLAYER").andExpect(status().isCreated());
+
+        resend("ana@test.com").andExpect(status().isNoContent());
+        VerificationEmailEvent event = events.stream(VerificationEmailEvent.class).reduce((a, b) -> b).orElseThrow();
+        assertThat(event.username()).isEqualTo("ana2");
+
+        verify(event.verificationToken()).andExpect(status().isOk()).andExpect(jsonPath("$.user.username").value("ana2"));
+        login("ana2", "otra-clave-123").andExpect(status().isOk());
+    }
+
+    @Test
+    void verifyingADisabledAccountVerifiesItButGivesNoSession() throws Exception {
+        long id = id(register("ana", "ana@test.com").andExpect(status().isCreated()));
+        String link = lastToken();
+        mvc.perform(patch("/api/admin/users/" + id + "/enabled").header(HttpHeaders.AUTHORIZATION, "Bearer " + admin())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
+                .andExpect(status().isOk());
+
+        verify(link).andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail").value("La cuenta está desactivada"))
+                .andExpect(jsonPath("$.accessToken").doesNotExist());
+
+        em.flush();
+        assertThat(jdbc.queryForObject("SELECT email_verified FROM users WHERE id = ?", Boolean.class, id)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?", Integer.class, id)).isZero();
+        login("ana", "password123").andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail").value("La cuenta está desactivada"));
     }
 
     @Test
@@ -184,17 +288,37 @@ class EmailVerificationIntegrationTest {
     }
 
     @Test
-    void usernameOfAnUnverifiedAccountIsFreedOnlyAfterItsLinkExpires() throws Exception {
+    void usernameOfAnUnverifiedAccountIsFreedOnlyWhenTheAccountIsOlderThanTheTtl() throws Exception {
         register("ana", "ana@test.com").andExpect(status().isCreated());
 
         register("ana", "intruso@test.com").andExpect(status().isConflict())
                 .andExpect(jsonPath("$.detail").value("El nombre de usuario ya está en uso"));
 
-        clock.now = clock.now.plus(Duration.ofHours(24)).plusSeconds(1);
+        // reenviar el enlace no retiene el nombre: cuenta la edad de la cuenta, no la del último enlace
+        clock.now = clock.now.plus(Duration.ofHours(23));
+        resend("ana@test.com").andExpect(status().isNoContent());
+        clock.now = clock.now.plus(Duration.ofHours(1)).plusSeconds(5);
         register("ana", "intruso@test.com").andExpect(status().isCreated());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE email = 'ana@test.com'", Integer.class))
                 .isZero();
         verify(lastToken()).andExpect(status().isOk()).andExpect(jsonPath("$.user.email").value("intruso@test.com"));
+    }
+
+    @Test
+    void anOldUnverifiedAccountWithDataOrExtraRolesKeepsItsUsername() throws Exception {
+        long withSession = id(register("conreg", "conreg@test.com").andExpect(status().isCreated()));
+        long admin = id(register("conadmin", "conadmin@test.com").andExpect(status().isCreated()));
+        jdbc.update("INSERT INTO refresh_tokens (user_id, token_hash, family_id, expires_at) VALUES (?, 'h-reg', 'f', CURRENT_TIMESTAMP)",
+                withSession);
+        jdbc.update("INSERT INTO user_roles (user_id, role_id) SELECT ?, id FROM roles WHERE name = 'ROLE_ADMIN'", admin);
+        em.flush();
+        em.clear(); // los roles insertados por SQL tienen que leerse de la BD, no de la caché
+        clock.now = clock.now.plus(Duration.ofDays(2));
+
+        register("conreg", "otro1@test.com").andExpect(status().isConflict());
+        register("conadmin", "otro2@test.com").andExpect(status().isConflict());
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE username IN ('conreg', 'conadmin')", Integer.class))
+                .isEqualTo(2);
     }
 
     @Test
@@ -238,7 +362,7 @@ class EmailVerificationIntegrationTest {
     }
 
     @Test
-    void resendInvalidatesThePreviousLink() throws Exception {
+    void resendIssuesAnotherLinkAndUsingOneInvalidatesTheOther() throws Exception {
         register("ana", "ana.reenvio@test.com").andExpect(status().isCreated());
         String first = lastToken();
 
@@ -247,27 +371,27 @@ class EmailVerificationIntegrationTest {
                 .verificationToken();
 
         assertThat(second).isNotEqualTo(first);
-        verify(first).andExpect(status().isBadRequest());
         verify(second).andExpect(status().isOk());
+        verify(first).andExpect(status().isBadRequest());
     }
 
     @Test
     void resendNormalizesTheEmail() throws Exception {
         register("ana", "ana.norm@test.com").andExpect(status().isCreated());
 
+        // el registro ya gastó un correo del cupo (3 por hora y email)
         resend(" Ana.Norm@Test.com ").andExpect(status().isNoContent());
         resend("ANA.NORM@test.com").andExpect(status().isNoContent());
-        resend("ana.norm@test.com").andExpect(status().isNoContent());
-        // las tres variantes cuentan como el mismo email
+        // las variantes cuentan como el mismo email
         resend("  ana.norm@TEST.com").andExpect(status().isTooManyRequests());
-        assertThat(events.stream(VerificationEmailEvent.class).count()).isEqualTo(3);
+        assertThat(events.stream(VerificationEmailEvent.class).count()).isEqualTo(2);
     }
 
     @Test
     void fourthResendInAnHourIs429() throws Exception {
         register("ana", "ana.limite@test.com").andExpect(status().isCreated());
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 2; i++) { // el registro ya gastó el primero de los 3 correos por hora
             resend("ana.limite@test.com").andExpect(status().isNoContent());
         }
         resend("ana.limite@test.com").andExpect(status().isTooManyRequests())

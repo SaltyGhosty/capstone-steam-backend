@@ -37,13 +37,43 @@ public class EmailVerificationToken {
     @Column(name = "used_at")
     private Instant usedAt;
 
+    /** Datos del registro que generó este enlace (se aplican a la cuenta al verificar). */
+    @Column(name = "username", nullable = false, updatable = false, length = 50)
+    private String username;
+
+    @Column(name = "password_hash", nullable = false, updatable = false, length = 100)
+    private String passwordHash;
+
+    @Column(name = "display_name", updatable = false, length = 100)
+    private String displayName;
+
+    @Column(name = "locale", nullable = false, updatable = false, length = 5)
+    private String locale;
+
+    @Column(name = "developer", nullable = false, updatable = false)
+    private boolean developer;
+
     protected EmailVerificationToken() {
     }
 
-    public EmailVerificationToken(Long userId, String tokenHash, Instant expiresAt) {
+    public EmailVerificationToken(Long userId, String tokenHash, Instant expiresAt, PendingRegistration data) {
         this.userId = userId;
         this.tokenHash = tokenHash;
         this.expiresAt = expiresAt;
+        this.username = data.username();
+        this.passwordHash = data.passwordHash();
+        this.displayName = data.displayName();
+        this.locale = data.locale();
+        this.developer = data.developer();
+    }
+
+    /** Los datos del registro que guarda este enlace. */
+    public PendingRegistration pending() {
+        return new PendingRegistration(username, passwordHash, displayName, locale, developer);
+    }
+
+    public String getUsername() {
+        return username;
     }
 
     public boolean isUsed() {

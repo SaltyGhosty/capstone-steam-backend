@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.capstone.steam.auth.EmailVerificationService;
 import com.capstone.steam.auth.RefreshTokenService;
 import com.capstone.steam.common.dto.PageResponse;
 import com.capstone.steam.common.exception.BadRequestException;
@@ -22,9 +23,12 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final RefreshTokenService refreshTokenService;
     private final AccessTokenRevocations accessTokenRevocations;
+    private final EmailVerificationService emailVerificationService;
 
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
-            RefreshTokenService refreshTokenService, AccessTokenRevocations accessTokenRevocations) {
+            RefreshTokenService refreshTokenService, AccessTokenRevocations accessTokenRevocations,
+            EmailVerificationService emailVerificationService) {
+        this.emailVerificationService = emailVerificationService;
         this.accessTokenRevocations = accessTokenRevocations;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -93,12 +97,10 @@ public class UserService {
         return UserResponse.from(user);
     }
 
-    /** El admin da el email por verificado (soporte y seed). Idempotente. */
+    /** El admin da el email por verificado (soporte y seed), con los datos del último enlace. Idempotente. */
     @Transactional
     public UserResponse verifyEmail(Long userId) {
-        User user = findWithRoles(userId);
-        user.setEmailVerified(true);
-        return UserResponse.from(user);
+        return UserResponse.from(emailVerificationService.verifyByAdmin(userId));
     }
 
     private User findWithRoles(Long userId) {

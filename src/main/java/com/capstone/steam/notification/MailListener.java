@@ -34,14 +34,16 @@ public class MailListener {
     @Async(AsyncConfig.MAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onUserRegistered(UserRegisteredEvent event) {
-        emailService.sendWelcome(event.email(), event.displayName(), event.locale(), event.verificationToken());
+        emailService.sendWelcome(event.email(), event.displayName(), event.locale(), event.verificationToken(),
+                event.username());
     }
 
     /** Reenvío del enlace de verificación (mismo correo que la bienvenida con verificación). */
     @Async(AsyncConfig.MAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onVerificationEmail(VerificationEmailEvent event) {
-        emailService.sendWelcome(event.email(), event.displayName(), event.locale(), event.verificationToken());
+        emailService.sendWelcome(event.email(), event.displayName(), event.locale(), event.verificationToken(),
+                event.username());
     }
 
     @Async(AsyncConfig.MAIL_EXECUTOR)

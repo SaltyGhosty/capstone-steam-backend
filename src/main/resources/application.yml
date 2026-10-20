@@ -106,7 +106,7 @@ app:
     # adónde llevan los botones de los correos; sin FRONTEND_URL se usa el primer origen de CORS
     store-url: ${FRONTEND_URL:${CORS_ALLOWED_ORIGINS:http://localhost:5173}}
     executor:
-      core-pool-size: 2
+      core-pool-size: 4
       max-pool-size: 5
       queue-capacity: 100
 

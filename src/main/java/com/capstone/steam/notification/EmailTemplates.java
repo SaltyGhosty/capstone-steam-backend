@@ -63,12 +63,12 @@ final class EmailTemplates {
      * Bienvenida. Con {@code verificationToken} es también la confirmación del email (botón a
      * {@code /verify-email}); sin él (verificación desactivada) es la bienvenida de siempre.
      */
-    static Email welcome(Brand brand, String displayName, String locale, String verificationToken) {
+    static Email welcome(Brand brand, String displayName, String locale, String verificationToken, String username) {
         MailTexts t = MailTexts.of(locale);
         if (verificationToken != null) {
             String body = eyebrow(t.welcomeEyebrow(), ACCENT)
                     + heading(greeting(t.welcomeHello(), displayName, "!"))
-                    + paragraph(t.verifyBody().formatted(esc(brand.name())))
+                    + paragraph(t.verifyBody().formatted(esc(username == null ? displayName : username), esc(brand.name())))
                     + button(t.verifyButton(), brand.link(verificationPath(verificationToken)))
                     + paragraph(t.verifyExpiry());
             return new Email(t.verifySubject().formatted(brand.name()),

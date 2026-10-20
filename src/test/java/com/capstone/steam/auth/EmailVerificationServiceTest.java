@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,13 +18,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.capstone.steam.common.exception.BadRequestException;
+import com.capstone.steam.common.exception.ConflictException;
+import com.capstone.steam.user.Role;
+import com.capstone.steam.user.RoleName;
+import com.capstone.steam.user.RoleRepository;
 import com.capstone.steam.user.User;
 import com.capstone.steam.user.UserRepository;
 
@@ -33,18 +35,21 @@ import com.capstone.steam.user.UserRepository;
 class EmailVerificationServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-10-20T10:00:00Z");
+    private static final PendingRegistration DATA = new PendingRegistration("nuevo", "hash-nuevo", "Nuevo", "en", true);
 
     @Mock private EmailVerificationTokenRepository tokens;
     @Mock private UserRepository userRepository;
+    @Mock private RoleRepository roleRepository;
     @Mock private ApplicationEventPublisher events;
+    @Mock private AccountDataCheck dataCheck;
 
     private EmailVerificationService service;
 
     @BeforeEach
     void setUp() {
-        service = new EmailVerificationService(tokens, userRepository, events,
+        service = new EmailVerificationService(tokens, userRepository, roleRepository, events,
                 new EmailVerificationProperties(true, Duration.ofDays(1), 3), Clock.fixed(NOW, ZoneOffset.UTC),
-                new ResendRateLimiter(Clock.fixed(NOW, ZoneOffset.UTC), 3));
+                new ResendRateLimiter(Clock.fixed(NOW, ZoneOffset.UTC), 3), dataCheck);
     }
 
     private static User user(long id) {
@@ -54,32 +59,52 @@ class EmailVerificationServiceTest {
     }
 
     @Test
-    void issueInvalidatesThePreviousLinksAndStoresOnlyTheHash() {
-        String raw = service.issue(user(5L));
+    void issueStoresOnlyTheHashAndTheRegistrationDataAndKeepsThePreviousLinks() {
+        String raw = service.issue(user(5L), DATA);
 
-        InOrder order = inOrder(tokens);
-        order.verify(tokens).invalidateActive(5L, NOW);
         ArgumentCaptor<EmailVerificationToken> saved = ArgumentCaptor.forClass(EmailVerificationToken.class);
-        order.verify(tokens).save(saved.capture());
-
+        verify(tokens).save(saved.capture());
+        verify(tokens, never()).invalidateActive(anyLong(), any());
         assertThat(raw).hasSize(43);
         assertThat(saved.getValue().getTokenHash()).isEqualTo(TokenHashing.sha256Hex(raw)).isNotEqualTo(raw);
         assertThat(saved.getValue().getUserId()).isEqualTo(5L);
         assertThat(saved.getValue().getExpiresAt()).isEqualTo(NOW.plus(Duration.ofDays(1)));
+        assertThat(saved.getValue().pending()).isEqualTo(DATA);
     }
 
     @Test
-    void verifyMarksTheTokenUsedAndVerifiesTheUser() {
+    void verifyAppliesTheDataOfTheLinkAndInvalidatesTheOthers() {
         User ana = user(5L);
         EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
         when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(ana));
+        when(userRepository.findIdByUsernameIgnoreCase("nuevo")).thenReturn(Optional.empty());
         when(tokens.markUsedIfUnused(10L, NOW)).thenReturn(1);
         when(userRepository.findWithRolesById(5L)).thenReturn(Optional.of(ana));
+        when(roleRepository.findByName(RoleName.ROLE_USER)).thenReturn(Optional.of(new Role(RoleName.ROLE_USER)));
+        when(roleRepository.findByName(RoleName.ROLE_DEVELOPER)).thenReturn(Optional.of(new Role(RoleName.ROLE_DEVELOPER)));
 
         User verified = service.verify("raw");
 
         assertThat(verified).isSameAs(ana);
         assertThat(ana.isEmailVerified()).isTrue();
+        assertThat(ana.getUsername()).isEqualTo("nuevo");
+        assertThat(ana.getPasswordHash()).isEqualTo("hash-nuevo");
+        assertThat(ana.getDisplayName()).isEqualTo("Nuevo");
+        assertThat(ana.getLocale()).isEqualTo("en");
+        assertThat(ana.hasRole(RoleName.ROLE_DEVELOPER)).isTrue();
+        verify(tokens).invalidateActive(5L, NOW);
+    }
+
+    @Test
+    void verifyFailsWith409AndKeepsTheLinkWhenAnotherAccountHasTheUsername() {
+        EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
+        when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(user(5L)));
+        when(userRepository.findIdByUsernameIgnoreCase("nuevo")).thenReturn(Optional.of(99L));
+
+        assertThatThrownBy(() -> service.verify("raw")).isInstanceOf(ConflictException.class);
+        verify(tokens, never()).markUsedIfUnused(anyLong(), any());
     }
 
     @Test
@@ -107,24 +132,42 @@ class EmailVerificationServiceTest {
     void verifyLosesTheRaceWhenAnotherRequestUsedTheTokenFirst() {
         EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
         when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(user(5L)));
+        when(userRepository.findIdByUsernameIgnoreCase("nuevo")).thenReturn(Optional.empty());
         when(tokens.markUsedIfUnused(10L, NOW)).thenReturn(0);
 
         assertThatThrownBy(() -> service.verify("raw")).isInstanceOf(BadRequestException.class);
     }
 
     @Test
-    void hasLiveTokenComparesTheLatestExpiryWithNow() {
-        when(tokens.latestExpiry(1L)).thenReturn(Optional.of(NOW.plusSeconds(1)));
-        when(tokens.latestExpiry(2L)).thenReturn(Optional.of(NOW));
-        when(tokens.latestExpiry(3L)).thenReturn(Optional.empty());
+    void anOldAccountWithoutDataCanBeReclaimedButNotARecentOneOrOneWithDataOrAdminRole() {
+        User old = user(1L);
+        ReflectionTestUtils.setField(old, "createdAt", NOW.minus(Duration.ofDays(1)));
+        when(dataCheck.hasData(1L)).thenReturn(false);
+        assertThat(service.isReclaimable(old)).isTrue();
 
-        assertThat(service.hasLiveToken(1L)).isTrue();
-        assertThat(service.hasLiveToken(2L)).isFalse();
-        assertThat(service.hasLiveToken(3L)).isFalse();
+        User recent = user(2L);
+        ReflectionTestUtils.setField(recent, "createdAt", NOW.minus(Duration.ofHours(23)));
+        assertThat(service.isReclaimable(recent)).isFalse();
+
+        User withData = user(3L);
+        ReflectionTestUtils.setField(withData, "createdAt", NOW.minus(Duration.ofDays(2)));
+        when(dataCheck.hasData(3L)).thenReturn(true);
+        assertThat(service.isReclaimable(withData)).isFalse();
+
+        User admin = user(4L);
+        ReflectionTestUtils.setField(admin, "createdAt", NOW.minus(Duration.ofDays(2)));
+        admin.addRole(new Role(RoleName.ROLE_ADMIN));
+        assertThat(service.isReclaimable(admin)).isFalse();
+
+        User verified = user(5L);
+        ReflectionTestUtils.setField(verified, "createdAt", NOW.minus(Duration.ofDays(2)));
+        verified.setEmailVerified(true);
+        assertThat(service.isReclaimable(verified)).isFalse();
     }
 
     private static EmailVerificationToken token(long id, long userId, Instant expiresAt) {
-        EmailVerificationToken token = new EmailVerificationToken(userId, "hash", expiresAt);
+        EmailVerificationToken token = new EmailVerificationToken(userId, "hash", expiresAt, DATA);
         ReflectionTestUtils.setField(token, "id", id);
         return token;
     }
