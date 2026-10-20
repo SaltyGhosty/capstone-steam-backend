@@ -34,14 +34,14 @@ export default function BalatroDemo({ paused, onFinish }: DemoGameProps) {
   finishRef.current = onFinish;
 
   useEffect(() => {
-    if (!round.finished) return;
+    if (!round.finished || paused) return;
     const timer = setTimeout(() => {
       finishRef.current(round.won
         ? { won: true, messageKey: 'demos.balatro.won', values: { score: round.score } }
         : { won: false, messageKey: 'demos.balatro.lost', values: { score: round.score, target: round.target } });
     }, FINISH_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [round.finished, round.won, round.score, round.target]);
+  }, [round.finished, round.won, round.score, round.target, paused]);
 
   const toggle = (index: number) => setSelected((prev) => (
     prev.includes(index) ? prev.filter((i) => i !== index) : prev.length < MAX_PLAY ? [...prev, index] : prev

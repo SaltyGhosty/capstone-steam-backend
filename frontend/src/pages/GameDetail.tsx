@@ -100,7 +100,7 @@ export default function GameDetail() {
       </div>
 
       <Reviews game={g} ownership={own} onChanged={() => { game.reload(); ownership.reload(); }} />
-      {demoOpen && <DemoPlayer game={g} onClose={() => setDemoOpen(false)} />}
+      {demoOpen && <DemoPlayer game={g} onClose={() => { setDemoOpen(false); ownership.reload(); }} />}
     </>
   );
 }

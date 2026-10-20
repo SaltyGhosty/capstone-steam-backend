@@ -15,6 +15,18 @@ const game = (id: number, slug: string, title: string) => ({ ...base, id, slug, 
 const notFound = { status: 404, body: { detail: 'no existe', status: 404 } };
 
 describe('página de demos', () => {
+  it('sin ninguna demo disponible muestra un estado vacío', async () => {
+    mockFetch({
+      'GET /api/games/celeste': notFound,
+      'GET /api/games/vampire-survivors': notFound,
+      'GET /api/games/rocket-league': { status: 500, body: { detail: 'caído' } },
+      'GET /api/games/balatro': notFound,
+    });
+    renderRoutes({ '/demos': <Demos /> }, '/demos');
+    expect(await screen.findByText('Ahora mismo no hay demos disponibles')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Jugar demo/ })).not.toBeInTheDocument();
+  });
+
   it('lista las demos de los juegos publicados', async () => {
     mockFetch({
       'GET /api/games/celeste': { body: game(1, 'celeste', 'Celeste') },

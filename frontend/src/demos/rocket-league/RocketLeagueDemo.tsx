@@ -56,7 +56,7 @@ function draw(ctx: CanvasRenderingContext2D, s: MatchState) {
   ctx.fillStyle = '#e9edf2';
   ctx.font = 'bold 22px "Space Grotesk", sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`${s.score.ai}  -  ${s.score.player}`, FIELD_W / 2, 30);
+  ctx.fillText(`${s.score.player}  -  ${s.score.ai}`, FIELD_W / 2, 30);
   ctx.font = '12px "Space Grotesk", sans-serif';
   ctx.fillText(`${Math.max(0, Math.ceil(MATCH_SECONDS - s.elapsed))} s`, FIELD_W / 2, 48);
   if (s.freeze > 0) {

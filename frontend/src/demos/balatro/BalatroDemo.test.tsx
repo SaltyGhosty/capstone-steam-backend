@@ -58,6 +58,23 @@ describe('demo de cartas', () => {
     expect(onFinish.mock.calls[0][0]).toMatchObject({ won: false, messageKey: 'demos.balatro.lost' });
   });
 
+  it('el retardo final respeta la pausa', async () => {
+    const onFinish = vi.fn();
+    const ui = (paused: boolean) => <I18nProvider initial="es"><BalatroDemo paused={paused} onFinish={onFinish} /></I18nProvider>;
+    const { rerender } = render(ui(false));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    for (let i = 0; i < 5; i++) {
+      await userEvent.click(cards()[7]);
+      await userEvent.click(screen.getByRole('button', { name: 'Jugar mano' }));
+    }
+    rerender(ui(true));
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(onFinish).not.toHaveBeenCalled();
+    rerender(ui(false));
+    await act(async () => { await vi.advanceTimersByTimeAsync(1500); });
+    expect(onFinish).toHaveBeenCalledTimes(1);
+  });
+
   it('en pausa no se puede jugar', () => {
     renderGame(vi.fn(), true);
     expect(cards().every((c) => (c as HTMLButtonElement).disabled)).toBe(true);

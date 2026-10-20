@@ -54,6 +54,12 @@ function keepsActivationKey(e: KeyboardEvent): boolean {
   return (e.key === ' ' || e.key === 'Enter') && el instanceof HTMLElement && ['BUTTON', 'INPUT', 'A'].includes(el.tagName);
 }
 
+/** Escribiendo en un campo (buscador, chat): las letras son suyas, no del juego. */
+function isTyping(e: KeyboardEvent): boolean {
+  const el = e.target;
+  return el instanceof HTMLElement && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable);
+}
+
 /**
  * Si es una tecla de juego (flechas, WASD, Espacio, X, Shift), evita el scroll y corta la propagación
  * para que no llegue a atajos globales. Con Ctrl/Meta/Alt no toca nada (Ctrl K del buscador).
@@ -61,7 +67,7 @@ function keepsActivationKey(e: KeyboardEvent): boolean {
  */
 export function guardGameKey(e: KeyboardEvent): keyof DemoInput | null {
   const field = KEY_MAP[e.key];
-  if (!field || e.ctrlKey || e.metaKey || e.altKey || keepsActivationKey(e)) return null;
+  if (!field || e.ctrlKey || e.metaKey || e.altKey || keepsActivationKey(e) || isTyping(e)) return null;
   e.preventDefault();
   e.stopPropagation();
   return field;

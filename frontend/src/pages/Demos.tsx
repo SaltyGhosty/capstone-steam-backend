@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import type { GameDetail } from '@/api/types';
 import { catalogApi } from '@/api/endpoints';
 import Icon from '@/components/Icon';
-import { Loading, PageHeader } from '@/components/ui';
+import { Empty, Loading, PageHeader } from '@/components/ui';
 import { DemoPlayer } from '@/demos/DemoPlayer';
 import { DEMOS } from '@/demos/registry';
 import { useI18n } from '@/i18n';
@@ -26,6 +27,11 @@ export default function Demos() {
     <section className="section">
       <PageHeader eyebrow={t('demos.eyebrow')} title={t('demos.title')} />
       {games.loading && !games.data && <Loading />}
+      {games.data && games.data.size === 0 && (
+        <Empty icon="play" title={t('demos.empty')}>
+          <Link className="primary small" to="/browse">{t('common.browseGames')}</Link>
+        </Empty>
+      )}
       <div className="demo-grid">
         {DEMOS.map((def) => {
           const game = games.data?.get(def.slug);

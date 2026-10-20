@@ -121,7 +121,7 @@ export function stepMatch(state: MatchState, dt: number, input: DemoInput): Matc
   // Parón tras un gol: nadie se mueve, pero el reloj sigue
   if (state.freeze > 0) return { ...state, elapsed, finished, freeze: Math.max(0, state.freeze - dt) };
 
-  const turbo = input.action && state.boost > 0;
+  const turbo = input.action && input.up && state.boost > 0;
   const boost = turbo ? Math.max(0, state.boost - BOOST_DRAIN * dt) : Math.min(100, state.boost + BOOST_REGEN * dt);
   let player = drive(state.player, dt, (input.up ? 1 : 0) - (input.down ? 1 : 0), (input.right ? 1 : 0) - (input.left ? 1 : 0), turbo);
   const control = aiInput(state.ai, state.ball);

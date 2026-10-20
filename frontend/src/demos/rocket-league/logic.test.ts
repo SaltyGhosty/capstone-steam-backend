@@ -67,6 +67,17 @@ describe('fútbol 2D estilo Rocket League', () => {
     expect(s.player.angle).toBeGreaterThan(0.3);
   });
 
+  it('el turbo solo se gasta mientras se acelera', () => {
+    let idle = createMatch();
+    let driving = createMatch();
+    for (let i = 0; i < 10; i++) {
+      idle = stepMatch(idle, 0.05, { ...NONE, action: true });
+      driving = stepMatch(driving, 0.05, { ...NONE, up: true, action: true });
+    }
+    expect(idle.boost).toBe(100);
+    expect(driving.boost).toBeLessThan(100);
+  });
+
   it('a los 60 s termina', () => {
     let s = createMatch();
     for (let i = 0; i < MATCH_SECONDS / 0.05 + 5 && !s.finished; i++) s = stepMatch(s, 0.05, NONE);

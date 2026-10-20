@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { clampDt } from '../loop';
 import type { DemoInput } from '../types';
-import { CELESTE_ROOMS, createCeleste, stepCeleste, type CelesteState } from './logic';
+import { CELESTE_ROOMS, PLAYER_H, createCeleste, stepCeleste, type CelesteState } from './logic';
 
 const NONE: DemoInput = { left: false, right: false, up: false, down: false, action: false, secondary: false };
 const press = (k: Partial<DemoInput>): DemoInput => ({ ...NONE, ...k });
@@ -84,6 +84,45 @@ describe('plataformas estilo Celeste', () => {
     expect(s.player.y).toBeLessThanOrEqual(start.y - 16);
     expect(s.deaths).toBe(0);
     expect(s.player.onGround).toBe(true);
+  });
+
+  it('mantener Espacio no encadena saltos: hace falta una pulsación nueva', () => {
+    const ground = settled();
+    const jumped = stepCeleste(ground, 1 / 60, press({ action: true }));
+    expect(jumped.player.vy).toBeLessThan(0);
+    // aterriza con la tecla aún pulsada: no vuelve a saltar
+    const landed = { ...ground, player: { ...ground.player, prevAction: true } };
+    expect(stepCeleste(landed, 1 / 60, press({ action: true })).player.vy).toBeGreaterThanOrEqual(0);
+    // soltar y pulsar de nuevo sí salta
+    const released = stepCeleste(landed, 1 / 60, NONE);
+    expect(stepCeleste(released, 1 / 60, press({ action: true })).player.vy).toBeLessThan(0);
+  });
+
+  it('pulsar el salto un instante antes de aterrizar cuenta', () => {
+    const ground = settled();
+    const buffered = { ...ground, player: { ...ground.player, onGround: false, coyote: 0, jumpBuffer: 0.05 } };
+    const landed = stepCeleste(buffered, 1 / 60, NONE); // aterriza en este fotograma
+    expect(landed.player.onGround).toBe(true);
+    expect(stepCeleste(landed, 1 / 60, NONE).player.vy).toBeLessThan(0);
+  });
+
+  it('el impulso no sale solo con X mantenida', () => {
+    const held = { ...airborne(), player: { ...airborne().player, prevSecondary: true } };
+    expect(stepCeleste(held, 1 / 60, press({ secondary: true, right: true })).player.dashT).toBe(0);
+  });
+
+  it('ninguna plataforma deja menos de 30 px de hueco sobre otra: se puede saltar sin darse con la cabeza', () => {
+    for (const room of CELESTE_ROOMS) {
+      for (const lower of room.solids) {
+        for (const upper of room.solids) {
+          const overlapsX = upper.x < lower.x + lower.w && upper.x + upper.w > lower.x;
+          const above = upper.y + upper.h <= lower.y;
+          if (overlapsX && above) {
+            expect(lower.y - PLAYER_H - (upper.y + upper.h)).toBeGreaterThanOrEqual(30);
+          }
+        }
+      }
+    }
   });
 
   it('cada sala tiene una salida alcanzable: saltos y huecos dentro del alcance', () => {

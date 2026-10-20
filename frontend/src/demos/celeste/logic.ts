@@ -23,6 +23,11 @@ export interface CelestePlayer {
   dashDy: number;
   /** Margen para saltar justo después de dejar el borde */
   coyote: number;
+  /** Margen para saltar si se pulsa un instante antes de aterrizar */
+  jumpBuffer: number;
+  /** Teclas del fotograma anterior: saltar e impulsar piden una pulsación nueva */
+  prevAction: boolean;
+  prevSecondary: boolean;
   facing: 1 | -1;
 }
 
@@ -46,6 +51,7 @@ const GROUND_ACCEL = 1500;
 const AIR_ACCEL = 900;
 const JUMP_SPEED = 460; // sube unos 75 px
 const COYOTE = 0.08;
+const JUMP_BUFFER = 0.1;
 const DASH_SPEED = 380;
 const DASH_TIME = 0.14; // unos 53 px
 const FALL_LIMIT = HEIGHT + 20;
@@ -61,7 +67,7 @@ export const CELESTE_ROOMS: Room[] = [
     spawn: START,
     solids: [
       plat(0, 300, 100, 60), plat(140, 268, 70), plat(250, 236, 70), plat(360, 204, 70),
-      plat(250, 172, 70), plat(140, 140, 70), plat(30, 108, 70), plat(30, 62, 70),
+      plat(250, 172, 70), plat(140, 140, 70), plat(30, 108, 70), plat(130, 62, 60),
     ],
   },
   {
@@ -86,7 +92,8 @@ export const CELESTE_ROOMS: Room[] = [
 function freshPlayer(room: Room): CelestePlayer {
   return {
     x: room.spawn.x, y: room.spawn.y, vx: 0, vy: 0, onGround: false, canDash: true,
-    dashT: 0, dashDx: 1, dashDy: 0, coyote: 0, facing: 1,
+    dashT: 0, dashDx: 1, dashDy: 0, coyote: 0, jumpBuffer: 0,
+    prevAction: false, prevSecondary: false, facing: 1,
   };
 }
 
@@ -124,9 +131,14 @@ export function stepCeleste(state: CelesteState, dt: number, input: DemoInput): 
   if (dir !== 0) p.facing = dir > 0 ? 1 : -1;
 
   p.coyote = p.onGround ? COYOTE : Math.max(0, p.coyote - dt);
+  const jumpPressed = input.action && !p.prevAction;
+  const dashPressed = input.secondary && !p.prevSecondary;
+  p.jumpBuffer = jumpPressed ? JUMP_BUFFER : Math.max(0, p.jumpBuffer - dt);
+  p.prevAction = input.action;
+  p.prevSecondary = input.secondary;
 
   // Impulso: una vez por salto, solo en el aire
-  if (input.secondary && p.canDash && !p.onGround && p.dashT <= 0) {
+  if (dashPressed && p.canDash && !p.onGround && p.dashT <= 0) {
     let dx = dir;
     let dy = (input.down ? 1 : 0) - (input.up ? 1 : 0);
     if (dx === 0 && dy === 0) dx = p.facing;
@@ -148,9 +160,10 @@ export function stepCeleste(state: CelesteState, dt: number, input: DemoInput): 
     }
   } else {
     p.vx = approach(p.vx, dir * MOVE_SPEED, (p.onGround ? GROUND_ACCEL : AIR_ACCEL) * dt);
-    if (input.action && p.coyote > 0) {
+    if (p.jumpBuffer > 0 && p.coyote > 0) {
       p.vy = -JUMP_SPEED;
       p.coyote = 0;
+      p.jumpBuffer = 0;
       p.onGround = false;
     }
     // Soltar el salto lo corta: se controla la altura

@@ -1,13 +1,19 @@
 // Reproductor de demos: pausa, teclado, pantalla final y aviso en móvil.
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
+import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setToken } from '@/api/client';
 import type { GameDetail } from '@/api/types';
+import { StoreProvider } from '@/context/StoreContext';
+import { I18nProvider } from '@/i18n';
 import { mockFetch, page } from '@/test/http';
 import { demoUser, renderRoutes } from '@/test/render';
 import { DemoPlayer } from './DemoPlayer';
 import { MAX_DT, clampDt } from './loop';
+
+const mocks = vi.hoisted(() => ({ failLoad: false }));
 
 // Registro de prueba: un «juego» que solo expone si está en pausa y puede terminar la partida
 vi.mock('./registry', async () => {
@@ -20,7 +26,10 @@ vi.mock('./registry', async () => {
     DEMOS: [],
     demoFor: () => ({
       slug: 'celeste', mechanicKey: 'demos.celeste.mechanic', controlsKey: 'demos.celeste.controls', needsKeyboard: true,
-      load: async () => ({ default: Stub }),
+      load: async () => {
+        if (mocks.failLoad) throw new Error('chunk perdido');
+        return { default: Stub };
+      },
     }),
   };
 });
@@ -45,8 +54,11 @@ function setup(extra = {}, loggedIn = false) {
 
 const open = (onClose = vi.fn()) => renderRoutes({ '/': <DemoPlayer game={game} onClose={onClose} /> }, '/');
 
+const status = (over = {}) => ({ body: { gameId: 5, owned: false, inCart: false, inWishlist: false, reviewed: false, ...over } });
+
 afterEach(() => {
   document.body.style.overflow = '';
+  mocks.failLoad = false;
 });
 
 describe('clampDt', () => {
@@ -102,7 +114,10 @@ describe('DemoPlayer', () => {
   });
 
   it('pantalla final con Añadir al carrito', async () => {
-    const fetchMock = setup({ 'PUT /api/cart/items/5': { body: { items: [], itemCount: 1, total: 0 } } }, true);
+    const fetchMock = setup({
+      'GET /api/library/status/5': status(),
+      'PUT /api/cart/items/5': { body: { items: [], itemCount: 1, total: 0 } },
+    }, true);
     open();
     await userEvent.click(await screen.findByRole('button', { name: 'terminar-stub' }));
     expect(screen.getByText('¡Demo completada!')).toBeInTheDocument();
@@ -110,13 +125,120 @@ describe('DemoPlayer', () => {
     await waitFor(() => expect(fetchMock.mock.calls.some(([u, i]) => String(u) === '/api/cart/items/5' && i?.method === 'PUT')).toBe(true));
   });
 
+  it('la propiedad se consulta al abrir, no al terminar, y no se pinta la compra mientras tanto', async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const fetchMock = setup({}, true);
+    const inner = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input, init) => {
+      if (String(input).includes('/api/library/status/5')) {
+        await gate;
+        return new Response(JSON.stringify(status({ owned: true }).body), { status: 200 });
+      }
+      return inner(input, init);
+    });
+    open();
+    await userEvent.click(await screen.findByRole('button', { name: 'terminar-stub' }));
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes('/api/library/status/5'))).toBe(true);
+    expect(screen.queryByRole('button', { name: /Añadir al carrito/ })).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByRole('link', { name: /Ya lo tienes/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Añadir al carrito/ })).not.toBeInTheDocument();
+  });
+
   it('pantalla final sin Añadir al carrito si ya lo tienes', async () => {
-    setup({ 'GET /api/library/status/5': { body: { gameId: 5, owned: true, inCart: false, inWishlist: false, reviewed: false } } }, true);
+    setup({ 'GET /api/library/status/5': status({ owned: true }) }, true);
     open();
     await userEvent.click(await screen.findByRole('button', { name: 'terminar-stub' }));
     const link = await screen.findByRole('link', { name: /Ya lo tienes/ });
     expect(link).toHaveAttribute('href', '/library');
     expect(screen.queryByRole('button', { name: /Añadir al carrito/ })).not.toBeInTheDocument();
+  });
+
+  it('pantalla final con el juego en el carrito: enlace a /cart', async () => {
+    setup({ 'GET /api/library/status/5': status({ inCart: true }) }, true);
+    open();
+    await userEvent.click(await screen.findByRole('button', { name: 'terminar-stub' }));
+    const link = await screen.findByRole('link', { name: /En el carrito/ });
+    expect(link).toHaveAttribute('href', '/cart');
+    expect(screen.queryByRole('button', { name: /Añadir al carrito/ })).not.toBeInTheDocument();
+  });
+
+  it('si es tu propio estudio no se ofrece ninguna acción de compra', async () => {
+    const mine = { ...game, developer: { id: demoUser.id, displayName: 'Yo' } } as GameDetail;
+    const fetchMock = setup({ 'GET /api/library/status/5': status() }, true);
+    renderRoutes({ '/': <DemoPlayer game={mine} onClose={vi.fn()} /> }, '/');
+    await userEvent.click(await screen.findByRole('button', { name: 'terminar-stub' }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes('/api/library/status/5'))).toBe(true));
+    expect(await screen.findByRole('button', { name: 'Jugar otra vez' })).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.queryByRole('button', { name: /Añadir al carrito/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Ya lo tienes|En el carrito/ })).not.toBeInTheDocument();
+  });
+
+  it('se pausa al ocultarse la pestaña', async () => {
+    setup();
+    open();
+    await screen.findByTestId('stub');
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+    expect(screen.getByTestId('stub')).toHaveAttribute('data-paused', 'true');
+  });
+
+  it('si el minijuego no se carga avisa dentro del diálogo y deja cerrar', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mocks.failLoad = true;
+    setup();
+    const onClose = vi.fn();
+    open(onClose);
+    expect(await screen.findByText('No se ha podido cargar la demo')).toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Cerrar' }).at(-1)!);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('devuelve el foco a quien abrió el diálogo al cerrarlo', async () => {
+    setup();
+    function Host() {
+      const [on, setOn] = useState(false);
+      return <><button onClick={() => setOn(true)}>abrir</button>{on && <DemoPlayer game={game} onClose={() => setOn(false)} />}</>;
+    }
+    renderRoutes({ '/': <Host /> }, '/');
+    const opener = screen.getByRole('button', { name: 'abrir' });
+    await userEvent.click(opener);
+    expect(await screen.findByRole('dialog')).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(opener).toHaveFocus();
+  });
+
+  it('Tab no sale del diálogo y «Continuar» recibe el foco al pausar', async () => {
+    setup();
+    render(
+      <>
+        <button>fuera</button>
+        <MemoryRouter><I18nProvider initial="es"><StoreProvider><DemoPlayer game={game} onClose={vi.fn()} /></StoreProvider></I18nProvider></MemoryRouter>
+      </>,
+    );
+    const dialog = await screen.findByRole('dialog');
+    await screen.findByTestId('stub');
+    for (let i = 0; i < 6; i++) {
+      await userEvent.tab();
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    }
+    act(() => { fireEvent.blur(window); });
+    expect(screen.getByRole('button', { name: 'Continuar' })).toHaveFocus();
+  });
+
+  it('las letras de juego no se bloquean mientras se escribe en un campo', async () => {
+    setup();
+    open();
+    await screen.findByRole('dialog');
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    expect(fireEvent.keyDown(input, { key: 'w' })).toBe(true);
+    expect(fireEvent.keyDown(input, { key: 's' })).toBe(true);
+    input.remove();
   });
 
   it('en móvil una demo de teclado muestra el aviso', async () => {

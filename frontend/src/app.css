@@ -376,10 +376,10 @@ td.row-actions > * { display: inline-flex; vertical-align: middle; margin-left: 
 .balatro-bar span { display: block; height: 100%; background: #b7ff3c; transition: width .4s ease; }
 .balatro-info { min-height: 20px; margin: 0; color: #c8ff68; text-align: center; font-family: "Space Grotesk", sans-serif; font-size: 16px; }
 .balatro-hand { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding-top: 18px; }
-.balatro-card { width: 74px; height: 104px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 8px 9px; box-sizing: border-box; border: 2px solid #cfd5dc; border-radius: 9px; background: #f3f5f7; color: #12161c; font-family: "Space Grotesk", sans-serif; font-size: 24px; font-weight: 700; line-height: 1; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+.balatro-card { touch-action: manipulation; width: 74px; height: 104px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 8px 9px; box-sizing: border-box; border: 2px solid #cfd5dc; border-radius: 9px; background: #f3f5f7; color: #12161c; font-family: "Space Grotesk", sans-serif; font-size: 24px; font-weight: 700; line-height: 1; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
 .balatro-card span:last-child { align-self: flex-end; font-size: 30px; }
 .balatro-card.red { color: #d6453a; }
-.balatro-card:hover:not(:disabled) { transform: translateY(-4px); }
+@media (hover: hover) { .balatro-card:hover:not(:disabled) { transform: translateY(-4px); } }
 .balatro-card.selected { transform: translateY(-16px); border-color: #b7ff3c; box-shadow: 0 0 0 3px rgba(183,255,60,.35), 0 10px 22px rgba(0,0,0,.5); }
 .balatro-card:disabled { opacity: .7; cursor: default; }
 .balatro-actions { display: flex; justify-content: center; gap: 12px; }
