@@ -618,13 +618,63 @@
             },
             "body": {
               "mode": "raw",
+              "raw": "{\n  \"token\": \"token-que-no-existe\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El enlace del correo se canjea con la contraseña de ese registro. Un enlace que no existe, está usado o caducó da 400 auth.verificationInvalid."
+          }
+        },
+        {
+          "name": "Preview con token falso → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"enlace no válido\", () => pm.expect(pm.response.json().code).to.eql(\"auth.verificationInvalid\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-email",
+                "preview"
+              ]
+            },
+            "body": {
+              "mode": "raw",
               "raw": "{\n  \"token\": \"token-que-no-existe\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
+            },
+            "description": "Dice de qué cuenta es un enlace vigente (sin gastarlo). Con un enlace que no vale, 400 auth.verificationInvalid."
           }
         },
         {

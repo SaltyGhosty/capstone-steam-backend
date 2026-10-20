@@ -18,7 +18,7 @@ interface StoreValue {
   /** verificationRequired: la cuenta existe pero no hay sesión hasta verificar el email. */
   register: (data: RegisterRequest) => Promise<{ verificationRequired: boolean; email: string }>;
   /** Canjea el enlace del correo e inicia la sesión. */
-  verifyEmail: (token: string) => Promise<User>;
+  verifyEmail: (token: string, password: string) => Promise<User>;
   logout: () => void;
   setUser: (user: User) => void;
 
@@ -130,8 +130,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const verifyEmail = useCallback<StoreValue['verifyEmail']>(
-    async (token) => {
-      const res = await authApi.verifyEmail(token);
+    async (token, password) => {
+      const res = await authApi.verifyEmail(token, password);
       await startSession(res.accessToken, res.refreshToken, res.user);
       return res.user;
     },

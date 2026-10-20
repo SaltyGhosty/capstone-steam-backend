@@ -15,9 +15,12 @@ export const authApi = {
   /** Con la verificación de email activa no devuelve sesión sino un RegisterResponse. */
   register: (body: RegisterRequest) =>
     api<AuthResponse | RegisterResponse>('/api/auth/register', { method: 'POST', body }),
-  /** Canjea el enlace del correo: verifica el email y devuelve la sesión. */
-  verifyEmail: (token: string) =>
-    api<AuthResponse>('/api/auth/verify-email', { method: 'POST', body: { token } }),
+  /** De qué cuenta es el enlace (si sigue vigente). No gasta el enlace. */
+  previewVerification: (token: string) =>
+    api<{ username: string }>('/api/auth/verify-email/preview', { method: 'POST', body: { token } }),
+  /** Canjea el enlace del correo con la contraseña de ese registro: verifica el email y devuelve la sesión. */
+  verifyEmail: (token: string, password: string) =>
+    api<AuthResponse>('/api/auth/verify-email', { method: 'POST', body: { token, password } }),
   /** Siempre 204, exista o no la cuenta. */
   resendVerification: (email: string) =>
     api<void>('/api/auth/resend-verification', { method: 'POST', body: { email } }),
