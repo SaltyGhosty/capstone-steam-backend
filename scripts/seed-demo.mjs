@@ -46,13 +46,17 @@ async function call(method, path, { token, body, accept = [] } = {}) {
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  // La API limita por IP (20 por minuto) el registro y la verificación: ante un 429 de /api/auth se espera y se repite
+  // La API limita por IP el registro y la verificación: ante un 429 del límite por IP (auth.tooManyRequests) se
+  // espera lo que dice Retry-After y se repite. Cualquier otro 429 (p. ej. el límite de correos por email) falla.
   const sendPatiently = async (tk) => {
     for (let waited = 0; ; waited++) {
       const r = await send(tk);
       if (r.status !== 429 || !path.startsWith('/api/auth/') || waited >= 40) return r;
+      const body = await r.clone().json().catch(() => null);
+      if (body?.code !== 'auth.tooManyRequests') return r;
+      const seconds = Number(r.headers.get('retry-after')) || 15;
       if (waited === 0) console.log('  … límite de peticiones por IP: espero a que se libere');
-      await new Promise((resolve) => setTimeout(resolve, 15000));
+      await new Promise((resolve) => setTimeout(resolve, Math.min(seconds, 90) * 1000 + 500));
     }
   };
   let current = renewed.get(token) ?? token;
@@ -71,6 +75,7 @@ async function call(method, path, { token, body, accept = [] } = {}) {
 }
 
 // Token del admin para verificar cuentas: se pide una vez y se renueva antes de que caduque (15 min).
+// Se valida ANTES de registrar la primera cuenta: si no, una cuenta quedaría registrada sin verificar.
 let adminSession = null;
 async function adminToken() {
   if (!ADMIN_PASSWORD) {
@@ -78,25 +83,57 @@ async function adminToken() {
     process.exit(1);
   }
   if (!adminSession || Date.now() - adminSession.at > 10 * 60 * 1000) {
-    const res = await call('POST', '/api/auth/login', { body: { login: ADMIN_LOGIN, password: ADMIN_PASSWORD } });
-    adminSession = { token: res.accessToken, at: Date.now() };
+    try {
+      const res = await call('POST', '/api/auth/login', { body: { login: ADMIN_LOGIN, password: ADMIN_PASSWORD } });
+      adminSession = { token: res.accessToken, at: Date.now() };
+    } catch (e) {
+      console.error(`No se pudo iniciar sesión como admin («${ADMIN_LOGIN}»): ${e.message}. Revisa --admin-password y --admin-login.`);
+      process.exit(1);
+    }
   }
   return adminSession.token;
 }
 
+/** Verifica con el admin una cuenta del seed que quedó registrada sin verificar (la busca por usuario). */
+async function verifyExisting(username) {
+  const token = await adminToken();
+  const page = await call('GET', `/api/admin/users?q=${encodeURIComponent(username)}&size=100`, { token });
+  const found = page.content.find((u) => u.username.toLowerCase() === username.toLowerCase());
+  if (!found) throw new Error(`La cuenta ${username} está sin verificar y no aparece en el listado de admin`);
+  try {
+    await call('POST', `/api/admin/users/${found.id}/verify-email`, { token });
+  } catch (e) {
+    if (e.code === 'auth.verificationAmbiguous') {
+      throw new Error(`La cuenta ${username} tiene varios registros pendientes y no se puede verificar a mano; bórrala de la base de datos y relanza el seed`);
+    }
+    throw e;
+  }
+}
+
 /**
- * Inicia sesión y, si la cuenta no existe (401) o está pendiente de verificar (403 auth.emailNotVerified),
- * la registra y, si la API pide verificar el email, la verifica con el admin. Devuelve token, id y el usuario.
+ * Inicia sesión y, si la cuenta no existe (401), la registra y la verifica con el admin. Si ya existe pero quedó sin
+ * verificar (403 auth.emailNotVerified: solo sale con la contraseña correcta, así que es del seed) NO se vuelve a
+ * registrar, que crearía un segundo registro y la dejaría sin arreglo: se verifica tal cual con el admin.
+ * Devuelve token, id y el usuario.
  */
 async function account(username, displayName, accountType) {
   const login = () => call('POST', '/api/auth/login', { body: { login: username, password: data.password } });
+  let pendingVerification = false;
   try {
     const res = await login();
     sessionUser.set(res.accessToken, username);
     return { token: res.accessToken, created: false, id: res.user.id, user: res.user };
   } catch (e) {
-    if (e.status !== 401 && !(e.status === 403 && e.code === 'auth.emailNotVerified')) throw e;
+    if (e.status === 403 && e.code === 'auth.emailNotVerified') pendingVerification = true;
+    else if (e.status !== 401) throw e;
   }
+  if (pendingVerification) {
+    await verifyExisting(username);
+    const res = await login();
+    sessionUser.set(res.accessToken, username);
+    return { token: res.accessToken, created: false, id: res.user.id, user: res.user };
+  }
+  await adminToken(); // antes de registrar nada: sin un admin válido la cuenta quedaría sin verificar
   const reg = await call('POST', '/api/auth/register', { body: {
     username, displayName, accountType, password: data.password, email: `${username}@demo.capstone-steam.local`,
   } });

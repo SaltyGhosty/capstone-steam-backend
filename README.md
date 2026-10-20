@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 420 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 89 tests en 15 archivos · CI en GitHub Actions |
+| **Tests** | Backend: 428 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 89 tests en 15 archivos · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 74 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -71,7 +71,7 @@ Los pagos son **simulados**: una tarjeta terminada en `0000` siempre se rechaza,
 - Registrarse con el email de una cuenta **sin verificar** responde 201 como un registro nuevo pero **no toca la cuenta**: solo emite otro enlace con los datos de esa petición. Un usuario ocupado por una cuenta sin verificar se libera si esa cuenta tiene más de 24 h, no tiene datos (pedidos, biblioteca, reseñas, juegos, amistades ni sesiones) y no tiene más roles que USER/DEVELOPER; si no, 409. Si al verificar el usuario del enlace lo ha cogido otra cuenta, 409 y el enlace queda sin usar. Una cuenta verificada nunca se toca.
 - Una cuenta desactivada por un admin que verifica su email queda verificada pero recibe 403 y no se le emite sesión. El registro y la verificación leen la fila del usuario con bloqueo pesimista.
 - Un admin puede verificar una cuenta a mano (`POST /api/admin/users/{id}/verify-email`): lo usan el seed y Postman. Si el email tiene varios registros pedidos distintos (cuentan también los enlaces anulados o caducados) responde 409 `auth.verificationAmbiguous` y no verifica nada; con uno solo aplica ese.
-- **Límite por IP** de 20 peticiones por minuto en `/register`, `/resend-verification`, `/verify-email` y `/verify-email/preview`. Un enlace de reenvío hereda las contraseñas erróneas del registro del que sale, y un registro cuyo enlace se anuló por 5 fallos no se reenvía (hay que registrarse de nuevo).
+- **Límite por IP** de 60 peticiones por minuto (las IPv6 se agrupan por su prefijo /64; los 429 llevan la cabecera `Retry-After`) en `/register`, `/resend-verification`, `/verify-email` y `/verify-email/preview`. Los 5 intentos de contraseña son **por registro** (usuario + contraseña), no por enlace: un enlace de reenvío hereda el máximo de fallos y los fallos se cuentan en todos los enlaces del registro, y un registro cuyo enlace se anuló por 5 fallos no se reenvía (hay que registrarse de nuevo).
 - Los correos reintentan hasta 3 veces los fallos de conexión con el SMTP (Gmail desde Render a veces tarda en conectar).
 
 **Sesión con refresh token.** El token de acceso dura **15 minutos** y el refresh token **7 días**.
@@ -136,7 +136,7 @@ cp .env.example .env    # y rellena los valores
 | `MAIL_FROM_NAME` | Opcional | Nombre con el que llegan los correos y marca que aparece en ellos (por defecto `ARCADE`) |
 | `MAIL_TIMEOUT` | Opcional | Milisegundos de espera de conexión, lectura y escritura con el SMTP (por defecto `15000`). Los fallos de conexión se reintentan hasta 3 veces (pausas de 2 s y 6 s) |
 | `EMAIL_VERIFICATION_REQUIRED` | Opcional | Por defecto `true`: crear una cuenta manda un correo con un enlace y no se puede iniciar sesión hasta pulsarlo. Con `false` las cuentas nacen verificadas y el registro devuelve la sesión (solo lo usan los tests) |
-| `AUTH_IP_LIMIT_PER_MINUTE` | Opcional | Peticiones por minuto y IP a registro, reenvío y verificación del email (por defecto `20`; 429 `auth.tooManyRequests` después). En producción (`prod`) la IP real sale de `X-Forwarded-For` (`server.forward-headers-strategy: native`) |
+| `AUTH_IP_LIMIT_PER_MINUTE` | Opcional | Peticiones por minuto y IP a registro, reenvío y verificación del email (por defecto `60`; 429 `auth.tooManyRequests` con `Retry-After` después). En producción (`prod`) la IP real sale de `X-Forwarded-For` (`server.forward-headers-strategy: native`) |
 | `EMAIL_VERIFICATION_TTL` | Opcional | Validez del enlace de verificación, en formato ISO-8601 (por defecto `P1D`, 24 horas) |
 | `FRONTEND_URL` | Opcional | URL de la tienda para los botones de los correos. Si falta, se usa el primer origen de `CORS_ALLOWED_ORIGINS` |
 | `SERVER_PORT` | Opcional | Por defecto `PORT` (lo fija Render) o 8080 (`.env.example` usa 8081) |
@@ -280,7 +280,7 @@ La autenticación es `Authorization: Bearer <accessToken>`. El token se obtiene 
 | POST | `/api/orders/{id}/cancel` | usuario | Cancelar un pedido pendiente |
 | GET | `/api/orders` · `/api/orders/{id}` | usuario | Historial y detalle |
 | POST | `/api/reviews` · PUT / DELETE `/api/reviews/{id}` | usuario | Reseñar un juego de mi biblioteca: `{gameId, recommended, body?, language?}` (autor; el admin también puede borrar) |
-| GET | `/api/admin/users` | admin | Usuarios paginados |
+| GET | `/api/admin/users` | admin | Usuarios paginados; `?q=` filtra por usuario o email (sin distinguir mayúsculas) |
 | PUT | `/api/admin/users/{id}/roles` | admin | Cambiar roles |
 | PATCH | `/api/admin/users/{id}/enabled` | admin | Activar o desactivar cuenta |
 | POST | `/api/admin/users/{id}/verify-email` | admin | Dar el email de la cuenta por verificado, aplicando los datos de su último enlace (idempotente) |
@@ -314,7 +314,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 420 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 428 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
@@ -371,7 +371,7 @@ node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD>                    
 node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD> --api https://tu-api.onrender.com # contra el despliegue
 ```
 
-El seed espera y reintenta si la API le responde 429 por el límite de 20 registros por minuto y IP (contra producción tarda unos minutos; no hace falta tocar variables de Render). La API exige verificar el email de las cuentas nuevas, así que el seed las verifica con la cuenta de admin (`POST /api/admin/users/{id}/verify-email`). La contraseña va en `--admin-password` o en la variable `ADMIN_PASSWORD` (el usuario, por defecto `admin`, en `--admin-login`). Sin ella, el seed termina con «Falta --admin-password» en cuanto necesita verificar una cuenta. En una base ya sembrada, relanzarlo no crea nada y no necesita la contraseña.
+El seed espera (lo que diga `Retry-After`) y reintenta si la API le responde 429 por el límite por IP (contra producción tarda unos minutos; no hace falta tocar variables de Render); otros 429 los trata como error. Valida la cuenta de admin **antes de registrar la primera cuenta**, para no dejar cuentas sin verificar, y si relanzas el seed tras una ejecución a medias verifica con el admin las cuentas que quedaron pendientes (no las vuelve a registrar). La API exige verificar el email de las cuentas nuevas, así que el seed las verifica con la cuenta de admin (`POST /api/admin/users/{id}/verify-email`). La contraseña va en `--admin-password` o en la variable `ADMIN_PASSWORD` (el usuario, por defecto `admin`, en `--admin-login`). Sin ella, el seed termina con «Falta --admin-password» en cuanto necesita verificar una cuenta. En una base ya sembrada, relanzarlo no crea nada y no necesita la contraseña.
 
 Las portadas, cápsulas e imágenes de cabecera se enlazan desde el CDN de Steam (`cdn.cloudflare.steamstatic.com`), tanto en la tienda como en el correo de recibo. Los nombres, las imágenes y las marcas pertenecen a sus respectivos estudios y editores; se usan solo como datos de demostración en este proyecto educativo. Los textos de las reseñas son propios; las descripciones de los juegos nuevos vienen de la tienda de Steam.
 
