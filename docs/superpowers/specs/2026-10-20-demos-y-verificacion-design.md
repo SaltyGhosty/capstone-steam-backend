@@ -71,11 +71,17 @@ Son dos trabajos independientes (frontend puro y backend+frontend). Se pueden co
 | `POST /api/admin/users/{id}/verify-email` | Admin marca la cuenta como verificada (soporte y seed). Idempotente. |
 
 - **Cuentas que nunca se verifican** *(decisión de Claude, tras la revisión del plan)*: que nadie pueda «secuestrar» un email o un usuario.
-  - Registrarse con un **email** que pertenece a una cuenta **sin verificar** → esa cuenta se **sustituye** (usuario, contraseña, nombre, tipo e idioma nuevos), se anulan sus tokens y se envía un correo nuevo. La propiedad solo se demuestra al pulsar el enlace, así que el dueño real siempre gana.
-  - Registrarse con un **usuario** que ocupa una cuenta **sin verificar cuyo último enlace ya caducó** → esa cuenta se borra y el nombre queda libre. Si su enlace aún es válido → 409 `auth.usernameTaken` como hoy.
+  - **Corregido tras la revisión de seguridad (2026-10-20).** La primera versión («mismo email sin verificar → la cuenta se sustituye») permitía robar cuentas: el atacante se registraba con el email de la víctima, la víctima pulsaba su enlace nuevo y la cuenta quedaba verificada con la contraseña del atacante. Regla nueva:
+  - **Cada enlace lleva los datos de su registro**: `email_verification_tokens` guarda `username`, `password_hash`, `display_name`, `locale` y `developer` de la petición que lo generó. **Al verificar, se aplican a la cuenta los datos de ese enlace** (no los del último registro) y se anulan todos los demás enlaces del usuario. El correo nombra la cuenta: «Confirma la cuenta «<usuario>»», así que quien no la pidió lo ve.
+  - Registrarse con un **email** de una cuenta **sin verificar** → 201 igual que un registro nuevo, **sin tocar la fila** de `users` ni anular enlaces anteriores: solo se emite un enlace nuevo con los datos de esta petición. Con el mismo límite que el reenvío (3 por hora por email).
+  - Registrarse con un **usuario** que ocupa una cuenta **sin verificar creada hace más de 24 h** (se mide desde `created_at`, no desde el último enlace, para que reenviar no retenga el nombre) → esa cuenta se borra y el nombre queda libre, **solo si no tiene datos** (pedidos, biblioteca, reseñas, juegos, amistades, refresh tokens) **ni más roles que USER/DEVELOPER**. Si no se cumple → 409 `auth.usernameTaken`.
+  - Al verificar, si el usuario del enlace lo ha cogido otra cuenta mientras tanto → 409 `auth.usernameTaken` (el enlace sigue sin usarse).
   - Una cuenta verificada nunca se toca: email o usuario repetidos → 409 como hoy (no se revela más que ahora).
+  - Una cuenta **desactivada** por un admin que verifica su email queda verificada, pero recibe 403 `error.disabled` y **no** se le emiten tokens.
+  - Registro, sustitución y verificación leen la fila de `users` con bloqueo pesimista para que no se pisen.
+  - El login de una cuenta sin verificar se bloquea **siempre**, esté el interruptor como esté (con el interruptor apagado, las cuentas nuevas se crean ya verificadas).
 - `SecurityConfig`: `verify-email` y `resend-verification` en `permitAll`.
-- `UserResponse` expone `emailVerified`. `UserRepository.searchPlayers` y amigos ignoran cuentas sin verificar.
+- `UserResponse` expone `emailVerified`. `UserRepository.searchPlayers` y amigos (`FriendService.isPlayer`: solicitudes y perfiles) ignoran cuentas sin verificar.
 - `AdminAccountInitializer` crea al admin ya verificado.
 - Refresh: un usuario sin verificar no tiene refresh tokens; no hace falta tocar `RefreshTokenService` salvo la extracción de `TokenHashing`.
 
