@@ -1,10 +1,12 @@
-# Blueprint de Render: backend (Docker) + PostgreSQL.
+# Blueprint de Render: API (Docker) + frontend (static site) + PostgreSQL, en Frankfurt.
 # En Render: New > Blueprint > elige este repositorio. Los valores con sync: false se piden al crearlo.
+# El despliegue actual (2026-10-19) se creó a mano con estos mismos valores; ver README → Despliegue.
 services:
   - type: web
     name: capstone-steam-api
     runtime: docker
     plan: free
+    region: frankfurt
     healthCheckPath: /actuator/health
     envVars:
       - key: SPRING_PROFILES_ACTIVE
@@ -22,13 +24,15 @@ services:
       - key: JWT_SECRET
         generateValue: true # 256 bits aleatorios en Base64
       - key: CORS_ALLOWED_ORIGINS
-        sync: false # URL del frontend en Vercel, p. ej. https://capstone-steam.vercel.app
+        value: https://capstone-steam-web.onrender.com # URL del frontend (el static site de abajo)
       - key: ADMIN_PASSWORD
-        sync: false
+        sync: false # no uses la de desarrollo: el README la publica
       - key: MAIL_USERNAME
         sync: false
       - key: MAIL_APP_PASSWORD
         sync: false
+      - key: MAIL_FROM
+        sync: false # vacío o igual a MAIL_USERNAME
       - key: CLOUDINARY_URL
         sync: false # cloudinary://<api_key>:<api_secret>@<cloud_name>; vacío = sin subida de portadas
       - key: OPENROUTER_API_KEY
@@ -36,7 +40,21 @@ services:
       - key: OPENROUTER_MODEL
         value: minimax/minimax-m3.1-flash:free,google/gemma-4-31b-it:free
 
+  - type: web
+    name: capstone-steam-web
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: ./frontend/dist
+    routes:
+      - type: rewrite # React Router: cualquier ruta sirve la app (el postbuild deja también un 404.html)
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://capstone-steam-api.onrender.com
+
 databases:
   - name: capstone-steam-db
-    plan: free
+    plan: free # caduca a los 30 días
+    region: frankfurt
     databaseName: capstone_steam

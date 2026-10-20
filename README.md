@@ -318,10 +318,10 @@ El repositorio incluye todo lo necesario; solo faltan las cuentas.
 
 **Desplegado en Render:** el frontend en https://capstone-steam-web.onrender.com y la API en https://capstone-steam-api.onrender.com ([Swagger](https://capstone-steam-api.onrender.com/swagger-ui.html)). El frontend va como *static site* de Render en lugar de Vercel: build `cd frontend && npm ci && npm run build`, carpeta `frontend/dist`, `VITE_API_URL` con la URL de la API. Para las rutas de React Router hay una regla *Rewrite* `/*` → `/index.html` en el panel de Render; además, el `postbuild` copia `index.html` como `404.html` por si falta la regla.
 
-1. **Backend + PostgreSQL en Render.** Ve a *New → Blueprint* y elige este repositorio: [`render.yaml`](render.yaml) crea la base de datos y el servicio web a partir del [`Dockerfile`](Dockerfile). `JWT_SECRET` se genera solo. Al crearlo se piden `CORS_ALLOWED_ORIGINS` (la URL del frontend), `ADMIN_PASSWORD` y, opcionalmente, `MAIL_USERNAME` y `MAIL_APP_PASSWORD`, `CLOUDINARY_URL` y `OPENROUTER_API_KEY` (sin estas dos, la subida de portadas y el asistente quedan desactivados).
-2. **Frontend en Vercel.** Importa el repositorio con *Root Directory* = `frontend` (el [`vercel.json`](frontend/vercel.json) ya configura el build y las rutas) y define `VITE_API_URL` con la URL del backend en Render.
-3. Vuelve a Render y pon en `CORS_ALLOWED_ORIGINS` la URL final de Vercel.
-4. Carga el catálogo demo en la base de datos nueva: `node scripts/seed-demo.mjs --api https://<tu-servicio>.onrender.com`.
+1. **Todo en Render con el Blueprint.** Ve a *New → Blueprint* y elige este repositorio: [`render.yaml`](render.yaml) crea en Frankfurt la base de datos, la API (a partir del [`Dockerfile`](Dockerfile)) y el frontend como *static site* con la regla *Rewrite*. `JWT_SECRET` se genera solo. Se piden `ADMIN_PASSWORD` y, opcionalmente, `MAIL_USERNAME`, `MAIL_APP_PASSWORD`, `MAIL_FROM`, `CLOUDINARY_URL` y `OPENROUTER_API_KEY` (sin estas dos, la subida de portadas y el asistente quedan desactivados). Si Render asigna otros nombres de servicio, ajusta `CORS_ALLOWED_ORIGINS` y `VITE_API_URL`.
+2. Carga el catálogo demo en la base de datos nueva: `node scripts/seed-demo.mjs --api https://<tu-api>.onrender.com`.
+
+Render solo permite **una PostgreSQL gratuita por cuenta**, y caduca a los 30 días. Como alternativa para el frontend sigue valiendo **Vercel**: *Root Directory* = `frontend` (el [`vercel.json`](frontend/vercel.json) ya configura el build y las rutas), `VITE_API_URL` con la URL de la API y esa URL de Vercel en `CORS_ALLOWED_ORIGINS`.
 
 En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda unos 3 minutos en despertarlo.
 
