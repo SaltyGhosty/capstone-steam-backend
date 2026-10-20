@@ -53,7 +53,12 @@ public class ResendRateLimiter {
         Instant now = clock.instant();
         sweepIfDue(now);
         if (hits.size() >= maxEntries && !hits.containsKey(emailKey)) {
-            makeRoom(now);
+            // lleno: tras barrer lo caducado, si sigue lleno se rechazan las claves nuevas (nunca se sacan las
+            // existentes, o un atacante con muchos emails podría borrar el límite de su víctima)
+            sweep(now);
+            if (hits.size() >= maxEntries) {
+                throw new TooManyRequestsException("auth.resendRateLimited");
+            }
         }
         boolean[] allowed = {false};
         hits.compute(emailKey, (key, queue) -> {
@@ -67,28 +72,6 @@ public class ResendRateLimiter {
         });
         if (!allowed[0]) {
             throw new TooManyRequestsException("auth.resendRateLimited");
-        }
-    }
-
-    /** Mapa lleno: barrido de lo caducado y, si sigue lleno, se descarta el 10 % de los más antiguos. */
-    private void makeRoom(Instant now) {
-        sweep(now);
-        if (hits.size() < maxEntries) {
-            return;
-        }
-        int toDrop = Math.max(1, maxEntries / 10);
-        hits.entrySet().stream()
-                .sorted(java.util.Comparator.comparing(e -> lastHit(e.getValue())))
-                .limit(toDrop)
-                .map(java.util.Map.Entry::getKey)
-                .toList()
-                .forEach(hits::remove);
-    }
-
-    private static Instant lastHit(Deque<Instant> queue) {
-        synchronized (queue) {
-            Instant last = queue.peekLast();
-            return last == null ? Instant.MIN : last;
         }
     }
 

@@ -21,6 +21,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.capstone.steam.common.exception.BadRequestException;
@@ -42,6 +43,7 @@ class EmailVerificationServiceTest {
     @Mock private RoleRepository roleRepository;
     @Mock private ApplicationEventPublisher events;
     @Mock private AccountDataCheck dataCheck;
+    @Mock private PasswordEncoder passwordEncoder;
 
     private EmailVerificationService service;
 
@@ -49,7 +51,7 @@ class EmailVerificationServiceTest {
     void setUp() {
         service = new EmailVerificationService(tokens, userRepository, roleRepository, events,
                 new EmailVerificationProperties(true, Duration.ofDays(1), 3), Clock.fixed(NOW, ZoneOffset.UTC),
-                new ResendRateLimiter(Clock.fixed(NOW, ZoneOffset.UTC), 3), dataCheck);
+                new ResendRateLimiter(Clock.fixed(NOW, ZoneOffset.UTC), 3), dataCheck, passwordEncoder);
     }
 
     private static User user(long id) {
@@ -77,6 +79,7 @@ class EmailVerificationServiceTest {
         User ana = user(5L);
         EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
         when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(passwordEncoder.matches("pw", "hash-nuevo")).thenReturn(true);
         when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(ana));
         when(userRepository.findIdByUsernameIgnoreCase("nuevo")).thenReturn(Optional.empty());
         when(tokens.markUsedIfUnused(10L, NOW)).thenReturn(1);
@@ -84,7 +87,7 @@ class EmailVerificationServiceTest {
         when(roleRepository.findByName(RoleName.ROLE_USER)).thenReturn(Optional.of(new Role(RoleName.ROLE_USER)));
         when(roleRepository.findByName(RoleName.ROLE_DEVELOPER)).thenReturn(Optional.of(new Role(RoleName.ROLE_DEVELOPER)));
 
-        User verified = service.verify("raw");
+        User verified = service.verify("raw", "pw");
 
         assertThat(verified).isSameAs(ana);
         assertThat(ana.isEmailVerified()).isTrue();
@@ -100,10 +103,11 @@ class EmailVerificationServiceTest {
     void verifyFailsWith409AndKeepsTheLinkWhenAnotherAccountHasTheUsername() {
         EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
         when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(passwordEncoder.matches("pw", "hash-nuevo")).thenReturn(true);
         when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(user(5L)));
         when(userRepository.findIdByUsernameIgnoreCase("nuevo")).thenReturn(Optional.of(99L));
 
-        assertThatThrownBy(() -> service.verify("raw")).isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> service.verify("raw", "pw")).isInstanceOf(ConflictException.class);
         verify(tokens, never()).markUsedIfUnused(anyLong(), any());
     }
 
@@ -113,7 +117,7 @@ class EmailVerificationServiceTest {
         ReflectionTestUtils.setField(token, "usedAt", NOW.minusSeconds(5));
         when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
 
-        assertThatThrownBy(() -> service.verify("raw")).isInstanceOf(BadRequestException.class)
+        assertThatThrownBy(() -> service.verify("raw", "pw")).isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("enlace");
         verify(tokens, never()).markUsedIfUnused(anyLong(), any());
     }
@@ -124,19 +128,48 @@ class EmailVerificationServiceTest {
         when(tokens.findByTokenHash(TokenHashing.sha256Hex("old")))
                 .thenReturn(Optional.of(token(11L, 5L, NOW)));  // caduca justo ahora: ya no vale
 
-        assertThatThrownBy(() -> service.verify("nope")).isInstanceOf(BadRequestException.class);
-        assertThatThrownBy(() -> service.verify("old")).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.verify("nope", "pw")).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.verify("old", "pw")).isInstanceOf(BadRequestException.class);
     }
 
     @Test
     void verifyLosesTheRaceWhenAnotherRequestUsedTheTokenFirst() {
         EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
         when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(passwordEncoder.matches("pw", "hash-nuevo")).thenReturn(true);
         when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(user(5L)));
         when(userRepository.findIdByUsernameIgnoreCase("nuevo")).thenReturn(Optional.empty());
         when(tokens.markUsedIfUnused(10L, NOW)).thenReturn(0);
 
-        assertThatThrownBy(() -> service.verify("raw")).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.verify("raw", "pw")).isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void aWrongPasswordCountsAsAFailureAndDoesNotConsumeTheLink() {
+        EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
+        when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(passwordEncoder.matches("mala", "hash-nuevo")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.verify("raw", "mala")).isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("contraseña");
+
+        verify(tokens).incrementFailedAttempts(10L);
+        verify(tokens).invalidateIfTooManyFailures(10L, NOW, 5);
+        verify(tokens, never()).markUsedIfUnused(anyLong(), any());
+    }
+
+    @Test
+    void previewReturnsTheUsernameOnlyOfALiveLink() {
+        when(tokens.findByTokenHash(TokenHashing.sha256Hex("vivo"))).thenReturn(Optional.of(token(10L, 5L, NOW.plusSeconds(60))));
+        when(tokens.findByTokenHash(TokenHashing.sha256Hex("viejo"))).thenReturn(Optional.of(token(11L, 5L, NOW)));
+        EmailVerificationToken used = token(12L, 5L, NOW.plusSeconds(60));
+        ReflectionTestUtils.setField(used, "usedAt", NOW.minusSeconds(1));
+        when(tokens.findByTokenHash(TokenHashing.sha256Hex("usado"))).thenReturn(Optional.of(used));
+
+        assertThat(service.preview("vivo")).isEqualTo("nuevo");
+        assertThatThrownBy(() -> service.preview("viejo")).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.preview("usado")).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.preview("nadie")).isInstanceOf(BadRequestException.class);
     }
 
     @Test

@@ -15,6 +15,7 @@ import com.capstone.steam.auth.dto.LoginRequest;
 import com.capstone.steam.auth.dto.RegisterRequest;
 import com.capstone.steam.auth.dto.RegisterResponse;
 import com.capstone.steam.auth.dto.RegistrationResult;
+import com.capstone.steam.common.exception.BadRequestException;
 import com.capstone.steam.common.exception.ConflictException;
 import com.capstone.steam.common.exception.ForbiddenException;
 import com.capstone.steam.common.exception.NotFoundException;
@@ -103,11 +104,13 @@ public class AuthService {
         if (byUsername != null && byUsername.isEmailVerified()) {
             throw new ConflictException("auth.usernameTaken");
         }
-        verificationService.checkRateLimit(email); // registro y reenvío comparten el cupo de correos por email
-        if (byUsername != null && (byEmail == null || !byUsername.getId().equals(byEmail.getId()))) {
-            if (!verificationService.isReclaimable(byUsername)) {
-                throw new ConflictException("auth.usernameTaken");
-            }
+        boolean takesOverUsername = byUsername != null && (byEmail == null || !byUsername.getId().equals(byEmail.getId()));
+        if (takesOverUsername && !verificationService.isReclaimable(byUsername)) {
+            throw new ConflictException("auth.usernameTaken");
+        }
+        // El cupo de correos (registro y reenvío lo comparten) solo se gasta cuando el registro se acepta
+        verificationService.checkRateLimit(email);
+        if (takesOverUsername) {
             userRepository.delete(byUsername); // sus enlaces caen por ON DELETE CASCADE
             userRepository.flush(); // el DELETE tiene que ir antes de reutilizar el nombre
         }
@@ -178,10 +181,11 @@ public class AuthService {
         return issueToken(user);
     }
 
-    /** Canjea el enlace del correo: verifica el email e inicia la sesión. */
-    @Transactional(noRollbackFor = ForbiddenException.class) // una cuenta desactivada queda verificada igualmente
-    public AuthResponse verifyEmail(String rawToken) {
-        User user = verificationService.verify(rawToken);
+    /** Canjea el enlace del correo con la contraseña de ese registro: verifica el email e inicia la sesión. */
+    // una cuenta desactivada queda verificada igualmente, y la contraseña errónea tiene que contar (400 sin rollback)
+    @Transactional(noRollbackFor = {ForbiddenException.class, BadRequestException.class})
+    public AuthResponse verifyEmail(String rawToken, String password) {
+        User user = verificationService.verify(rawToken, password);
         if (!user.isEnabled()) {
             throw new ForbiddenException("error.disabled"); // verificada, pero sin sesión
         }

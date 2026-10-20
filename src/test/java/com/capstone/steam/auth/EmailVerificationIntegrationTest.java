@@ -178,13 +178,122 @@ class EmailVerificationIntegrationTest {
                 .isEqualTo("victima");
 
         // la víctima pulsa SU enlace: la cuenta queda con SUS datos
-        verify(victimLink).andExpect(status().isOk()).andExpect(jsonPath("$.user.username").value("victima"))
+        verify(victimLink, "ClaveVictima1").andExpect(status().isOk()).andExpect(jsonPath("$.user.username").value("victima"))
                 .andExpect(jsonPath("$.user.roles.length()").value(1));
         login("victima", "ClaveVictima1").andExpect(status().isOk());
         login("victima", "ClaveAtacante1").andExpect(status().isUnauthorized());
         login("atacante", "ClaveAtacante1").andExpect(status().isUnauthorized());
         // el enlace del atacante ya no vale
         verify(attackerLink).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void verifyRequiresThePasswordOfThatRegistration() throws Exception {
+        // la víctima y el atacante piden el MISMO usuario con el mismo email: los dos correos nombran «juanp»
+        register("juanp", "v@test.com", "ClaveVictima1", "PLAYER").andExpect(status().isCreated());
+        String victimLink = lastToken();
+        register("juanp", "v@test.com", "ClaveAtacante1", "PLAYER").andExpect(status().isCreated());
+        String attackerLink = lastToken();
+
+        // pulsar el enlace del atacante con la contraseña de la víctima no vale (ni a la inversa)
+        verify(attackerLink, "ClaveVictima1").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("auth.verificationPasswordInvalid"))
+                .andExpect(jsonPath("$.detail").value("La contraseña no coincide con la de este registro."));
+        verify(victimLink, "ClaveAtacante1").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("auth.verificationPasswordInvalid"));
+        login("juanp", "ClaveVictima1").andExpect(status().isForbidden()); // sigue sin verificar
+
+        verify(victimLink, "ClaveVictima1").andExpect(status().isOk()).andExpect(jsonPath("$.accessToken").isNotEmpty());
+        login("juanp", "ClaveVictima1").andExpect(status().isOk());
+        login("juanp", "ClaveAtacante1").andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void wrongPasswordDoesNotConsumeTheLink() throws Exception {
+        register("ana", "ana@test.com").andExpect(status().isCreated());
+        String link = lastToken();
+
+        verify(link, "equivocada1").andExpect(status().isBadRequest());
+        verify(link, "equivocada2").andExpect(status().isBadRequest());
+
+        assertThat(jdbc.queryForObject("SELECT failed_attempts FROM email_verification_tokens WHERE token_hash = ?",
+                Integer.class, TokenHashing.sha256Hex(link))).isEqualTo(2);
+        verify(link).andExpect(status().isOk());
+    }
+
+    @Test
+    void fiveWrongPasswordsInvalidateTheLink() throws Exception {
+        register("ana", "ana@test.com").andExpect(status().isCreated());
+        String link = lastToken();
+
+        for (int i = 0; i < 5; i++) {
+            verify(link, "equivocada" + i).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("auth.verificationPasswordInvalid"));
+        }
+        // anulado: ni con la contraseña buena, y el aviso pasa a «enlace no válido»
+        verify(link).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("auth.verificationInvalid"));
+        preview(link).andExpect(status().isBadRequest());
+        login("ana", "password123").andExpect(status().isForbidden());
+    }
+
+    @Test
+    void previewShowsTheUsernameOnlyForAValidLink() throws Exception {
+        register("ana", "ana@test.com").andExpect(status().isCreated());
+        String link = lastToken();
+
+        preview(link).andExpect(status().isOk()).andExpect(jsonPath("$.username").value("ana"))
+                .andExpect(jsonPath("$.email").doesNotExist());
+        preview(link).andExpect(status().isOk()); // idempotente: no gasta el enlace
+        preview("no-existe").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("auth.verificationInvalid"));
+
+        verify(link).andExpect(status().isOk());
+        preview(link).andExpect(status().isBadRequest()); // usado
+
+        register("leo", "leo@test.com").andExpect(status().isCreated());
+        String expiring = lastToken();
+        clock.now = clock.now.plus(Duration.ofHours(24)).plusSeconds(1);
+        preview(expiring).andExpect(status().isBadRequest()); // caducado
+    }
+
+    @Test
+    void resendSendsAllPendingLinks() throws Exception {
+        register("juanp", "v@test.com", "ClaveVictima1", "PLAYER").andExpect(status().isCreated());
+        register("juanp", "v@test.com", "ClaveAtacante1", "PLAYER").andExpect(status().isCreated());
+        events.clear();
+
+        resend("v@test.com").andExpect(status().isNoContent());
+
+        List<VerificationEmailEvent> sent = events.stream(VerificationEmailEvent.class).toList();
+        assertThat(sent).hasSize(2); // mismo usuario, dos registros distintos: dos correos
+        // cada enlace nuevo conserva la contraseña de su registro
+        verify(sent.get(0).verificationToken(), "ClaveAtacante1").andExpect(status().isOk());
+    }
+
+    @Test
+    void adminCannotVerifyByHandWhenSeveralRegistrationsArePending() throws Exception {
+        long id = id(register("victima", "v@test.com", "ClaveVictima1", "PLAYER").andExpect(status().isCreated()));
+        register("atacante", "v@test.com", "ClaveAtacante1", "PLAYER").andExpect(status().isCreated());
+
+        mvc.perform(post("/api/admin/users/" + id + "/verify-email").header(HttpHeaders.AUTHORIZATION, "Bearer " + admin()))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("auth.verificationAmbiguous"));
+        assertThat(jdbc.queryForObject("SELECT username FROM users WHERE id = ?", String.class, id)).isEqualTo("victima");
+        login("victima", "ClaveVictima1").andExpect(status().isForbidden()); // sigue sin verificar
+    }
+
+    @Test
+    void conflictingRegistrationsDoNotSpendTheEmailsQuota() throws Exception {
+        register("ocupado", "ocupado@test.com").andExpect(status().isCreated());
+        verify(lastToken()).andExpect(status().isOk());
+
+        for (int i = 0; i < 5; i++) {
+            register("ocupado", "nuevo@test.com").andExpect(status().isConflict()); // usuario de una cuenta verificada
+        }
+        // el cupo de nuevo@ sigue entero: 3 registros aceptados y el 4.º, 429
+        for (int i = 0; i < 3; i++) {
+            register("libre" + i, "nuevo@test.com").andExpect(status().isCreated());
+        }
+        register("libre3", "nuevo@test.com").andExpect(status().isTooManyRequests());
     }
 
     @Test
@@ -208,7 +317,7 @@ class EmailVerificationIntegrationTest {
         register("ana2", "ana@test.com", "otra-clave-123", "DEVELOPER").andExpect(status().isCreated());
         String second = lastToken();
 
-        verify(second).andExpect(status().isOk())
+        verify(second, "otra-clave-123").andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.username").value("ana2"))
                 .andExpect(jsonPath("$.user.roles[0]").value("ROLE_DEVELOPER"));
         login("ana2", "otra-clave-123").andExpect(status().isOk());
@@ -256,7 +365,7 @@ class EmailVerificationIntegrationTest {
         assertThat(sent).extracting(VerificationEmailEvent::username).containsExactlyInAnyOrder("victima", "atacante");
         String victimLink = sent.stream().filter(e -> e.username().equals("victima")).findFirst().orElseThrow()
                 .verificationToken();
-        verify(victimLink).andExpect(status().isOk()).andExpect(jsonPath("$.user.username").value("victima"));
+        verify(victimLink, "ClaveVictima1").andExpect(status().isOk()).andExpect(jsonPath("$.user.username").value("victima"));
         login("victima", "ClaveVictima1").andExpect(status().isOk());
         login("victima", "ClaveAtacante1").andExpect(status().isUnauthorized());
     }
@@ -501,7 +610,16 @@ class EmailVerificationIntegrationTest {
     }
 
     private ResultActions verify(String token) throws Exception {
+        return verify(token, "password123");
+    }
+
+    private ResultActions verify(String token, String password) throws Exception {
         return mvc.perform(post("/api/auth/verify-email").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"%s\",\"password\":\"%s\"}".formatted(token, password)));
+    }
+
+    private ResultActions preview(String token) throws Exception {
+        return mvc.perform(post("/api/auth/verify-email/preview").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"token\":\"%s\"}".formatted(token)));
     }
 

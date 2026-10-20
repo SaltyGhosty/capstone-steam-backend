@@ -83,22 +83,22 @@ class ResendRateLimiterTest {
     }
 
     @Test
-    void theMapNeverGrowsPastItsCapAndDropsTheOldestEntries() {
+    void aFullMapRejectsNewKeysAndNeverEvictsExistingOnes() {
         limiter = new ResendRateLimiter(clock, 3, 10);
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < 10; i++) {
             limiter.check("victima" + i + "@test.com");
-            clock.advance(Duration.ofSeconds(1));
-            assertThat(limiter.trackedEmails()).isLessThanOrEqualTo(10);
         }
-        // los últimos siguen contando; los más antiguos se descartaron (y vuelven a tener todo su cupo)
-        for (int i = 0; i < 3; i++) {
-            limiter.check("victima0@test.com");
-        }
-        assertThatThrownBy(() -> {
-            for (int i = 0; i < 3; i++) {
-                limiter.check("victima49@test.com");
-            }
-        }).isInstanceOf(TooManyRequestsException.class);
+        // lleno: una clave nueva se rechaza (no se saca ninguna existente)
+        assertThatThrownBy(() -> limiter.check("nuevo@test.com")).isInstanceOf(TooManyRequestsException.class);
+        assertThat(limiter.trackedEmails()).isEqualTo(10);
+        // las existentes siguen contando: 3 pasan, la cuarta no
+        limiter.check("victima0@test.com");
+        limiter.check("victima0@test.com");
+        assertThatThrownBy(() -> limiter.check("victima0@test.com")).isInstanceOf(TooManyRequestsException.class);
+
+        // pasada la hora el barrido libera sitio
+        clock.advance(Duration.ofHours(1).plusMinutes(6));
+        assertThatCode(() -> limiter.check("nuevo@test.com")).doesNotThrowAnyException();
     }
 
     @Test

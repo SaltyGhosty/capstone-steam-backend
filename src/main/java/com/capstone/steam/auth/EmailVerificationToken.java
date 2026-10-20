@@ -53,6 +53,9 @@ public class EmailVerificationToken {
     @Column(name = "developer", nullable = false, updatable = false)
     private boolean developer;
 
+    @Column(name = "failed_attempts", nullable = false)
+    private int failedAttempts;
+
     protected EmailVerificationToken() {
     }
 
@@ -70,6 +73,14 @@ public class EmailVerificationToken {
     /** Los datos del registro que guarda este enlace. */
     public PendingRegistration pending() {
         return new PendingRegistration(username, passwordHash, displayName, locale, developer);
+    }
+
+    public int getFailedAttempts() {
+        return failedAttempts;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
     }
 
     public String getUsername() {

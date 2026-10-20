@@ -85,7 +85,7 @@ class EmailVerificationConcurrencyTest {
         String victimLink = tokenOf("victima");
 
         List<Object> results = runTogether(List.of(
-                () -> authService.verifyEmail(victimLink),
+                () -> authService.verifyEmail(victimLink, "ClaveVictima1"),
                 () -> authService.register(request("atacante", "carrera1@test.com", "ClaveAtacante1"))));
 
         assertThat(results.get(0)).isNotInstanceOf(Exception.class); // la víctima entra
@@ -99,6 +99,19 @@ class EmailVerificationConcurrencyTest {
     }
 
     @Test
+    void aWrongPasswordIsCountedAndSurvivesTheBadRequestResponse() {
+        authService.register(request("contador", "carrera3@test.com", "ClaveBuena123"));
+        String link = tokenOf("contador");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> authService.verifyEmail(link, "mala"))
+                .isInstanceOf(BadRequestException.class);
+
+        // sin transacción de test: el commit es real, así que el contador solo está si no hubo rollback
+        assertThat(jdbc.queryForObject("SELECT failed_attempts FROM email_verification_tokens WHERE token_hash = ?",
+                Integer.class, TokenHashing.sha256Hex(link))).isEqualTo(1);
+    }
+
+    @Test
     void twoLinksOfTheSameAccountPressedAtOnceAreNotBothAccepted() throws Exception {
         authService.register(request("primera", "carrera2@test.com", "ClavePrimera11"));
         String first = tokenOf("primera");
@@ -106,8 +119,8 @@ class EmailVerificationConcurrencyTest {
         String second = tokenOf("segunda");
 
         List<Object> results = runTogether(List.of(
-                () -> authService.verifyEmail(first),
-                () -> authService.verifyEmail(second)));
+                () -> authService.verifyEmail(first, "ClavePrimera11"),
+                () -> authService.verifyEmail(second, "ClaveSegunda11")));
 
         long accepted = results.stream().filter(r -> !(r instanceof Exception)).count();
         long rejected = results.stream().filter(r -> r instanceof BadRequestException).count();

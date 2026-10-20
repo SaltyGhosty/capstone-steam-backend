@@ -16,6 +16,8 @@ CREATE TABLE email_verification_tokens (
     display_name  VARCHAR(100),
     locale        VARCHAR(5)   DEFAULT 'es' NOT NULL,
     developer     BOOLEAN      DEFAULT FALSE NOT NULL,
+    -- contraseñas erróneas al pulsar el enlace: a las 5 el enlace se anula
+    failed_attempts INT        DEFAULT 0 NOT NULL,
     CONSTRAINT uk_email_verification_tokens_hash UNIQUE (token_hash),
     CONSTRAINT ck_email_verification_tokens_locale CHECK (locale IN ('es', 'en', 'it'))
 );

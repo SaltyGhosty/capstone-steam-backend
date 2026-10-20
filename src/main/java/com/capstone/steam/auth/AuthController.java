@@ -13,6 +13,8 @@ import com.capstone.steam.auth.dto.RefreshRequest;
 import com.capstone.steam.auth.dto.RegisterRequest;
 import com.capstone.steam.auth.dto.RegistrationResult;
 import com.capstone.steam.auth.dto.ResendVerificationRequest;
+import com.capstone.steam.auth.dto.VerificationPreview;
+import com.capstone.steam.auth.dto.VerificationPreviewRequest;
 import com.capstone.steam.auth.dto.VerifyEmailRequest;
 
 import jakarta.validation.Valid;
@@ -43,7 +45,13 @@ public class AuthController {
     /** Canjea el enlace del correo: verifica el email e inicia la sesión. */
     @PostMapping("/verify-email")
     public AuthResponse verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
-        return authService.verifyEmail(request.token());
+        return authService.verifyEmail(request.token(), request.password());
+    }
+
+    /** De qué cuenta es el enlace (si sigue vigente), para que la página pida su contraseña. Idempotente. */
+    @PostMapping("/verify-email/preview")
+    public VerificationPreview previewVerification(@Valid @RequestBody VerificationPreviewRequest request) {
+        return new VerificationPreview(verificationService.preview(request.token()));
     }
 
     /** Siempre 204: no revela si el email existe ni si ya está verificado. Máximo 3 por hora y email. */

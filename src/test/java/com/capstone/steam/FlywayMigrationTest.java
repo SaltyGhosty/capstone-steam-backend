@@ -28,16 +28,31 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV12() {
+    void appliesAllMigrationsUpToV12_1() {
         var applied = flyway.info().applied();
-        assertThat(applied).hasSize(12);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("12");
+        assertThat(applied).hasSize(13);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("12.1");
     }
 
     @Test
     void existingUsersAreVerifiedAfterV12() {
         assertThat(jdbc.queryForObject("SELECT email_verified FROM users WHERE username = 'admin'", Boolean.class))
                 .isTrue();
+    }
+
+    @Test
+    void usernamesAreUniqueIgnoringCase() {
+        insertUser("JuanP");
+        assertThatThrownBy(() -> insertUser("juanp")).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void verificationLinksStartWithZeroFailedAttempts() {
+        long userId = insertUser("intentos");
+        jdbc.update("INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, username, password_hash) "
+                + "VALUES (?, 'h-int', CURRENT_TIMESTAMP, 'x', 'y')", userId);
+        assertThat(jdbc.queryForObject("SELECT failed_attempts FROM email_verification_tokens WHERE token_hash = 'h-int'",
+                Integer.class)).isZero();
     }
 
     @Test

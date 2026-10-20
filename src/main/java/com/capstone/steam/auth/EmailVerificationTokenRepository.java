@@ -23,6 +23,16 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
     @Query("update EmailVerificationToken t set t.usedAt = :now where t.userId = :userId and t.usedAt is null")
     int invalidateActive(Long userId, Instant now);
 
+    /** Cuenta una contraseña errónea. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update EmailVerificationToken t set t.failedAttempts = t.failedAttempts + 1 where t.id = :id")
+    int incrementFailedAttempts(Long id);
+
+    /** Anula el enlace si ya llegó al máximo de contraseñas erróneas. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update EmailVerificationToken t set t.usedAt = :now where t.id = :id and t.usedAt is null and t.failedAttempts >= :max")
+    int invalidateIfTooManyFailures(Long id, Instant now, int max);
+
     /** Marca el token como usado solo si seguía sin usar; de dos clics simultáneos solo uno recibe 1. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update EmailVerificationToken t set t.usedAt = :now where t.id = :id and t.usedAt is null")
