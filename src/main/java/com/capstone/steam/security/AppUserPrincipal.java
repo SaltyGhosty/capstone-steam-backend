@@ -1,5 +1,6 @@
 package com.capstone.steam.security;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -22,8 +23,11 @@ public final class AppUserPrincipal implements UserDetails {
     private final String password;
     private final boolean enabled;
     private final List<GrantedAuthority> authorities;
+    private final Instant issuedAt;
 
-    private AppUserPrincipal(Long id, String username, String password, boolean enabled, List<String> roles) {
+    private AppUserPrincipal(Long id, String username, String password, boolean enabled, List<String> roles,
+            Instant issuedAt) {
+        this.issuedAt = issuedAt;
         this.id = id;
         this.username = username;
         this.password = password;
@@ -33,11 +37,20 @@ public final class AppUserPrincipal implements UserDetails {
 
     public static AppUserPrincipal fromUser(User user) {
         List<String> roles = user.getRoles().stream().map(Role::getName).map(Enum::name).sorted().toList();
-        return new AppUserPrincipal(user.getId(), user.getUsername(), user.getPasswordHash(), user.isEnabled(), roles);
+        return new AppUserPrincipal(user.getId(), user.getUsername(), user.getPasswordHash(), user.isEnabled(), roles, null);
     }
 
     public static AppUserPrincipal fromToken(Long id, String username, List<String> roles) {
-        return new AppUserPrincipal(id, username, null, true, roles);
+        return fromToken(id, username, roles, null);
+    }
+
+    public static AppUserPrincipal fromToken(Long id, String username, List<String> roles, Instant issuedAt) {
+        return new AppUserPrincipal(id, username, null, true, roles, issuedAt);
+    }
+
+    /** Instante de emisión del token (iat); null si el principal no viene de un token. */
+    public Instant getIssuedAt() {
+        return issuedAt;
     }
 
     public Long getId() {

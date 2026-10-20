@@ -11,6 +11,7 @@ import com.capstone.steam.auth.RefreshTokenService;
 import com.capstone.steam.common.dto.PageResponse;
 import com.capstone.steam.common.exception.BadRequestException;
 import com.capstone.steam.common.exception.NotFoundException;
+import com.capstone.steam.security.AccessTokenRevocations;
 import com.capstone.steam.user.dto.UpdateProfileRequest;
 import com.capstone.steam.user.dto.UserResponse;
 
@@ -20,9 +21,11 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final RefreshTokenService refreshTokenService;
+    private final AccessTokenRevocations accessTokenRevocations;
 
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
-            RefreshTokenService refreshTokenService) {
+            RefreshTokenService refreshTokenService, AccessTokenRevocations accessTokenRevocations) {
+        this.accessTokenRevocations = accessTokenRevocations;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.refreshTokenService = refreshTokenService;
@@ -72,6 +75,7 @@ public class UserService {
         roles.forEach(name -> user.addRole(roleRepository.findByName(name).orElseThrow()));
         // Los roles viajan en el access token: se cortan sus sesiones para que renueve con los nuevos
         refreshTokenService.revokeAll(userId);
+        accessTokenRevocations.revokeUser(userId); // y el access token vigente deja de valer ya (D16)
         return UserResponse.from(user);
     }
 
@@ -84,6 +88,7 @@ public class UserService {
         user.setEnabled(enabled);
         if (!enabled) {
             refreshTokenService.revokeAll(userId);
+            accessTokenRevocations.revokeUser(userId);
         }
         return UserResponse.from(user);
     }

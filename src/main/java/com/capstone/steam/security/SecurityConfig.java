@@ -1,5 +1,6 @@
 package com.capstone.steam.security;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,6 +19,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.time.Clock;
 import java.util.List;
 
 @Configuration
@@ -26,7 +28,7 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService,
-            ProblemResponseWriter problemWriter) throws Exception {
+            AccessTokenRevocations revocations, ProblemResponseWriter problemWriter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable) // API stateless con Bearer token: sin cookies, sin CSRF
                 .cors(cors -> {})
@@ -48,8 +50,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/developer/**").hasRole("DEVELOPER")
                         .anyRequest().authenticated())
-                .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthFilter(jwtService, revocations), UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    Clock clock() {
+        return Clock.systemUTC();
     }
 
     @Bean

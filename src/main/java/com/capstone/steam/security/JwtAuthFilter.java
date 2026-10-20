@@ -28,9 +28,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
+    private final AccessTokenRevocations revocations;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, AccessTokenRevocations revocations) {
         this.jwtService = jwtService;
+        this.revocations = revocations;
     }
 
     @Override
@@ -41,6 +43,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 AppUserPrincipal principal = jwtService.parseToken(header.substring(BEARER_PREFIX.length()));
+                if (revocations.isRevoked(principal.getId(), principal.getIssuedAt())) {
+                    log.debug("JWT rechazado: emitido antes de una revocación de la cuenta");
+                    chain.doFilter(request, response);
+                    return;
+                }
                 var authentication = UsernamePasswordAuthenticationToken.authenticated(
                         principal, null, principal.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
