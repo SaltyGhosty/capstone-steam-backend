@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 323 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 69 tests en 14 archivos · CI en GitHub Actions |
+| **Tests** | Backend: 332 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 69 tests en 14 archivos · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 73 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -293,7 +293,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 323 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 332 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
@@ -370,7 +370,7 @@ La justificación de cada decisión (D1 a D51) está en [handoff.md](handoff.md)
 - **Sin filtraciones de información.** Un pedido ajeno devuelve 404 (no 403), los listados usan un orden fijo en el servidor y los datos del usuario se escapan en los correos HTML.
 
 ### Limitaciones conocidas
-- El JWT no consulta la base de datos en cada petición. Si se desactiva un usuario o cambian sus roles, sus refresh tokens se revocan al instante, pero el token de acceso que ya tenía sigue valiendo hasta 15 minutos.
+- Desactivar una cuenta o cambiarle los roles corta su token de acceso al instante, sin consultar la base de datos en cada petición: el backend guarda una marca en memoria. Esa marca se pierde al reiniciar (el token vuelve a valer hasta 15 minutos) y no se comparte entre varias instancias.
 - El refresh token se guarda en `localStorage`, como el de acceso, así que un XSS podría leerlo. Una cookie `httpOnly` sería más segura, pero entre dominios (Vercel y Render) complica CORS y SameSite.
 - La purga diaria de `refresh_tokens` solo borra familias enteras ya caducadas; con varias instancias correría en todas (es idempotente).
 - El límite de mensajes del asistente vive en memoria: se pierde al reiniciar y no se comparte entre varias instancias del backend.

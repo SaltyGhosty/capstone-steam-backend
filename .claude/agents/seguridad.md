@@ -26,7 +26,7 @@ Dentro de `src/main/java/com/capstone/steam/`:
 - **Sin filtraciones.** Un recurso ajeno sensible responde 404, no 403. Los mensajes de error del login no revelan si el usuario existe.
 - **CORS.** Solo los orígenes de `CORS_ALLOWED_ORIGINS`.
 
-Limitaciones conocidas: (D16) si se desactiva un usuario o cambian sus roles, el acceso que ya tenía sigue valiendo hasta 15 minutos, aunque sus refresh tokens se revocan al instante. El refresh token vive en `localStorage` en el frontend, y la tabla `refresh_tokens` no se purga.
+D16 (2026-10-20): desactivar o cambiar roles corta el access token al instante con `AccessTokenRevocations` (marca en memoria; el filtro rechaza `iat` <= marca). No añadas una consulta a la BD por petición. Limitación: la marca se pierde al reiniciar y no se comparte entre instancias.
 
 ## Trabajo opcional pendiente en tu zona
 

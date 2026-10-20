@@ -12,7 +12,7 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 |---|---|
 | Paquete base | `com.capstone.steam` |
 | Artifact | `capstone-steam-backend` |
-| Estado actual | **✅ Bloques 0 a 16, bloque A (cierre) y los seis extras B a G, más la pasada de arreglos tras la revisión: backend (323 tests, JaCoCo exige el 80 % de líneas, Swagger) + frontend React en es/en/it (69 tests en 14 archivos) + CI + despliegue preparado. Migraciones V1 a V11. Último trabajo: las pasadas de arreglos de las oleadas 1 y 2, la BD demo migrada y sembrada, y Newman en verde (2026-10-19)** |
+| Estado actual | **✅ Bloques 0 a 16, bloque A (cierre) y los seis extras B a G, más la pasada de arreglos tras la revisión: backend (332 tests, JaCoCo exige el 80 % de líneas, Swagger) + frontend React en es/en/it (69 tests en 14 archivos) + CI + despliegue preparado. Migraciones V1 a V11. Último trabajo: las pasadas de arreglos de las oleadas 1 y 2, la BD demo migrada y sembrada, y Newman en verde (2026-10-19)** |
 | Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). <br>El plan `docs/superpowers/specs/2026-10-19-cierre-y-extras-design.md` está **entero en `main`** (bloques A a G). Cloudinary, OpenRouter y los correos en/it ya están probados con las cuentas reales. **Desplegado en Render** (2026-10-19): backend https://capstone-steam-api.onrender.com y frontend https://capstone-steam-web.onrender.com. Las rutas profundas van con la regla *Rewrite* `/*` → `/index.html` (puesta a mano por el usuario el 2026-10-20) y responden 200; el `404.html` del `postbuild` queda de respaldo |
 | Última actualización | 2026-10-19 |
 
@@ -50,7 +50,7 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 - **El límite del chatbot es en memoria** (`ChatRateLimiter`, 20 mensajes por hora y usuario): se pierde al reiniciar y no sirve con varias instancias del backend.
 - **Las etiquetas «Extremadamente positivas/negativas» necesitan 500 reseñas** y no salen en la demo (el juego con más reseñas tiene 60). Se explica en la defensa.
 - La purga de `refresh_tokens` (D52) correría en cada instancia si hubiera varias: es idempotente, solo duplica trabajo.
-- **Una cuenta desactivada conserva su acceso hasta 15 minutos**: el filtro JWT no consulta la base de datos (D16). Sus refresh tokens sí se revocan al instante, así que no puede renovar.
+- Las marcas de revocación del access token (D16) viven en memoria: tras reiniciar el backend, el token de una cuenta desactivada vuelve a valer hasta que caduca (15 min); sus refresh tokens siguen revocados en la BD.
 - Las portadas **pegadas como URL** siguen cargándose desde un servidor ajeno, también en el correo (D43). Las subidas a Cloudinary no.
 - Amistades: dos solicitudes cruzadas simultáneas dan un 409 genérico porque lo resuelve la UNIQUE del par.
 
@@ -100,7 +100,7 @@ Spring Boot **4.1.1** · jjwt **0.13.0** · Java **25** · Flyway (gestionado po
 | D13 | Login con username **o** email (`UserRepository.findByLogin`), con el email guardado en minúsculas | Bloque 2 | ✅ Aplicada |
 | D14 | Tras una compra, los juegos comprados se quitan también de la wishlist (`deleteByUserIdAndGameIdIn`) | Bloque 2 | ✅ Aplicada |
 | D15 | Registro con `accountType` (PLAYER o DEVELOPER). ADMIN nunca se autoasigna: el primer admin lo crea `AdminAccountInitializer` desde `ADMIN_*` y los siguientes los nombra un admin (`PUT /api/admin/users/{id}/roles`) | Bloque 3 | ✅ Aplicada |
-| D16 | El JWT lleva el id, el username y los roles, y cada petición se autentica **sin consultar la BD**. Consecuencia: si se desactiva un usuario o cambian sus roles, el cambio no aplica hasta que caduque su token. **Desde el bloque F el token dura 15 min** y el refresh token se revoca al instante (D48) | Bloque 3 | ✅ Aplicada (matizada por D48) |
+| D16 | El JWT lleva el id, el username y los roles, y cada petición se autentica **sin consultar la BD**. Antes, desactivar a un usuario o cambiarle los roles no aplicaba hasta que caducaba su token. **Desde el 2026-10-20 aplica al instante**: `AccessTokenRevocations` guarda en memoria `userId → instante` al desactivar una cuenta o cambiarle los roles; `JwtAuthFilter` rechaza (401) los tokens con `iat` en ese segundo o antes. Sin consultar la BD por petición. Las marcas se olvidan pasada la vida del token (15 min). Queda: se pierden al reiniciar y no se comparten entre instancias | Bloque 3 · 2026-10-20 | ✅ Aplicada |
 | D17 | `JwtAuthFilter` no es un `@Component` (evita que se registre dos veces). Un token inválido deja la petición como anónima y el entry point responde 401 | Bloque 3 | ✅ Aplicada |
 | D18 | Errores: `GlobalExceptionHandler` extiende `ResponseEntityExceptionHandler` y devuelve ProblemDetail; los errores de validación salen en `errors: {campo: mensaje}`. Los 401 y 403 del filtro los escribe `ProblemResponseWriter` con el `JsonMapper` de Jackson 3 | Bloque 3 | ✅ Aplicada |
 | D19 | Las respuestas paginadas usan `PageResponse<T>` (`common/dto`), no `Page` de Spring Data. `hibernate.default_batch_fetch_size=50` evita el N+1 sin paginar en memoria | Bloque 3 | ✅ Aplicada |
@@ -311,7 +311,7 @@ com.capstone.steam
 - **Asistente (D):** `POST /api/recommendations/chat` (D51).
 
 ### Testing
-Total: **323 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de frontend** (`npm test`, 14 archivos).
+Total: **332 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de frontend** (`npm test`, 14 archivos).
 - **Unitarios (Mockito):** `JwtServiceTest`, `AuthServiceTest`, `OrderServiceTest`, `ReviewServiceTest`, `ReviewScoreTest`, `CartServiceTest`, `GameManagementServiceTest`, `SimulatedPaymentGatewayTest`, `EmailServiceTest`, `SteamStoreClientTest`, `RefreshTokenServiceTest`, `FriendServiceTest`, `ImageTypeTest`, `CloudinaryCoverStorageTest` (con `MockRestServiceServer`), `OpenRouterChatModelTest`, `RecommendationServiceTest` y `ChatRateLimiterTest`.
 - **`@DataJpaTest` con H2 y Flyway real:** `GameCriteriaRepositoryTest` y `RepositoryIntegrationTest` (UPDATE atómicos y doble pago). Concurrencia con 16 hilos en `AtomicUpdateConcurrencyTest`, y con varios refresh simultáneos en `RefreshTokenConcurrencyTest` (solo uno gana).
 - **`@SpringBootTest` + MockMvc:**
@@ -359,6 +359,7 @@ Total: **323 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de 
 | Remate A | Dos menores del bloque A | ✅ Hecho | 2026-10-19 | `coverUrl` vacía o en blanco se guarda como `null`, como `avatarUrl` (`da83628`). Tests de URLs con espacios alrededor en `coverUrl` y `avatarUrl`: ya daban 400, ahora está cubierto (`5558597`). `clean verify`: **315 tests**, 0 fallos, 95 % de instrucciones |
 | Limitaciones | V11 y purga de refresh tokens | ✅ Hecho | 2026-10-20 | Dos subagentes Sonnet en paralelo, cada uno en su worktree, revisados y fusionados (D52). • V11 `ck_friendships_pair` + test en `FlywayMigrationTest` (`94ef6f2`) • Purga programada por familias caducadas + 5 tests (`b22ccce`) • `clean verify`: **321 tests**, 0 fallos, 95 % de instrucciones • Se limpiaron los 16 worktrees ya fusionados |
 | D33 | Bloqueo del pedido al pagar | ✅ Hecho | 2026-10-20 | Subagente Sonnet en worktree, revisado y fusionado (`b4e0259`, `5d58773`). `OrderRepository.findOwnForUpdate` (`@Lock(PESSIMISTIC_WRITE)`) en `pay()`; el 404 de pedido ajeno se mantiene (D31). Tests: 16 pagos concurrentes → 1 OK, 15 × 409 y `charge` 1 vez; pedido ajeno → 404. `clean verify`: **323 tests**, 0 fallos, 95 % |
+| D16 | Revocación inmediata del access token | ✅ Hecho | 2026-10-20 | Subagente Sonnet en worktree, revisado y fusionado (`a6222f5`, `a775314`). `AccessTokenRevocations` guarda en memoria `userId → instante` al desactivar una cuenta o cambiarle los roles; `JwtAuthFilter` rechaza (401) los tokens con `iat` en ese segundo o antes. Sin consultar la BD por petición. Las marcas se olvidan pasada la vida del token (15 min). Queda: se pierden al reiniciar y no se comparten entre instancias. Bean `Clock` global (`@ConditionalOnMissingBean`) en `SecurityConfig`. Tests: 7 unitarios (antes, después, mismo segundo, caducidad) y 2 de integración (desactivar y cambiar roles → 401 con el token viejo; login nuevo → 200). `clean verify`: **332 tests**, 0 fallos, 95 % |
 | Docs | README, handoff, Postman y agentes al día | ✅ Hecho | 2026-10-19 | `README.md` y `frontend/README.md` con las funciones nuevas, endpoints, variables y cifras; spec corregida (familia en vez de todos); Postman reescrita a 73 peticiones (reseñas 👍/👎, refresh y logout, amigos, estado de portadas y asistente con 200 o 503); cifras de los agentes. **Newman sin ejecutar** con la colección nueva |
 
 ---
@@ -392,6 +393,6 @@ Total: **323 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de 
    `& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -h localhost -c "CREATE DATABASE capstone_steam;"`
 1. `docker compose up -d` (solo si se usa Docker en lugar de Postgres local)
 2. `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`: Flyway aplica V1 a V11 y Hibernate valida el esquema.
-3. `./mvnw test`: todo en verde sobre H2 (323 tests). Frontend: `cd frontend && npm test` (69 tests).
+3. `./mvnw test`: todo en verde sobre H2 (332 tests). Frontend: `cd frontend && npm test` (69 tests).
 4. Prueba manual: register → login → buscar con filtros → carrito → checkout → biblioteca → reseña.
 5. Comprobar que llega el correo y que en los logs el envío aparece en un hilo `mail-*`.
