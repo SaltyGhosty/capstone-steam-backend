@@ -13,7 +13,7 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 | Paquete base | `com.capstone.steam` |
 | Artifact | `capstone-steam-backend` |
 | Estado actual | **✅ Bloques 0 a 16, bloque A (cierre) y los seis extras B a G, más la pasada de arreglos tras la revisión: backend (321 tests, JaCoCo exige el 80 % de líneas, Swagger) + frontend React en es/en/it (69 tests en 14 archivos) + CI + despliegue preparado. Migraciones V1 a V11. Último trabajo: las pasadas de arreglos de las oleadas 1 y 2, la BD demo migrada y sembrada, y Newman en verde (2026-10-19)** |
-| Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). <br>El plan `docs/superpowers/specs/2026-10-19-cierre-y-extras-design.md` está **entero en `main`** (bloques A a G). Cloudinary, OpenRouter y los correos en/it ya están probados con las cuentas reales. **Desplegado en Render** (2026-10-19): backend https://capstone-steam-api.onrender.com y frontend https://capstone-steam-web.onrender.com. Las rutas profundas funcionan con un `404.html` (copia de `index.html` en el `postbuild`) |
+| Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). <br>El plan `docs/superpowers/specs/2026-10-19-cierre-y-extras-design.md` está **entero en `main`** (bloques A a G). Cloudinary, OpenRouter y los correos en/it ya están probados con las cuentas reales. **Desplegado en Render** (2026-10-19): backend https://capstone-steam-api.onrender.com y frontend https://capstone-steam-web.onrender.com. Las rutas profundas van con la regla *Rewrite* `/*` → `/index.html` (puesta a mano por el usuario el 2026-10-20) y responden 200; el `404.html` del `postbuild` queda de respaldo |
 | Última actualización | 2026-10-19 |
 
 ### Entorno local (máquina del usuario, Windows 11)
@@ -56,7 +56,6 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 - Amistades: dos solicitudes cruzadas simultáneas dan un 409 genérico porque lo resuelve la UNIQUE del par.
 
 ### Pendientes manuales del usuario
-- Opcional: regla *Rewrite* `/*` → `/index.html` en el static site `capstone-steam-web` (el conector de Render no la crea). Hoy las rutas profundas funcionan con el `404.html`, pero responden con estado 404.
 - La Postgres free de Render (`capstone-steam-db`) **caduca el 2026-11-18**: pasarla a pago o recrearla y volver a sembrar.
 - Regenerar las claves de OpenRouter, Cloudinary y la contraseña de aplicación de Gmail (salieron en el chat), y cambiarlas en `.env` y en Render.
 - La contraseña del admin de producción no es `Admin12345!`: la tiene el usuario.
