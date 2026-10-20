@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 381 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 83 tests en 15 archivos · CI en GitHub Actions |
+| **Tests** | Backend: 396 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 87 tests en 15 archivos · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 74 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -64,10 +64,12 @@ Los pagos son **simulados**: una tarjeta terminada en `0000` siempre se rechaza,
 - El perfil (`/users/:username`) enseña siempre el nombre, el avatar y la fecha de alta. La biblioteca (con horas jugadas) y la lista de amigos solo se ven si el perfil es **público**, si quien mira es **amigo** o si es el propio dueño. El perfil es privado por defecto (`profilePublic`, en *Ajustes*). Nunca se ven el email, los pedidos, el carrito ni la wishlist. La regla se aplica en el backend.
 
 **Verificación de email.** Crear la cuenta no inicia sesión: llega **un solo correo** («¡Bienvenido a ARCADE! Confirma tu email», en el idioma elegido) con un enlace a `/verify-email?token=…`.
-- Al pulsarlo la cuenta queda verificada y entra ya con su sesión. Sin verificar, el login responde **403** `auth.emailNotVerified` (solo si la contraseña es correcta; con una mala sigue siendo 401, así no se revela qué cuentas existen).
+- Al pulsarlo la cuenta queda verificada y entra ya con su sesión. Sin verificar, el login responde **403** `auth.emailNotVerified` (siempre que la contraseña sea correcta; con una mala sigue siendo 401, así no se revela qué cuentas existen).
 - El enlace es de **un solo uso** y caduca a las 24 h. En la base de datos solo se guarda su SHA-256 y el token en claro nunca se escribe en el log con el correo activo (sin `MAIL_USERNAME`, en desarrollo, el enlace sale en el log para poder probarlo).
-- «Reenviar correo» (`POST /api/auth/resend-verification`) responde siempre 204, exista o no la cuenta, con un máximo de **3 por hora y email**. Cada enlace nuevo anula los anteriores.
-- Registrarse con el email de una cuenta **sin verificar** la sustituye (el dueño real siempre gana, porque solo él recibe el enlace); un usuario ocupado por una cuenta sin verificar se libera cuando su enlace caduca. Una cuenta verificada nunca se toca.
+- **Cada enlace lleva los datos de su registro** (usuario, contraseña cifrada, nombre, idioma y tipo de cuenta). Al pulsarlo se aplican **esos** datos a la cuenta y los demás enlaces dejan de valer, así que nadie puede quedarse con una cuenta registrando antes su email: el correo nombra la cuenta («Confirma la cuenta «usuario»») y quien pulsa su enlace se queda con su contraseña.
+- «Reenviar correo» (`POST /api/auth/resend-verification`) responde siempre 204, exista o no la cuenta. Registro y reenvío comparten un máximo de **3 correos por hora y email** (429 después). El reenvío copia los datos del último enlace.
+- Registrarse con el email de una cuenta **sin verificar** responde 201 como un registro nuevo pero **no toca la cuenta**: solo emite otro enlace con los datos de esa petición. Un usuario ocupado por una cuenta sin verificar se libera si esa cuenta tiene más de 24 h, no tiene datos (pedidos, biblioteca, reseñas, juegos, amistades ni sesiones) y no tiene más roles que USER/DEVELOPER; si no, 409. Si al verificar el usuario del enlace lo ha cogido otra cuenta, 409 y el enlace queda sin usar. Una cuenta verificada nunca se toca.
+- Una cuenta desactivada por un admin que verifica su email queda verificada pero recibe 403 y no se le emite sesión. El registro y la verificación leen la fila del usuario con bloqueo pesimista.
 - Un admin puede verificar una cuenta a mano (`POST /api/admin/users/{id}/verify-email`): lo usan el seed y Postman.
 - Los correos reintentan hasta 3 veces los fallos de conexión con el SMTP (Gmail desde Render a veces tarda en conectar).
 
@@ -226,7 +228,7 @@ La respuesta HTTP no espera al SMTP. Si la transacción hace rollback, no se env
 | **V9** `friendships` | `users.profile_public` (falso por defecto) y la tabla `friendships`: una fila por pareja sea cual sea la dirección (`UNIQUE(user_low_id, user_high_id)`), con estado `PENDING` o `ACCEPTED` |
 | **V10** `refresh_tokens` | `refresh_tokens`: SHA-256 del token (nunca el token), familia, caducidad, fecha de revocación y sustituto |
 | **V11** `friendships_pair_check` | `CHECK ck_friendships_pair`: el par `(user_low_id, user_high_id)` tiene que ser el del solicitante y el destinatario |
-| **V12** `email_verification` | `users.email_verified` (las cuentas que ya existían quedan verificadas) y la tabla `email_verification_tokens`: SHA-256 del enlace (nunca el token), caducidad y fecha de uso |
+| **V12** `email_verification` | `users.email_verified` (las cuentas que ya existían quedan verificadas) y la tabla `email_verification_tokens`: SHA-256 del enlace (nunca el token), caducidad, fecha de uso y los datos del registro que lo generó (usuario, contraseña cifrada, nombre, idioma y tipo de cuenta) |
 
 El enunciado pide V1 a V4; V5 a V12 se añadieron después (idioma de los correos, traducciones, Steam, reseñas estilo Steam, amigos, refresh tokens, la integridad del par de amigos y la verificación de email). V1 a V3 y V5 a V12 son SQL portable. V4 tiene dos versiones ([postgresql](src/main/resources/db/migration/postgresql) y [h2](src/main/resources/db/migration/h2)), porque H2 no soporta los índices por trigramas ni los parciales. Flyway elige la adecuada con `locations: …/common, …/{vendor}`.
 
@@ -240,7 +242,7 @@ La autenticación es `Authorization: Bearer <accessToken>`. El token se obtiene 
 |---|---|---|---|
 | POST | `/api/auth/register` | público | Registro (`accountType`: PLAYER o DEVELOPER; `locale` opcional: `es`, `en` o `it`, por defecto `es`) → 201 con `{id, email, verificationRequired: true}` y un correo con el enlace de verificación (sin sesión). Con `EMAIL_VERIFICATION_REQUIRED=false` devuelve `accessToken` y `refreshToken` |
 | POST | `/api/auth/verify-email` | público | `{token}` del correo → verifica el email y devuelve `accessToken` y `refreshToken`. 400 si el enlace está usado, caducado o no existe |
-| POST | `/api/auth/resend-verification` | público | `{email}` → 204 siempre (no revela si la cuenta existe). 429 al pasar de 3 por hora y email |
+| POST | `/api/auth/resend-verification` | público | `{email}` → 204 siempre (no revela si la cuenta existe). 429 al pasar de 3 correos por hora y email (registro incluido) |
 | POST | `/api/auth/login` | público | Login con username **o** email → `accessToken` y `refreshToken`. 403 con `code: auth.emailNotVerified` si la contraseña es correcta pero falta verificar el email |
 | POST | `/api/auth/refresh` | público | `{refreshToken}` → par nuevo (rotación). 401 si está caducado, revocado o ya usado (en ese caso se revoca su familia) |
 | POST | `/api/auth/logout` | público | `{refreshToken}` → 204; revoca la sesión (idempotente) |
@@ -277,7 +279,7 @@ La autenticación es `Authorization: Bearer <accessToken>`. El token se obtiene 
 | GET | `/api/admin/users` | admin | Usuarios paginados |
 | PUT | `/api/admin/users/{id}/roles` | admin | Cambiar roles |
 | PATCH | `/api/admin/users/{id}/enabled` | admin | Activar o desactivar cuenta |
-| POST | `/api/admin/users/{id}/verify-email` | admin | Dar el email de la cuenta por verificado (idempotente) |
+| POST | `/api/admin/users/{id}/verify-email` | admin | Dar el email de la cuenta por verificado, aplicando los datos de su último enlace (idempotente) |
 | POST | `/api/admin/users/{userId}/library/{gameId}` | admin | Regalar un juego |
 | POST / PUT / DELETE | `/api/admin/genres[/{id}]` | admin | CRUD de géneros |
 | GET | `/api/admin/games?status=` | admin | Juegos por estado |
@@ -308,7 +310,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 381 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 396 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
@@ -323,7 +325,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 
 Los tests usan H2 en modo PostgreSQL **con las mismas migraciones de Flyway** que producción; no hay `ddl-auto=create`.
 
-**Frontend** (`cd frontend && npm test`): 83 tests en 15 archivos, con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402, y la renovación de la sesión con refresh token), los formateadores, la detección del idioma del navegador y los flujos de login, registro, verificación de email, checkout (pedido → pago aprobado o rechazado), ajustes, la ficha del juego (reseñas 👍/👎 y filtro por idioma), amigos y perfil, la subida de portadas y el chat del asistente sobre las páginas reales con `fetch` simulado, además de la traducción de la interfaz (mismas claves en los tres idiomas, banderas y `Accept-Language`).
+**Frontend** (`cd frontend && npm test`): 87 tests en 15 archivos, con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402, y la renovación de la sesión con refresh token), los formateadores, la detección del idioma del navegador y los flujos de login, registro, verificación de email, checkout (pedido → pago aprobado o rechazado), ajustes, la ficha del juego (reseñas 👍/👎 y filtro por idioma), amigos y perfil, la subida de portadas y el chat del asistente sobre las páginas reales con `fetch` simulado, además de la traducción de la interfaz (mismas claves en los tres idiomas, banderas y `Accept-Language`).
 
 **CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta `./mvnw verify` y los tests y el build del frontend en cada push a `main`.
 

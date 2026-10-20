@@ -178,6 +178,7 @@ class FriendServiceTest {
         when(user.getUsername()).thenReturn(username);
         when(user.getDisplayName()).thenReturn(username);
         when(user.isEnabled()).thenReturn(true);
+        org.mockito.Mockito.lenient().when(user.isEmailVerified()).thenReturn(true);
         when(userRepository.findWithRolesById(id)).thenReturn(Optional.of(user));
         when(userRepository.findWithRolesByUsernameIgnoreCase(username)).thenReturn(Optional.of(user));
         return user;
