@@ -51,9 +51,10 @@ spring:
           starttls:
             enable: true
             required: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
+          # Gmail desde Render a veces tarda en conectar: 15 s y EmailService reintenta los fallos de conexión
+          connectiontimeout: ${MAIL_TIMEOUT:15000}
+          timeout: ${MAIL_TIMEOUT:15000}
+          writetimeout: ${MAIL_TIMEOUT:15000}
 
 app:
   jwt:

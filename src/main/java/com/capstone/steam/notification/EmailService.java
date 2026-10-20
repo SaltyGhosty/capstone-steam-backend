@@ -3,13 +3,18 @@ package com.capstone.steam.notification;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -48,11 +53,30 @@ public class EmailService {
     private final Brand brand;
     private final boolean enabled;
 
+    /** Pausa entre intentos; en los tests se sustituye para no esperar de verdad. */
+    @FunctionalInterface
+    interface Sleeper {
+        void sleep(Duration duration) throws InterruptedException;
+    }
+
+    private static final int MAX_ATTEMPTS = 3;
+    /** Pausa antes del 2.º y del 3.º intento. */
+    private static final List<Duration> RETRY_PAUSES = List.of(Duration.ofSeconds(2), Duration.ofSeconds(6));
+
+    private final Sleeper sleeper;
+
+    @Autowired
     public EmailService(JavaMailSender mailSender,
             @Value("${app.mail.from:}") String from,
             @Value("${app.mail.from-name:}") String fromName,
             @Value("${app.mail.store-url:}") String storeUrl,
             @Value("${spring.mail.username:}") String smtpUsername) {
+        this(mailSender, from, fromName, storeUrl, smtpUsername, Thread::sleep);
+    }
+
+    EmailService(JavaMailSender mailSender, String from, String fromName, String storeUrl, String smtpUsername,
+            Sleeper sleeper) {
+        this.sleeper = sleeper;
         this.mailSender = mailSender;
         this.from = from == null || from.isBlank() ? smtpUsername : from.trim(); // MAIL_FROM= vacío o con espacios en .env
         this.brand = new Brand(
@@ -65,8 +89,14 @@ public class EmailService {
     }
 
     /** {@code locale}: es, en o it (el de {@code users.locale}); cualquier otro valor, o null, sale en español. */
-    public void sendWelcome(String to, String displayName, String locale) {
-        send(to, EmailTemplates.welcome(brand, displayName, locale));
+    public void sendWelcome(String to, String displayName, String locale, String verificationToken) {
+        if (verificationToken != null && !enabled) {
+            // Solo con el correo desactivado (desarrollo) el enlace sale en el log, para poder verificarse
+            String path = EmailTemplates.verificationPath(verificationToken);
+            log.info("[correo desactivado] enlace de verificación para {}: {}", maskEmail(to),
+                    brand.storeUrl() == null ? path : brand.link(path));
+        }
+        send(to, EmailTemplates.welcome(brand, displayName, locale, verificationToken));
     }
 
     public void sendPurchaseReceipt(String to, String displayName, Long orderId, BigDecimal total,
@@ -95,20 +125,54 @@ public class EmailService {
             log.info("[correo no enviado: dominio reservado] para={} asunto=\"{}\"", masked, email.subject());
             return;
         }
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
-            helper.setFrom(from, brand.name());
-            helper.setTo(to);
-            helper.setSubject(email.subject());
-            helper.setText(email.html(), true);
-            mailSender.send(message);
-            log.info("Correo enviado: para={} asunto=\"{}\"", masked, email.subject());
-        } catch (MailException | MessagingException | UnsupportedEncodingException ex) {
-            // el servidor SMTP suele repetir la dirección en su error ("Invalid Addresses: ...")
-            String reason = ex.getMessage() == null ? null : ex.getMessage().replace(to, masked);
-            log.error("No se pudo enviar el correo a {} (\"{}\"): {}", masked, email.subject(), reason);
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+                helper.setFrom(from, brand.name());
+                helper.setTo(to);
+                helper.setSubject(email.subject());
+                helper.setText(email.html(), true);
+                mailSender.send(message);
+                log.info("Correo enviado: para={} asunto=\"{}\"", masked, email.subject());
+                return;
+            } catch (MailException | MessagingException | UnsupportedEncodingException ex) {
+                // el servidor SMTP suele repetir la dirección en su error ("Invalid Addresses: ...")
+                String reason = ex.getMessage() == null ? null : ex.getMessage().replace(to, masked);
+                if (attempt < MAX_ATTEMPTS && isConnectionFailure(ex)) {
+                    log.warn("Reintento {}/{} del correo a {} (\"{}\"): {}", attempt + 1, MAX_ATTEMPTS, masked,
+                            email.subject(), reason);
+                    try {
+                        sleeper.sleep(RETRY_PAUSES.get(attempt - 1));
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        log.error("Correo a {} (\"{}\") cancelado: el hilo fue interrumpido", masked, email.subject());
+                        return;
+                    }
+                    continue;
+                }
+                log.error("No se pudo enviar el correo a {} (\"{}\"): {}", masked, email.subject(), reason);
+                return;
+            }
         }
+    }
+
+    /**
+     * Fallo de red al hablar con el SMTP (conexión rechazada o agotada): merece reintento.
+     * Las credenciales o el destinatario incorrectos no cambian por esperar, no se reintentan.
+     */
+    static boolean isConnectionFailure(Throwable ex) {
+        if (!(ex instanceof MailSendException)) {
+            return false;
+        }
+        for (Throwable cause = ex; cause != null; cause = cause.getCause() == cause ? null : cause.getCause()) {
+            // MailConnectException es de la implementación de Jakarta Mail (solo en runtime): se compara por nombre
+            if (cause.getClass().getSimpleName().equals("MailConnectException") || cause instanceof ConnectException
+                    || cause instanceof SocketTimeoutException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

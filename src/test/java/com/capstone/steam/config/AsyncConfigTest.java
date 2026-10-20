@@ -21,7 +21,7 @@ class AsyncConfigTest {
 
         new AsyncConfig().getAsyncUncaughtExceptionHandler().handleUncaughtException(
                 new IllegalStateException("plantilla rota"), method,
-                new UserRegisteredEvent(7L, "ana@test.com", "Ana", "es"));
+                new UserRegisteredEvent(7L, "ana@test.com", "Ana", "es", null));
 
         assertThat(output.getAll())
                 .contains("onUserRegistered", "UserRegisteredEvent", "plantilla rota")

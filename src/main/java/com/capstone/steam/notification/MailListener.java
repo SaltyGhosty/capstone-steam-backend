@@ -11,6 +11,7 @@ import com.capstone.steam.notification.event.GameOnSaleEvent;
 import com.capstone.steam.notification.event.OrderPaidEvent;
 import com.capstone.steam.notification.event.PaymentFailedEvent;
 import com.capstone.steam.notification.event.UserRegisteredEvent;
+import com.capstone.steam.notification.event.VerificationEmailEvent;
 
 /**
  * Traduce eventos de dominio en correos.
@@ -33,7 +34,14 @@ public class MailListener {
     @Async(AsyncConfig.MAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onUserRegistered(UserRegisteredEvent event) {
-        emailService.sendWelcome(event.email(), event.displayName(), event.locale());
+        emailService.sendWelcome(event.email(), event.displayName(), event.locale(), event.verificationToken());
+    }
+
+    /** Reenvío del enlace de verificación (mismo correo que la bienvenida con verificación). */
+    @Async(AsyncConfig.MAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onVerificationEmail(VerificationEmailEvent event) {
+        emailService.sendWelcome(event.email(), event.displayName(), event.locale(), event.verificationToken());
     }
 
     @Async(AsyncConfig.MAIL_EXECUTOR)

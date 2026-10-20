@@ -5,11 +5,16 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 
@@ -33,6 +39,13 @@ class EmailServiceTest {
 
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
 
+    /** Mismo nombre que la excepción de la implementación de Jakarta Mail (que no está en el classpath de compilación). */
+    private static class MailConnectException extends jakarta.mail.MessagingException {
+        MailConnectException(String message) {
+            super(message);
+        }
+    }
+
     @BeforeEach
     void setUp() {
         when(mailSender.createMimeMessage()).thenAnswer(inv -> new MimeMessage((Session) null));
@@ -42,9 +55,9 @@ class EmailServiceTest {
     void neverSendsToReservedDomainsLikeTheDemoAccounts() {
         var service = new EmailService(mailSender, "tienda@capstone.test", "ARCADE", STORE, "smtp-user@gmail.com");
 
-        service.sendWelcome("demo_player@demo.capstone-steam.local", "Demo", "es");
-        service.sendWelcome("ana@example.com", "Ana", "es");
-        service.sendWelcome("bob@shop.test", "Bob", "es");
+        service.sendWelcome("demo_player@demo.capstone-steam.local", "Demo", "es", null);
+        service.sendWelcome("ana@example.com", "Ana", "es", null);
+        service.sendWelcome("bob@shop.test", "Bob", "es", null);
 
         verifyNoInteractions(mailSender);
         assertThat(EmailService.isReservedDomain("player@test.com")).isFalse(); // test.com es un dominio real
@@ -210,7 +223,7 @@ class EmailServiceTest {
     @Test
     void mailArrivesWithTheStoreNameAsSender() throws Exception {
         new EmailService(mailSender, "tienda@capstone.test", "Mi Tienda", STORE, "smtp-user@gmail.com")
-                .sendWelcome("a@test.com", "Ana", "es");
+                .sendWelcome("a@test.com", "Ana", "es", null);
 
         MimeMessage message = sentMessage();
         InternetAddress from = (InternetAddress) message.getFrom()[0];
@@ -223,7 +236,7 @@ class EmailServiceTest {
     @Test
     void emptySenderNameFallsBackToArcade() throws Exception {
         new EmailService(mailSender, "tienda@capstone.test", " ", STORE, "smtp-user@gmail.com")
-                .sendWelcome("a@test.com", "Ana", "es");
+                .sendWelcome("a@test.com", "Ana", "es", null);
 
         MimeMessage message = sentMessage();
         assertThat(((InternetAddress) message.getFrom()[0]).getPersonal()).isEqualTo("ARCADE");
@@ -254,7 +267,7 @@ class EmailServiceTest {
 
     @Test
     void userWithoutDisplayNameGetsAPlainGreeting() throws Exception {
-        new EmailService(mailSender, "", "ARCADE", STORE, "smtp-user@gmail.com").sendWelcome("a@test.com", null, "es");
+        new EmailService(mailSender, "", "ARCADE", STORE, "smtp-user@gmail.com").sendWelcome("a@test.com", null, "es", null);
 
         assertThat((String) sentMessage().getContent()).contains("¡Hola!").doesNotContain("¡Hola, ");
     }
@@ -270,7 +283,7 @@ class EmailServiceTest {
 
     @Test
     void emptyFromFallsBackToSmtpUsername() throws Exception {
-        new EmailService(mailSender, "", "ARCADE", STORE, "smtp-user@gmail.com").sendWelcome("a@test.com", "Ana", "es");
+        new EmailService(mailSender, "", "ARCADE", STORE, "smtp-user@gmail.com").sendWelcome("a@test.com", "Ana", "es", null);
 
         assertThat(((InternetAddress) sentMessage().getFrom()[0]).getAddress()).isEqualTo("smtp-user@gmail.com");
     }
@@ -278,7 +291,7 @@ class EmailServiceTest {
     @Test
     void mailFromIsTrimmed() throws Exception {
         new EmailService(mailSender, "  tienda@capstone.test 	", "ARCADE", STORE, "smtp-user@gmail.com")
-                .sendWelcome("a@test.com", "Ana", "es");
+                .sendWelcome("a@test.com", "Ana", "es", null);
 
         assertThat(((InternetAddress) sentMessage().getFrom()[0]).getAddress()).isEqualTo("tienda@capstone.test");
     }
@@ -296,7 +309,7 @@ class EmailServiceTest {
     @Test
     void withoutSmtpCredentialsNothingIsSent() {
         JavaMailSender untouched = mock(JavaMailSender.class);
-        new EmailService(untouched, "", "ARCADE", STORE, "").sendWelcome("a@test.com", "Ana", "es");
+        new EmailService(untouched, "", "ARCADE", STORE, "").sendWelcome("a@test.com", "Ana", "es", null);
         verifyNoInteractions(untouched);
     }
 
@@ -307,6 +320,108 @@ class EmailServiceTest {
 
         assertThatCode(() -> service.sendPaymentFailed("a@test.com", "Ana", 1L, BigDecimal.TEN, "Rechazada", "es"))
                 .doesNotThrowAnyException();
+    }
+
+    // ------------------------------------------------------------------ reintentos y enlace de verificación
+
+    private static final String TOKEN = "abc_DEF-123";
+
+    private final List<Duration> pauses = new ArrayList<>();
+
+    private EmailService retryingService() {
+        return new EmailService(mailSender, "tienda@capstone.test", "ARCADE", STORE, "user@gmail.com", pauses::add);
+    }
+
+    private static MailSendException connectionFailure() {
+        return new MailSendException("Couldn't connect to host smtp.gmail.com:587; timeout 15000",
+                new SocketTimeoutException("connect timed out"));
+    }
+
+    @Test
+    void retriesConnectionFailuresTwiceThenSends() {
+        doThrow(connectionFailure()).doThrow(connectionFailure()).doNothing()
+                .when(mailSender).send(any(MimeMessage.class));
+
+        retryingService().sendWelcome("a@test.com", "Ana", "es", TOKEN);
+
+        verify(mailSender, times(3)).send(any(MimeMessage.class));
+        assertThat(pauses).containsExactly(Duration.ofSeconds(2), Duration.ofSeconds(6));
+    }
+
+    @Test
+    void anAngusConnectExceptionCountsAsAConnectionFailure() {
+        doThrow(new MailSendException("fallo", new MailConnectException("Couldn't connect to host"))).doNothing()
+                .when(mailSender).send(any(MimeMessage.class));
+
+        retryingService().sendWelcome("a@test.com", "Ana", "es", null);
+
+        verify(mailSender, times(2)).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void givesUpAfterThreeConnectionFailuresWithoutThrowing() {
+        doThrow(connectionFailure()).when(mailSender).send(any(MimeMessage.class));
+        var service = retryingService();
+
+        assertThatCode(() -> service.sendWelcome("a@test.com", "Ana", "es", TOKEN)).doesNotThrowAnyException();
+
+        verify(mailSender, times(3)).send(any(MimeMessage.class));
+        assertThat(pauses).hasSize(2);
+    }
+
+    @Test
+    void doesNotRetryAuthenticationFailures() {
+        doThrow(new MailAuthenticationException("535 credenciales")).when(mailSender).send(any(MimeMessage.class));
+
+        retryingService().sendWelcome("a@test.com", "Ana", "es", TOKEN);
+
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
+        assertThat(pauses).isEmpty();
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void retryLogsTheAttemptWithAMaskedAddress(CapturedOutput output) {
+        doThrow(connectionFailure()).doNothing().when(mailSender).send(any(MimeMessage.class));
+
+        retryingService().sendWelcome("ana@test.com", "Ana", "es", null);
+
+        assertThat(output.getAll()).contains("Reintento 2/3 del correo a a***@test.com").doesNotContain("ana@test.com");
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void logsVerificationLinkOnlyWhenMailIsDisabled(CapturedOutput output) {
+        new EmailService(mailSender, "", "ARCADE", STORE, "").sendWelcome("ana@test.com", "Ana", "es", TOKEN);
+        assertThat(output.getAll()).contains(STORE + "/verify-email?token=" + TOKEN);
+        verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void neverLogsTheTokenWhenMailIsEnabled(CapturedOutput output) {
+        var service = retryingService();
+        service.sendWelcome("ana@test.com", "Ana", "es", TOKEN);
+        doThrow(connectionFailure()).when(mailSender).send(any(MimeMessage.class));
+        service.sendWelcome("ana@test.com", "Ana", "es", TOKEN);
+        service.sendWelcome("ana@example.com", "Ana", "es", TOKEN); // dominio reservado: tampoco
+
+        assertThat(output.getAll()).doesNotContain(TOKEN);
+    }
+
+    @Test
+    void verificationMailCarriesTheLinkInTheRecipientsLanguage() throws Exception {
+        retryingService().sendWelcome("a@test.com", "Ana", "en", TOKEN);
+
+        MimeMessage message = sentMessage();
+        assertThat(message.getSubject()).isEqualTo("Welcome to ARCADE! Confirm your email");
+        assertThat((String) message.getContent()).contains("href=\"" + STORE + "/verify-email?token=" + TOKEN + "\"");
+    }
+
+    @Test
+    void tokenIsUrlEncodedInTheLink() {
+        assertThat(EmailTemplates.welcome(new EmailTemplates.Brand("ARCADE", STORE), "Ana", "es", "a+b/c=").html())
+                .contains("/verify-email?token=a%2Bb%2Fc%3D");
     }
 
     /** El único mensaje que el servicio ha entregado al sender. */
@@ -330,10 +445,10 @@ class EmailServiceTest {
     void logsNeverContainTheFullRecipientAddress(CapturedOutput output) {
         var service = new EmailService(mailSender, "tienda@capstone.test", "ARCADE", STORE, "smtp-user@gmail.com");
 
-        service.sendWelcome("ana@test.com", "Ana", "es");
+        service.sendWelcome("ana@test.com", "Ana", "es", null);
         doThrow(new MailSendException("550 rejected: ana@test.com")).when(mailSender).send(any(MimeMessage.class));
-        service.sendWelcome("ana@test.com", "Ana", "es");
-        service.sendWelcome("demo@demo.capstone-steam.local", "Demo", "es");
+        service.sendWelcome("ana@test.com", "Ana", "es", null);
+        service.sendWelcome("demo@demo.capstone-steam.local", "Demo", "es", null);
 
         assertThat(output.getAll())
                 .doesNotContain("ana@test.com", "demo@demo.capstone-steam.local")

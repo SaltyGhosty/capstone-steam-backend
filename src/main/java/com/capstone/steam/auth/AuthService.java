@@ -73,7 +73,7 @@ public class AuthService {
         userRepository.save(user);
 
         // El correo de bienvenida sale solo si la transacción hace commit (listener AFTER_COMMIT)
-        events.publishEvent(new UserRegisteredEvent(user.getId(), user.getEmail(), user.getDisplayName(), user.getLocale()));
+        events.publishEvent(new UserRegisteredEvent(user.getId(), user.getEmail(), user.getDisplayName(), user.getLocale(), null));
 
         return issueToken(user);
     }
