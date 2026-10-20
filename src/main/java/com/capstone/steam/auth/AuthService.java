@@ -1,5 +1,7 @@
 package com.capstone.steam.auth;
 
+import java.util.Locale;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -11,7 +13,10 @@ import com.capstone.steam.auth.dto.AccountType;
 import com.capstone.steam.auth.dto.AuthResponse;
 import com.capstone.steam.auth.dto.LoginRequest;
 import com.capstone.steam.auth.dto.RegisterRequest;
+import com.capstone.steam.auth.dto.RegisterResponse;
+import com.capstone.steam.auth.dto.RegistrationResult;
 import com.capstone.steam.common.exception.ConflictException;
+import com.capstone.steam.common.exception.ForbiddenException;
 import com.capstone.steam.common.exception.NotFoundException;
 import com.capstone.steam.common.exception.UnauthorizedException;
 import com.capstone.steam.notification.event.UserRegisteredEvent;
@@ -34,10 +39,15 @@ public class AuthService {
     private final JwtService jwtService;
     private final ApplicationEventPublisher events;
     private final RefreshTokenService refreshTokenService;
+    private final EmailVerificationService verificationService;
+    private final EmailVerificationProperties verification;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager, JwtService jwtService, ApplicationEventPublisher events,
-            RefreshTokenService refreshTokenService) {
+            RefreshTokenService refreshTokenService, EmailVerificationService verificationService,
+            EmailVerificationProperties verification) {
+        this.verificationService = verificationService;
+        this.verification = verification;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -47,8 +57,76 @@ public class AuthService {
         this.refreshTokenService = refreshTokenService;
     }
 
+    /**
+     * Con la verificación de email activa crea la cuenta sin sesión y manda el enlace por correo
+     * ({@link RegisterResponse}); desactivada, la cuenta nace verificada y devuelve la sesión.
+     */
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public RegistrationResult register(RegisterRequest request) {
+        return verification.required() ? registerPendingVerification(request) : registerVerified(request);
+    }
+
+    /**
+     * Nadie puede quedarse con un email o un usuario que no ha demostrado suyo:
+     * una cuenta verificada nunca se toca (409); una sin verificar se sustituye (mismo email) o se libera
+     * cuando su enlace caduca (mismo usuario).
+     */
+    private RegisterResponse registerPendingVerification(RegisterRequest request) {
+        String username = request.username().trim();
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        User byEmail = userRepository.findByEmail(email).orElse(null);
+        User byUsername = userRepository.findByUsernameIgnoreCase(username).orElse(null);
+
+        if (byEmail != null && byEmail.isEmailVerified()) {
+            throw new ConflictException("auth.emailTaken");
+        }
+        if (byUsername != null && byUsername.isEmailVerified()) {
+            throw new ConflictException("auth.usernameTaken");
+        }
+        // usuario ocupado por OTRA cuenta sin verificar: solo se libera si su último enlace ya caducó
+        if (byUsername != null && (byEmail == null || !byUsername.getId().equals(byEmail.getId()))) {
+            if (verificationService.hasLiveToken(byUsername.getId())) {
+                throw new ConflictException("auth.usernameTaken");
+            }
+            userRepository.delete(byUsername); // sus enlaces caen por ON DELETE CASCADE
+            userRepository.flush(); // el DELETE tiene que ir antes de reutilizar el nombre
+        }
+
+        User user = byEmail;
+        if (user == null) {
+            user = new User(username, email, passwordEncoder.encode(request.password()));
+        } else {
+            user.setUsername(username);
+            user.setPasswordHash(passwordEncoder.encode(request.password()));
+            user.setDisplayName(username);
+            user.setLocale("es");
+            user.getRoles().clear();
+        }
+        applyRegistration(user, request);
+        user.setEmailVerified(false);
+        userRepository.save(user);
+
+        String token = verificationService.issue(user);
+        events.publishEvent(new UserRegisteredEvent(user.getId(), user.getEmail(), user.getDisplayName(),
+                user.getLocale(), token));
+        return new RegisterResponse(user.getId(), user.getEmail(), true);
+    }
+
+    /** Nombre visible, idioma y roles de la petición de registro. */
+    private void applyRegistration(User user, RegisterRequest request) {
+        if (request.displayName() != null && !request.displayName().isBlank()) {
+            user.setDisplayName(request.displayName().trim());
+        }
+        if (request.locale() != null) {
+            user.setLocale(request.locale());
+        }
+        user.addRole(role(RoleName.ROLE_USER));
+        if (request.accountType() == AccountType.DEVELOPER) {
+            user.addRole(role(RoleName.ROLE_DEVELOPER));
+        }
+    }
+
+    private AuthResponse registerVerified(RegisterRequest request) {
         String username = request.username().trim();
         User user = new User(username, request.email(), passwordEncoder.encode(request.password()));
 
@@ -58,18 +136,8 @@ public class AuthService {
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new ConflictException("auth.emailTaken");
         }
-        if (request.displayName() != null && !request.displayName().isBlank()) {
-            user.setDisplayName(request.displayName().trim());
-        }
-        if (request.locale() != null) {
-            user.setLocale(request.locale());
-        }
-
-        user.setEmailVerified(true); // provisional: la Task 3 lo condiciona al interruptor de verificación
-        user.addRole(role(RoleName.ROLE_USER));
-        if (request.accountType() == AccountType.DEVELOPER) {
-            user.addRole(role(RoleName.ROLE_DEVELOPER));
-        }
+        applyRegistration(user, request);
+        user.setEmailVerified(true); // sin verificación de email, la cuenta nace verificada
         userRepository.save(user);
 
         // El correo de bienvenida sale solo si la transacción hace commit (listener AFTER_COMMIT)
@@ -85,6 +153,17 @@ public class AuthService {
         var principal = (AppUserPrincipal) authentication.getPrincipal();
         User user = userRepository.findWithRolesById(principal.getId())
                 .orElseThrow(() -> NotFoundException.of("user", principal.getId()));
+        // Solo tras acertar la contraseña (y con la cuenta activa, lo comprueba Spring antes): no se revela nada más
+        if (verification.required() && !user.isEmailVerified()) {
+            throw new ForbiddenException("auth.emailNotVerified");
+        }
+        return issueToken(user);
+    }
+
+    /** Canjea el enlace del correo: verifica el email e inicia la sesión. */
+    @Transactional
+    public AuthResponse verifyEmail(String rawToken) {
+        User user = verificationService.verify(rawToken);
         return issueToken(user);
     }
 

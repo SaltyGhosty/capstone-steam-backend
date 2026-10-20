@@ -37,7 +37,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     ProblemDetail handleApi(ApiException ex) {
-        return problem(ex.getStatus(), ex.getLocalizedMessage());
+        ProblemDetail pd = problem(ex.getStatus(), ex.getLocalizedMessage());
+        pd.setProperty("code", ex.getCode());
+        return pd;
     }
 
     @ExceptionHandler(BadCredentialsException.class)

@@ -37,6 +37,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
              order by lower(u.username)""")
     List<User> searchPlayers(String pattern, Long excludeId, Pageable pageable);
 
+    Optional<User> findByEmail(String email);
+
+    Optional<User> findByUsernameIgnoreCase(String username);
+
     boolean existsByEmail(String email);
 
     boolean existsByUsernameIgnoreCase(String username);

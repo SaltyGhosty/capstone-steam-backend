@@ -16,6 +16,9 @@ app:
     secret: dGVzdC1zZWNyZXQtY2Fwc3RvbmUtc3RlYW0tMzItYnl0ZXMtbWluaW11bS0hIQ==
     expiration: PT15M
     refresh-expiration: P7D
+  auth:
+    email-verification:
+      required: false # los tests registran y usan el token al momento; EmailVerificationIntegrationTest lo activa
   admin:
     username: admin
     email: admin@test.local

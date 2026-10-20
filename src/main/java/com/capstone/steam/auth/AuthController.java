@@ -11,6 +11,8 @@ import com.capstone.steam.auth.dto.AuthResponse;
 import com.capstone.steam.auth.dto.LoginRequest;
 import com.capstone.steam.auth.dto.RefreshRequest;
 import com.capstone.steam.auth.dto.RegisterRequest;
+import com.capstone.steam.auth.dto.RegistrationResult;
+import com.capstone.steam.auth.dto.VerifyEmailRequest;
 
 import jakarta.validation.Valid;
 
@@ -26,13 +28,19 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
+    public RegistrationResult register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
     }
 
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    /** Canjea el enlace del correo: verifica el email e inicia la sesión. */
+    @PostMapping("/verify-email")
+    public AuthResponse verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        return authService.verifyEmail(request.token());
     }
 
     /** Canjea un refresh token por un acceso y un refresh nuevos. */
