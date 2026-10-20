@@ -40,6 +40,7 @@ src/
 ├── api/          client.ts (fetch + JWT + renovación con refresh token + ProblemDetail), endpoints.ts (una función por endpoint), types.ts (DTOs)
 ├── context/      StoreContext: sesión, carrito, ids de la wishlist y avisos (toast)
 ├── components/   Layout (barra lateral + barra superior del diseño), GameCard, ReviewScoreBadge (etiqueta y % de reseñas), AssistantChat (chat del asistente), CoverUpload (subir portada), UserAvatar, Icon, ui (estados, precio, RequireAuth)
+├── demos/        DemoPlayer, registry (por slug), loop (bucle y teclado) y un minijuego por carpeta
 ├── lib/          format (€, fechas es-ES, tiempo jugado), useAsync
 ├── test/         setup de Vitest, doble de fetch y render con router + StoreProvider
 ├── pages/        Discover, Browse, GameDetail, Cart, Orders, Collection (biblioteca y wishlist), Friends, Profile, Auth, Settings, Developer, Admin
@@ -54,6 +55,7 @@ src/
 | `/` | Público | Hero con los mejor valorados (por % de reseñas positivas), más vendidos, ofertas y novedades |
 | `/browse` | Público | Catálogo con los filtros de la Criteria API (texto, géneros, precio, % mínimo de reseñas positivas, ofertas, orden y paginación); los filtros se guardan en la URL |
 | `/games/:slug` | Público | Ficha del juego con los botones según `/library/status`, la etiqueta y el % de reseñas positivas y la lista de reseñas 👍/👎 (crear, editar y borrar), filtrada por el idioma de la interfaz con un control «Todos los idiomas» |
+| `/demos` | Público | Demos jugables de cuatro juegos del catálogo (ver «Demos») |
 | `/login`, `/register` | Público | Registro como jugador o developer |
 | `/cart` | Usuario | Carrito; «Continuar al pago» crea el pedido PENDING |
 | `/orders`, `/orders/:id` | Usuario | Historial y pago (200 → PAID, 402 → FAILED) |
@@ -65,6 +67,23 @@ src/
 | `/developer/games/:id` | DEVELOPER | Formulario del juego (`new` para uno nuevo): crear o editar con `version` para el bloqueo optimista, descripción en es/en/it, importar desde Steam por AppID y subir la portada como archivo (JPEG, PNG o WebP de hasta 5 MB, si el servidor tiene Cloudinary) |
 | `/admin` | ADMIN | Moderación de juegos (también puede subir portadas), roles y activación de usuarios, regalar juegos y CRUD de géneros |
 
+## Demos
+
+Minijuegos propios (sin sprites, música ni nombres de los juegos reales) inspirados en cuatro juegos del catálogo. Se abren desde `/demos` y desde el botón «Probar demo» de la ficha del juego (`GameDetail`), y los dos usan el mismo reproductor (`demos/DemoPlayer.tsx`). Cualquiera puede jugar, también sin sesión. **No hay backend ni se guarda nada**: ni puntuaciones, ni `localStorage`. Al terminar la pantalla final ofrece «Añadir al carrito» (o «Ya lo tienes» / «En el carrito», según `/library/status`).
+
+| Slug | Juego | Controles | Fin |
+|---|---|---|---|
+| `celeste` | Plataformas: tres pantallas hasta la cumbre | ← → mover · Espacio saltar · X impulso en el aire | Llegar a la cumbre (tiempo y caídas) |
+| `vampire-survivors` | Supervivencia: el ataque es automático | Flechas o WASD | Aguantar 60 s o perder las 6 vidas |
+| `rocket-league` | Fútbol 2D contra un coche rival | ↑ acelerar · ↓ frenar · ← → girar · Espacio turbo | Partido de 60 s |
+| `balatro` | Cartas: póquer por puntos (objetivo 300) | Ratón, teclado o toque | Superar el objetivo o quedarse sin manos (5 manos, 2 descartes) |
+
+- Una demo solo aparece si `GET /api/games/{slug}` responde (juego publicado). El registro por slug está en `demos/registry.ts`; cada minijuego se carga con `React.lazy` al abrirlo.
+- Cada minijuego separa la lógica pura (`logic.ts`: estado + `step(dt, input)`, probada con Vitest) del dibujo en `<canvas>` (`*Demo.tsx`). Balatro usa botones del DOM.
+- `demos/loop.ts`: bucle con `requestAnimationFrame` que se cancela al pausar o desmontar, `dt` limitado a 0,05 s y lectura del teclado (flechas, WASD, Espacio, X) sin scroll ni atajos globales.
+- Se pausa solo al perder el foco la ventana o la pestaña y sigue pausado hasta pulsar «Continuar». Esc cierra.
+- En móvil (`pointer: coarse`) Balatro se juega con toques y las otras tres muestran «Demo disponible en ordenador».
+
 **Idioma de la interfaz:** español, inglés o italiano, con las banderas de la cabecera (`LanguageSwitcher`), también sin sesión. Se recuerda en `localStorage` (`arcade.lang`); la primera vez se usa el idioma del navegador, o español si no es uno de los tres. Los textos están en `src/i18n/messages.ts` y la API recibe el mismo idioma en `Accept-Language`.
 
 **Asistente.** Con sesión, un botón flotante abre el chat (`AssistantChat`): texto más hasta 4 tarjetas de juegos que abren su ficha. La conversación vive en memoria y se pierde al recargar; se mandan como mucho los últimos 10 mensajes. Un 503 muestra «El asistente no está disponible ahora» y un 429, el aviso del límite (20 mensajes por hora).
@@ -73,7 +92,7 @@ src/
 
 ## Tests
 
-`npm test`: 69 tests en 14 archivos.
+`npm test`: 145 tests en 22 archivos.
 
 | Archivo | Qué comprueba |
 |---|---|
@@ -90,6 +109,9 @@ src/
 | `components/Layout.test.tsx` | Un jugador ve «Amigos» y «Mi perfil»; un developer y un admin no |
 | `context/StoreContext.test.tsx` | Un fallo de red al validar la sesión no la borra; un 401 sí |
 | `lib/locale.test.ts` | `detectLocale`: dos primeras letras del idioma del navegador; español si no está soportado |
+| `demos/DemoPlayer.test.tsx`, `demos/loop.test.tsx` | `clampDt`, diálogo y cierre con Esc, pausa al perder el foco (y sigue en pausa al volver), teclas de juego sin scroll ni atajos globales, pantalla final con «Añadir al carrito» o «Ya lo tienes», aviso de móvil, bucle sin `requestAnimationFrame` huérfano |
+| `demos/*/logic.test.ts`, `demos/balatro/BalatroDemo.test.tsx` | Lógica pura de los cuatro minijuegos (salto y impulso, oleadas y daño, gol, rebotes y turbo, jugadas y puntuación del póquer) y la interfaz de cartas |
+| `pages/Demos.test.tsx` | Una tarjeta por demo publicada; una demo cuyo juego da 404 no aparece ni rompe la página |
 | `i18n/i18n.test.tsx` | Los tres idiomas tienen las mismas claves, variables y plurales, las banderas cambian el idioma sin sesión y lo recuerdan, géneros traducidos y `Accept-Language` en las peticiones |
 
 ## Despliegue

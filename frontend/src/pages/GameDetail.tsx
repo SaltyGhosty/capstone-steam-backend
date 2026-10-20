@@ -7,6 +7,8 @@ import Icon from '@/components/Icon';
 import ReviewScoreBadge from '@/components/ReviewScoreBadge';
 import { ErrorState, FieldError, Loading, Pagination, Price } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
+import { DemoPlayer } from '@/demos/DemoPlayer';
+import { demoFor } from '@/demos/registry';
 import { getLang, useI18n } from '@/i18n';
 import { formatDate, formatDateTime, genreLabel, genreName, initials, wideImage } from '@/lib/format';
 import { LOCALES } from '@/lib/locale';
@@ -16,6 +18,7 @@ export default function GameDetail() {
   const { slug = '' } = useParams();
   const { user, addToCart, toggleWishlist, wishlistIds } = useStore();
   const { t } = useI18n();
+  const [demoOpen, setDemoOpen] = useState(false);
   const game = useAsync(() => catalogApi.get(slug), [slug]);
   const ownership = useAsync<Ownership | null>(
     () => (user && game.data ? libraryApi.status(game.data.id) : Promise.resolve(null)),
@@ -64,6 +67,11 @@ export default function GameDetail() {
               ) : (
                 <button className="primary" onClick={onAdd}><Icon name="cart" size={18} /> {t('game.addCart')}</button>
               )}
+              {demoFor(g.slug) && (
+                <button className="secondary" onClick={() => setDemoOpen(true)}>
+                  <Icon name="play" size={18} /> {t('demos.try')}
+                </button>
+              )}
               {!isMine && !own?.owned && (
                 <button className="secondary" onClick={() => toggleWishlist(g.id, g.title)}>
                   <Icon name="heart" size={18} /> {wished ? t('common.inWishlist') : t('common.addToWishlist')}
@@ -92,6 +100,7 @@ export default function GameDetail() {
       </div>
 
       <Reviews game={g} ownership={own} onChanged={() => { game.reload(); ownership.reload(); }} />
+      {demoOpen && <DemoPlayer game={g} onClose={() => { setDemoOpen(false); ownership.reload(); }} />}
     </>
   );
 }

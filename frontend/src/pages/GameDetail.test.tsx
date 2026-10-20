@@ -160,4 +160,18 @@ describe('ficha del juego', () => {
     await waitFor(() => expect(reviewCalls(fetchMock).at(-1)!.searchParams.get('language')).toBe('it'));
     expect(reviewCalls(fetchMock).at(-1)!.searchParams.get('page')).toBe('0');
   });
+
+  it('muestra Probar demo solo en juegos con demo', async () => {
+    setup({
+      'GET /api/games/celeste': { body: { ...game, id: 14, title: 'Celeste', slug: 'celeste' } },
+      'GET /api/games/celeste/reviews': { body: page([]) },
+    });
+    const first = renderRoutes(routes, '/games/neon-drift');
+    await screen.findByRole('heading', { name: 'NEON DRIFT' });
+    expect(screen.queryByRole('button', { name: /Probar demo/ })).not.toBeInTheDocument();
+    first.unmount();
+
+    renderRoutes(routes, '/games/celeste');
+    expect(await screen.findByRole('button', { name: /Probar demo/ })).toBeInTheDocument();
+  });
 });

@@ -100,6 +100,7 @@ export default function Layout() {
           <p>{t('nav.menu')}</p>
           <SideLink to="/" end icon="home" label={t('nav.discover')} />
           <SideLink to="/browse" icon="compass" label={t('nav.browse')} />
+          <SideLink to="/demos" icon="play" label={t('nav.demos')} />
           <SideLink to="/library" icon="library" label={t('nav.library')} />
           <p>{t('nav.collection')}</p>
           <SideLink to="/wishlist" icon="heart" label={t('nav.wishlist')} count={user ? wishlistIds.size : undefined} />
