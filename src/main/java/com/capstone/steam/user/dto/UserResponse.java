@@ -16,7 +16,8 @@ public record UserResponse(
         boolean enabled,
         List<String> roles,
         Instant createdAt,
-        boolean profilePublic) {
+        boolean profilePublic,
+        boolean emailVerified) {
 
     public static UserResponse from(User user) {
         return new UserResponse(
@@ -29,6 +30,7 @@ public record UserResponse(
                 user.isEnabled(),
                 user.getRoles().stream().map(Role::getName).map(Enum::name).sorted().toList(),
                 user.getCreatedAt(),
-                user.isProfilePublic());
+                user.isProfilePublic(),
+                user.isEmailVerified());
     }
 }

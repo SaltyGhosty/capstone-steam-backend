@@ -65,6 +65,7 @@ public class AuthService {
             user.setLocale(request.locale());
         }
 
+        user.setEmailVerified(true); // provisional: la Task 3 lo condiciona al interruptor de verificación
         user.addRole(role(RoleName.ROLE_USER));
         if (request.accountType() == AccountType.DEVELOPER) {
             user.addRole(role(RoleName.ROLE_DEVELOPER));

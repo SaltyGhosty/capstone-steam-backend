@@ -42,6 +42,7 @@ public class AdminAccountInitializer implements ApplicationRunner {
         if (userRepository.existsByEmail(admin.getEmail()) || userRepository.existsByUsernameIgnoreCase(admin.getUsername())) {
             return;
         }
+        admin.setEmailVerified(true);
         admin.addRole(roleRepository.findByName(RoleName.ROLE_USER).orElseThrow());
         admin.addRole(roleRepository.findByName(RoleName.ROLE_ADMIN).orElseThrow());
         userRepository.save(admin);

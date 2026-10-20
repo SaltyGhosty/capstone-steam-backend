@@ -1,14 +1,8 @@
 package com.capstone.steam.auth;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.HexFormat;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,8 +25,6 @@ import com.capstone.steam.user.UserRepository;
  */
 @Service
 public class RefreshTokenService {
-
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final RefreshTokenRepository repository;
     private final UserRepository userRepository;
@@ -60,8 +52,8 @@ public class RefreshTokenService {
     /** Abre una sesión nueva (familia nueva) y devuelve el token en claro. */
     @Transactional
     public String issue(User user) {
-        String raw = newRawToken();
-        repository.save(new RefreshToken(user.getId(), hash(raw), UUID.randomUUID().toString(),
+        String raw = TokenHashing.newRawToken();
+        repository.save(new RefreshToken(user.getId(), TokenHashing.sha256Hex(raw), UUID.randomUUID().toString(),
                 clock.instant().plus(lifetime)));
         return raw;
     }
@@ -77,7 +69,7 @@ public class RefreshTokenService {
     @Transactional(noRollbackFor = UnauthorizedException.class)
     public Rotation rotate(String rawToken) {
         Instant now = clock.instant();
-        RefreshToken current = repository.findByTokenHash(hash(rawToken)).orElseThrow(RefreshTokenService::invalid);
+        RefreshToken current = repository.findByTokenHash(TokenHashing.sha256Hex(rawToken)).orElseThrow(RefreshTokenService::invalid);
         if (current.isRevoked()) {
             // Token ya usado: alguien lo reutiliza. Se cierra toda la familia.
             repository.revokeFamily(current.getFamilyId(), now);
@@ -98,9 +90,9 @@ public class RefreshTokenService {
             throw invalid();
         }
 
-        String raw = newRawToken();
+        String raw = TokenHashing.newRawToken();
         RefreshToken next = repository.save(
-                new RefreshToken(user.getId(), hash(raw), current.getFamilyId(), now.plus(lifetime)));
+                new RefreshToken(user.getId(), TokenHashing.sha256Hex(raw), current.getFamilyId(), now.plus(lifetime)));
         repository.linkReplacement(current.getId(), next.getId());
         return new Rotation(user, raw);
     }
@@ -108,7 +100,7 @@ public class RefreshTokenService {
     /** Cierra la sesión del token dado. Idempotente: un token desconocido no es error. */
     @Transactional
     public void revoke(String rawToken) {
-        repository.findByTokenHash(hash(rawToken))
+        repository.findByTokenHash(TokenHashing.sha256Hex(rawToken))
                 .ifPresent(token -> repository.revokeFamily(token.getFamilyId(), clock.instant()));
     }
 
@@ -121,21 +113,6 @@ public class RefreshTokenService {
     @Transactional
     public int purgeExpired(Duration grace) {
         return repository.deleteExpiredFamilies(clock.instant().minus(grace));
-    }
-
-    private static String newRawToken() {
-        byte[] bytes = new byte[32];
-        RANDOM.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private static String hash(String rawToken) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(rawToken.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 no disponible", e);
-        }
     }
 
     private static UnauthorizedException invalid() {

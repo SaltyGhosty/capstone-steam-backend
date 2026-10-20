@@ -45,6 +45,10 @@ public class User {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    /** El dueño pulsó el enlace del correo (V12). Separado de {@code enabled}: pendiente no es desactivada. */
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
     /** Idioma de los correos: es, en o it (CHECK ck_users_locale en V5). */
     @Column(name = "locale", nullable = false, length = 5)
     private String locale = "es";
@@ -131,6 +135,14 @@ public class User {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 
     public String getLocale() {

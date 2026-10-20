@@ -13,7 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Verifica que las migraciones V1-V11 se aplican sobre H2 y que las
+ * Verifica que las migraciones V1-V12 se aplican sobre H2 y que las
  * restricciones clave del esquema funcionan.
  */
 @SpringBootTest
@@ -28,10 +28,34 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV11() {
+    void appliesAllMigrationsUpToV12() {
         var applied = flyway.info().applied();
-        assertThat(applied).hasSize(11);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("11");
+        assertThat(applied).hasSize(12);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("12");
+    }
+
+    @Test
+    void existingUsersAreVerifiedAfterV12() {
+        assertThat(jdbc.queryForObject("SELECT email_verified FROM users WHERE username = 'admin'", Boolean.class))
+                .isTrue();
+    }
+
+    @Test
+    void newUsersAreUnverifiedByDefault() {
+        long id = insertUser("sinverificar");
+        assertThat(jdbc.queryForObject("SELECT email_verified FROM users WHERE id = ?", Boolean.class, id)).isFalse();
+    }
+
+    @Test
+    void emailVerificationTokenHashIsUniqueAndDiesWithItsUser() {
+        long userId = insertUser("verificador");
+        String sql = "INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) "
+                + "VALUES (?, 'h1', CURRENT_TIMESTAMP)";
+        jdbc.update(sql, userId);
+        assertThatThrownBy(() -> jdbc.update(sql, userId)).isInstanceOf(DataIntegrityViolationException.class);
+
+        jdbc.update("DELETE FROM users WHERE id = ?", userId);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM email_verification_tokens", Integer.class)).isZero();
     }
 
     @Test

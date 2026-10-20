@@ -28,7 +28,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("""
             select u from User u
-             where u.enabled = true and u.id <> :excludeId
+             where u.enabled = true and u.emailVerified = true and u.id <> :excludeId
                and (lower(u.username) like lower(:pattern) escape '!'
                     or lower(u.displayName) like lower(:pattern) escape '!')
                and not exists (select r.id from u.roles r
