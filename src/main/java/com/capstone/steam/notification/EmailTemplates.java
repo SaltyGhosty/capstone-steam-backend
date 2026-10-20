@@ -1,6 +1,8 @@
 package com.capstone.steam.notification;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
@@ -57,13 +59,31 @@ final class EmailTemplates {
         }
     }
 
-    static Email welcome(Brand brand, String displayName, String locale) {
+    /**
+     * Bienvenida. Con {@code verificationToken} es también la confirmación del email (botón a
+     * {@code /verify-email}); sin él (verificación desactivada) es la bienvenida de siempre.
+     */
+    static Email welcome(Brand brand, String displayName, String locale, String verificationToken, String username) {
         MailTexts t = MailTexts.of(locale);
+        if (verificationToken != null) {
+            String body = eyebrow(t.welcomeEyebrow(), ACCENT)
+                    + heading(greeting(t.welcomeHello(), displayName, "!"))
+                    + paragraph(t.verifyBody().formatted(esc(username == null ? displayName : username), esc(brand.name())))
+                    + button(t.verifyButton(), brand.link(verificationPath(verificationToken)))
+                    + paragraph(t.verifyExpiry());
+            return new Email(t.verifySubject().formatted(brand.name()),
+                    layout(brand, t, t.verifyPreheader(), body));
+        }
         String body = eyebrow(t.welcomeEyebrow(), ACCENT)
                 + heading(greeting(t.welcomeHello(), displayName, "!"))
                 + paragraph(t.welcomeBody().formatted(esc(brand.name())))
                 + button(t.welcomeButton(), brand.link("/browse"));
         return new Email(t.welcomeSubject().formatted(brand.name()), layout(brand, t, t.welcomePreheader(), body));
+    }
+
+    /** Ruta del enlace de verificación; el token va codificado para URL. */
+    static String verificationPath(String token) {
+        return "/verify-email?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
     }
 
     static Email purchaseReceipt(Brand brand, String displayName, Long orderId, BigDecimal total,

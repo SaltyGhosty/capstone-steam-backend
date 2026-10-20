@@ -37,7 +37,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     ProblemDetail handleApi(ApiException ex) {
-        return problem(ex.getStatus(), ex.getLocalizedMessage());
+        ProblemDetail pd = problem(ex.getStatus(), ex.getLocalizedMessage());
+        pd.setProperty("code", ex.getCode());
+        return pd;
+    }
+
+    /** 429 de un límite por ventana: con la cabecera Retry-After (segundos) para que el cliente sepa cuándo volver. */
+    @ExceptionHandler(RateLimitedException.class)
+    ResponseEntity<ProblemDetail> handleRateLimited(RateLimitedException ex) {
+        ProblemDetail pd = problem(ex.getStatus(), ex.getLocalizedMessage());
+        pd.setProperty("code", ex.getCode());
+        return ResponseEntity.status(ex.getStatus()).header(HttpHeaders.RETRY_AFTER,
+                String.valueOf(ex.getRetryAfterSeconds())).body(pd);
     }
 
     @ExceptionHandler(BadCredentialsException.class)
@@ -59,7 +70,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     /** Red de seguridad: una restricción UNIQUE/CHECK de la BD que el service no validó antes. */
     @ExceptionHandler(DataIntegrityViolationException.class)
     ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
-        log.warn("Violación de integridad: {}", ex.getMostSpecificCause().getMessage());
+        String cause = ex.getMostSpecificCause().getMessage();
+        log.warn("Violación de integridad: {}", cause);
+        // dos registros simultáneos con el mismo usuario (sin mayúsculas) se cuelan por la comprobación y los frena el índice
+        if (cause != null && cause.toLowerCase(java.util.Locale.ROOT).contains("uk_users_username_lower")) {
+            ProblemDetail pd = problem(HttpStatus.CONFLICT, Messages.get("auth.usernameTaken"));
+            pd.setProperty("code", "auth.usernameTaken");
+            return pd;
+        }
         return problem(HttpStatus.CONFLICT, Messages.get("error.dataConflict"));
     }
 

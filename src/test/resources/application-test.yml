@@ -16,6 +16,11 @@ app:
     secret: dGVzdC1zZWNyZXQtY2Fwc3RvbmUtc3RlYW0tMzItYnl0ZXMtbWluaW11bS0hIQ==
     expiration: PT15M
     refresh-expiration: P7D
+  auth:
+    ip-limit:
+      per-minute: 100000 # los tests hacen cientos de peticiones desde la misma IP; IpRateLimitIntegrationTest lo baja a 20
+    email-verification:
+      required: false # los tests registran y usan el token al momento; EmailVerificationIntegrationTest lo activa
   admin:
     username: admin
     email: admin@test.local

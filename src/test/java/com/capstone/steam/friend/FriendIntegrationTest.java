@@ -34,6 +34,9 @@ class FriendIntegrationTest {
     @Autowired
     private MockMvc mvc;
 
+    @Autowired
+    private com.capstone.steam.user.UserRepository userRepository;
+
     private String ana;
     private String leo;
     private String sam;
@@ -125,6 +128,25 @@ class FriendIntegrationTest {
         mvc.perform(auth(post("/api/friends/requests"), ana).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"leo\"}"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void unverifiedAccountsDisappearFromSearch() throws Exception {
+        var leoUser = userRepository.findById(leoId).orElseThrow();
+        leoUser.setEmailVerified(false);
+        userRepository.saveAndFlush(leoUser);
+        mvc.perform(auth(get("/api/users/search").param("q", "leo"), ana)).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void unverifiedAccountsCannotBeRequestedNorViewedNorSendRequests() throws Exception {
+        var leoUser = userRepository.findById(leoId).orElseThrow();
+        leoUser.setEmailVerified(false);
+        userRepository.saveAndFlush(leoUser);
+
+        mvc.perform(sendRequest(ana, "leo")).andExpect(status().isNotFound());
+        mvc.perform(auth(get("/api/users/leo/profile"), ana)).andExpect(status().isNotFound());
+        mvc.perform(sendRequest(leo, "ana")).andExpect(status().isForbidden());
     }
 
     @Test

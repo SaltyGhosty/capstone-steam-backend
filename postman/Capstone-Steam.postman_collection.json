@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Capstone Steam API",
-    "description": "Colección de la API de Capstone Steam (backend Spring Boot 4 + JWT).\n\nEstá ordenada como un **flujo completo**: ejecútala con el Collection Runner de arriba abajo.\nLos tokens, ids y slugs se guardan solos en variables de colección.\n\n- `baseUrl`: por defecto http://localhost:8081\n- La carpeta **10. Admin** necesita un admin: define ADMIN_PASSWORD en .env y pon la misma contraseña en `adminPassword`.\n- Tarjeta terminada en 0000 = pago rechazado (simulado).\n- La carpeta **9** acepta que el asistente responda 503 si el servidor no tiene `OPENROUTER_API_KEY`.",
+    "description": "Colección de la API de Capstone Steam (backend Spring Boot 4 + JWT).\n\nEstá ordenada como un **flujo completo**: ejecútala con el Collection Runner de arriba abajo.\nLos tokens, ids y slugs se guardan solos en variables de colección.\n\n- `baseUrl`: por defecto http://localhost:8081\n- **Hace falta un admin** (`adminPassword`, la misma que ADMIN_PASSWORD del .env): las cuentas nuevas se verifican con `POST /api/admin/users/{id}/verify-email` antes de iniciar sesión, y la carpeta **10. Admin** lo usa.\n- Tarjeta terminada en 0000 = pago rechazado (simulado).\n- La carpeta **9** acepta que el asistente responda 503 si el servidor no tiene `OPENROUTER_API_KEY`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -31,6 +31,10 @@
     },
     {
       "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "devId",
       "value": ""
     },
     {
@@ -91,6 +95,54 @@
       "name": "1. Auth",
       "item": [
         {
+          "name": "Login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"adminToken\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{adminLogin}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Necesita ADMIN_PASSWORD (variable adminPassword): verifica las cuentas nuevas y lo usa la carpeta 10."
+          }
+        },
+        {
           "name": "Registro developer",
           "event": [
             {
@@ -109,9 +161,9 @@
                 "exec": [
                   "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
                   "const b = pm.response.json();",
-                  "pm.collectionVariables.set(\"devToken\", b.accessToken);",
-                  "pm.test(\"rol DEVELOPER\", () => pm.expect(b.user.roles).to.include(\"ROLE_DEVELOPER\"));",
-                  "pm.test(\"llega refreshToken\", () => pm.expect(b.refreshToken).to.be.a(\"string\").and.not.empty);"
+                  "pm.collectionVariables.set(\"devId\", b.id);",
+                  "pm.test(\"pide verificar el email\", () => pm.expect(b.verificationRequired).to.eql(true));",
+                  "pm.test(\"no hay sesión hasta verificar\", () => { pm.expect(b).to.not.have.property(\"accessToken\"); pm.expect(b).to.not.have.property(\"refreshToken\"); });"
                 ]
               }
             }
@@ -138,7 +190,7 @@
                 "register"
               ]
             },
-            "description": "accountType: PLAYER (por defecto) o DEVELOPER. ADMIN nunca se puede autoasignar.",
+            "description": "accountType: PLAYER (por defecto) o DEVELOPER. ADMIN nunca se puede autoasignar. Con la verificación de email activa no devuelve sesión: la cuenta se verifica con el admin (o con el enlace del correo) y luego se hace login.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"pm_dev_{{suffix}}\",\n  \"email\": \"pm_dev_{{suffix}}@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Postman Studios\",\n  \"accountType\": \"DEVELOPER\",\n  \"locale\": \"en\"\n}",
@@ -160,11 +212,9 @@
                 "exec": [
                   "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
                   "const b = pm.response.json();",
-                  "pm.collectionVariables.set(\"playerToken\", b.accessToken);",
-                  "pm.collectionVariables.set(\"playerId\", b.user.id);",
-                  "pm.collectionVariables.set(\"playerRefreshToken\", b.refreshToken);",
-                  "pm.test(\"llega refreshToken\", () => pm.expect(b.refreshToken).to.be.a(\"string\").and.not.empty);",
-                  "pm.test(\"el acceso trae su duración\", () => pm.expect(b.expiresIn).to.be.above(0));"
+                  "pm.collectionVariables.set(\"playerId\", b.id);",
+                  "pm.test(\"pide verificar el email\", () => pm.expect(b.verificationRequired).to.eql(true));",
+                  "pm.test(\"no hay sesión hasta verificar\", () => { pm.expect(b).to.not.have.property(\"accessToken\"); pm.expect(b).to.not.have.property(\"refreshToken\"); });"
                 ]
               }
             }
@@ -194,6 +244,189 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"pm_player_{{suffix}}\",\n  \"email\": \"pm_player_{{suffix}}@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login sin verificar → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"code auth.emailNotVerified\", () => pm.expect(pm.response.json().code).to.eql(\"auth.emailNotVerified\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Contraseña correcta pero el email sin verificar: 403 con code auth.emailNotVerified. Con contraseña mala sería 401 (no se revela nada más).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"pm_player_{{suffix}}\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Verificar developer (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"emailVerified\", () => pm.expect(pm.response.json().emailVerified).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{devId}}/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{devId}}",
+                "verify-email"
+              ]
+            },
+            "description": "Soporte y seed: el admin da el email por verificado (idempotente)."
+          }
+        },
+        {
+          "name": "Verificar jugador (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"emailVerified\", () => pm.expect(pm.response.json().emailVerified).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{playerId}}/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{playerId}}",
+                "verify-email"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login developer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set(\"devToken\", b.accessToken);",
+                  "pm.test(\"rol DEVELOPER\", () => pm.expect(b.user.roles).to.include(\"ROLE_DEVELOPER\"));",
+                  "pm.test(\"email verificado\", () => pm.expect(b.user.emailVerified).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"pm_dev_{{suffix}}\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -298,6 +531,150 @@
                 }
               }
             }
+          }
+        },
+        {
+          "name": "Reenviar verificación → 204",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204 (siempre, exista o no la cuenta)\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-verification",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "resend-verification"
+              ]
+            },
+            "description": "Siempre 204, esté la cuenta verificada, pendiente o no exista. Máximo 3 por hora y email (429 después).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"pm_player_{{suffix}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Verificar con token falso → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"enlace no válido\", () => pm.expect(pm.response.json().code).to.eql(\"auth.verificationInvalid\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-email"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"token-que-no-existe\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El enlace del correo se canjea con la contraseña de ese registro. Un enlace que no existe, está usado o caducó da 400 auth.verificationInvalid."
+          }
+        },
+        {
+          "name": "Preview con token falso → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"enlace no válido\", () => pm.expect(pm.response.json().code).to.eql(\"auth.verificationInvalid\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-email",
+                "preview"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"token-que-no-existe\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Dice de qué cuenta es un enlace vigente (sin gastarlo). Con un enlace que no vale, 400 auth.verificationInvalid."
           }
         },
         {
@@ -2099,10 +2476,9 @@
                 "exec": [
                   "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
                   "const b = pm.response.json();",
-                  "pm.collectionVariables.set(\"player2Token\", b.accessToken);",
-                  "pm.collectionVariables.set(\"player2Id\", b.user.id);",
-                  "pm.collectionVariables.set(\"player2Username\", b.user.username);",
-                  "pm.test(\"perfil privado por defecto\", () => pm.expect(b.user.profilePublic).to.eql(false));"
+                  "pm.collectionVariables.set(\"player2Id\", b.id);",
+                  "pm.collectionVariables.set(\"player2Username\", \"pm_friend_\" + pm.collectionVariables.get(\"suffix\"));",
+                  "pm.test(\"pide verificar el email\", () => pm.expect(b.verificationRequired).to.eql(true));"
                 ]
               }
             }
@@ -2132,6 +2508,96 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"pm_friend_{{suffix}}\",\n  \"email\": \"pm_friend_{{suffix}}@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Postman Friend\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Verificar al segundo jugador (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{player2Id}}/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{player2Id}}",
+                "verify-email"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login del segundo jugador",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set(\"player2Token\", b.accessToken);",
+                  "pm.test(\"perfil privado por defecto\", () => pm.expect(b.user.profilePublic).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{player2Username}}\",\n  \"password\": \"password123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2960,53 +3426,6 @@
     {
       "name": "10. Admin (requiere ADMIN_PASSWORD)",
       "item": [
-        {
-          "name": "Login admin",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-                  "pm.collectionVariables.set(\"adminToken\", pm.response.json().accessToken);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "auth": {
-              "type": "noauth"
-            },
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "login"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"login\": \"{{adminLogin}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
         {
           "name": "Listar usuarios",
           "event": [

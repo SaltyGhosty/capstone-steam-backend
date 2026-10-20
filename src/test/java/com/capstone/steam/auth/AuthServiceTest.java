@@ -42,13 +42,15 @@ class AuthServiceTest {
     @Mock private JwtService jwtService;
     @Mock private ApplicationEventPublisher events;
     @Mock private RefreshTokenService refreshTokenService;
+    @Mock private EmailVerificationService verificationService;
 
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
         authService = new AuthService(userRepository, roleRepository, passwordEncoder, authenticationManager,
-                jwtService, events, refreshTokenService);
+                jwtService, events, refreshTokenService, verificationService,
+                new EmailVerificationProperties(false, java.time.Duration.ofDays(1), 3));
     }
 
     @Test
@@ -59,7 +61,7 @@ class AuthServiceTest {
         when(jwtService.getExpirationSeconds()).thenReturn(3600L);
         when(refreshTokenService.issue(any())).thenReturn("refresh");
 
-        AuthResponse response = authService.register(
+        AuthResponse response = (AuthResponse) authService.register(
                 new RegisterRequest("gaben", "Gabe@Valve.com", "secret123", null, AccountType.DEVELOPER, "en"));
 
         ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);

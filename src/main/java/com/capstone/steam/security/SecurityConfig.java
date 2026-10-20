@@ -43,7 +43,8 @@ public class SecurityConfig {
                                 problemWriter.write(req, res, HttpStatus.FORBIDDEN, "error.forbiddenResource")))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login",
-                                "/api/auth/refresh", "/api/auth/logout").permitAll()
+                                "/api/auth/refresh", "/api/auth/logout", "/api/auth/verify-email",
+                                "/api/auth/verify-email/preview", "/api/auth/resend-verification").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/games/**", "/api/genres/**").permitAll()
                         .requestMatchers("/actuator/health/**", "/error").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

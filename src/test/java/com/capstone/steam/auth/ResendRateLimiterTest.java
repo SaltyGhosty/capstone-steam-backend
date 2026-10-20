@@ -1,0 +1,143 @@
+package com.capstone.steam.auth;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.capstone.steam.common.exception.TooManyRequestsException;
+
+class ResendRateLimiterTest {
+
+    /** Reloj que se avanza a mano. */
+    private static final class MutableClock extends Clock {
+        private Instant now = Instant.parse("2026-10-20T10:00:00Z");
+
+        void advance(Duration d) {
+            now = now.plus(d);
+        }
+
+        @Override public ZoneId getZone() { return ZoneOffset.UTC; }
+        @Override public Clock withZone(ZoneId zone) { return this; }
+        @Override public Instant instant() { return now; }
+    }
+
+    private MutableClock clock;
+    private ResendRateLimiter limiter;
+
+    @BeforeEach
+    void setUp() {
+        clock = new MutableClock();
+        limiter = new ResendRateLimiter(clock, 3);
+    }
+
+    @Test
+    void allowsThreePerHourAndRejectsTheFourth() {
+        for (int i = 0; i < 3; i++) {
+            limiter.check("ana@test.com");
+            clock.advance(Duration.ofMinutes(1));
+        }
+
+        assertThatThrownBy(() -> limiter.check("ana@test.com"))
+                .isInstanceOf(TooManyRequestsException.class)
+                .hasMessageContaining("demasiados");
+    }
+
+    @Test
+    void anAttemptRejectedByTheLimitDoesNotExtendTheBlock() {
+        for (int i = 0; i < 3; i++) {
+            limiter.check("ana@test.com");
+        }
+        clock.advance(Duration.ofMinutes(30));
+        assertThatThrownBy(() -> limiter.check("ana@test.com")).isInstanceOf(TooManyRequestsException.class);
+
+        clock.advance(Duration.ofMinutes(30).plusSeconds(1)); // la hora de los tres primeros ya pasó
+        assertThatCode(() -> limiter.check("ana@test.com")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void passesAgainAfterOneHour() {
+        for (int i = 0; i < 3; i++) {
+            limiter.check("ana@test.com");
+        }
+        clock.advance(Duration.ofHours(1));
+
+        assertThatCode(() -> limiter.check("ana@test.com")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void differentEmailsDoNotAffectEachOther() {
+        for (int i = 0; i < 3; i++) {
+            limiter.check("ana@test.com");
+        }
+
+        assertThatCode(() -> limiter.check("leo@test.com")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void aFullMapRejectsNewKeysAndNeverEvictsExistingOnes() {
+        limiter = new ResendRateLimiter(clock, 3, 10);
+        for (int i = 0; i < 10; i++) {
+            limiter.check("victima" + i + "@test.com");
+        }
+        // lleno: una clave nueva se rechaza (no se saca ninguna existente)
+        assertThatThrownBy(() -> limiter.check("nuevo@test.com")).isInstanceOf(TooManyRequestsException.class);
+        assertThat(limiter.trackedEmails()).isEqualTo(10);
+        // las existentes siguen contando: 3 pasan, la cuarta no
+        limiter.check("victima0@test.com");
+        limiter.check("victima0@test.com");
+        assertThatThrownBy(() -> limiter.check("victima0@test.com")).isInstanceOf(TooManyRequestsException.class);
+
+        // pasada la hora el barrido libera sitio
+        clock.advance(Duration.ofHours(1).plusMinutes(6));
+        assertThatCode(() -> limiter.check("nuevo@test.com")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void aFullMapSweepsAtMostOncePerSecond() {
+        limiter = new ResendRateLimiter(clock, 3, 5);
+        for (int i = 0; i < 5; i++) {
+            limiter.check("clave" + i + "@test.com");
+        }
+        for (int i = 0; i < 50; i++) {
+            assertThatThrownBy(() -> limiter.check("nueva@test.com")).isInstanceOf(TooManyRequestsException.class);
+        }
+        assertThat(limiter.fullSweeps()).isEqualTo(1); // 50 peticiones en el mismo instante, un solo barrido
+
+        clock.advance(Duration.ofSeconds(1));
+        assertThatThrownBy(() -> limiter.check("nueva@test.com")).isInstanceOf(TooManyRequestsException.class);
+        assertThat(limiter.fullSweeps()).isEqualTo(2);
+    }
+
+    @Test
+    void theEmailLimitAlwaysSendsTheWholeWindowAsRetryAfter() {
+        limiter.check("ana@test.com");
+        clock.advance(Duration.ofMinutes(10));
+        limiter.check("ana@test.com");
+        limiter.check("ana@test.com");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> limiter.check("ana@test.com"))
+                .isInstanceOfSatisfying(com.capstone.steam.common.exception.RateLimitedException.class,
+                        e -> assertThat(e.getRetryAfterSeconds()).isEqualTo(3600L)); // constante: no delata cuándo fue el último intento
+    }
+
+    @Test
+    void idleEntriesAreSweptSoTheMapDoesNotGrowForever() {
+        limiter.check("ana@test.com");
+        limiter.check("leo@test.com");
+        assertThat(limiter.trackedEmails()).isEqualTo(2);
+
+        clock.advance(Duration.ofHours(2));
+        limiter.check("sam@test.com"); // el barrido corre al llamar
+
+        assertThat(limiter.trackedEmails()).isEqualTo(1);
+    }
+}

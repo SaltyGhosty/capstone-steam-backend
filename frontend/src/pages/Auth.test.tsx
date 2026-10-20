@@ -61,3 +61,81 @@ describe('login y registro', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0]![1]!.body)).locale).toBe('es');
   });
 });
+
+describe('verificación de email en login y registro', () => {
+  const notVerified = {
+    status: 403,
+    body: { detail: 'Tu email no está verificado. Revisa tu correo o pide otro enlace.', code: 'auth.emailNotVerified' },
+  };
+
+  it('login de cuenta sin verificar ofrece reenviar con el email escrito', async () => {
+    const fetchMock = mockFetch({
+      'POST /api/auth/login': notVerified,
+      'POST /api/auth/resend-verification': { status: 204 },
+    });
+    renderRoutes({ '/login': <Login /> }, '/login');
+
+    await userEvent.type(screen.getByLabelText('Usuario o email'), 'ana@test.com');
+    await userEvent.type(screen.getByLabelText('Contraseña'), 'password123');
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByText('Tu email no está verificado.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Tu email')).not.toBeInTheDocument(); // ya escribió un email
+    await userEvent.click(screen.getByRole('button', { name: 'Reenviar correo' }));
+
+    expect(await screen.findByText(/Si la cuenta está pendiente/)).toBeInTheDocument();
+    const resend = fetchMock.mock.calls.find(([url]) => String(url) === '/api/auth/resend-verification')!;
+    expect(JSON.parse(String(resend[1]!.body))).toEqual({ email: 'ana@test.com' });
+    expect(getToken()).toBeNull();
+  });
+
+  it('si escribió un usuario, el reenvío pide el email', async () => {
+    const fetchMock = mockFetch({
+      'POST /api/auth/login': notVerified,
+      'POST /api/auth/resend-verification': { status: 204 },
+    });
+    renderRoutes({ '/login': <Login /> }, '/login');
+
+    await userEvent.type(screen.getByLabelText('Usuario o email'), 'ana');
+    await userEvent.type(screen.getByLabelText('Contraseña'), 'password123');
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByText('Tu email no está verificado.')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Tu email'), 'ana@test.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Reenviar correo' }));
+
+    await screen.findByText(/Si la cuenta está pendiente/);
+    const resend = fetchMock.mock.calls.find(([url]) => String(url) === '/api/auth/resend-verification')!;
+    expect(JSON.parse(String(resend[1]!.body))).toEqual({ email: 'ana@test.com' });
+  });
+
+  it('una contraseña mala (401) no ofrece reenviar', async () => {
+    mockFetch({ 'POST /api/auth/login': { status: 401, body: { detail: 'Usuario o contraseña incorrectos' } } });
+    renderRoutes({ '/login': <Login /> }, '/login');
+
+    await userEvent.type(screen.getByLabelText('Usuario o email'), 'ana');
+    await userEvent.type(screen.getByLabelText('Contraseña'), 'mala');
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Usuario o contraseña incorrectos');
+    expect(screen.queryByRole('button', { name: 'Reenviar correo' })).not.toBeInTheDocument();
+  });
+
+  it('registro sin verificación (respuesta con tokens) inicia sesión como hoy', async () => {
+    mockFetch({
+      'POST /api/auth/register': { status: 201, body: { accessToken: 'jwt-demo', tokenType: 'Bearer', expiresIn: 900, refreshToken: 'refresh-demo', user: demoUser } },
+      'GET /api/cart': { body: emptyCart },
+      'GET /api/wishlist': { body: page([]) },
+    });
+    const { path } = renderRoutes({ '/register': <Register />, '/': <p>Inicio</p> }, '/register');
+
+    await userEvent.type(screen.getByLabelText('Usuario'), 'demo_player');
+    await userEvent.type(screen.getByLabelText('Email'), 'demo@test.com');
+    await userEvent.type(screen.getByLabelText(/^Contraseña/), 'password123');
+    await userEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    await waitFor(() => expect(path()).toBe('/'));
+    expect(getToken()).toBe('jwt-demo');
+    expect(getRefreshToken()).toBe('refresh-demo');
+  });
+});

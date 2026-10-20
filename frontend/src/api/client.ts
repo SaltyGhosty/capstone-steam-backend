@@ -14,12 +14,15 @@ export class ApiError extends Error {
   status: number;
   fieldErrors: Record<string, string>;
   body: unknown;
+  /** Clave del error del backend (p. ej. auth.emailNotVerified), para distinguir errores con el mismo status. */
+  readonly code?: string;
 
-  constructor(status: number, message: string, fieldErrors: Record<string, string> = {}, body?: unknown) {
+  constructor(status: number, message: string, fieldErrors: Record<string, string> = {}, body?: unknown, code?: string) {
     super(message);
     this.status = status;
     this.fieldErrors = fieldErrors;
     this.body = body;
+    this.code = code;
   }
 }
 
@@ -180,9 +183,9 @@ async function request<T>(path: string, options: RequestOptions, canRefresh: boo
     }
   }
 
-  const problem = (data ?? {}) as { detail?: string; title?: string; errors?: Record<string, string> };
+  const problem = (data ?? {}) as { detail?: string; title?: string; errors?: Record<string, string>; code?: string };
   const message = problem.detail || problem.title || `Error ${res.status}`;
-  throw new ApiError(res.status, message, problem.errors ?? {}, data);
+  throw new ApiError(res.status, message, problem.errors ?? {}, data, problem.code);
 }
 
 function safeJson(text: string): unknown {

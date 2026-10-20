@@ -56,7 +56,9 @@ src/
 | `/browse` | Público | Catálogo con los filtros de la Criteria API (texto, géneros, precio, % mínimo de reseñas positivas, ofertas, orden y paginación); los filtros se guardan en la URL |
 | `/games/:slug` | Público | Ficha del juego con los botones según `/library/status`, la etiqueta y el % de reseñas positivas y la lista de reseñas 👍/👎 (crear, editar y borrar), filtrada por el idioma de la interfaz con un control «Todos los idiomas» |
 | `/demos` | Público | Demos jugables de cuatro juegos del catálogo (ver «Demos») |
-| `/login`, `/register` | Público | Registro como jugador o developer |
+| `/login`, `/register` | Público | Registro como jugador o developer. Crear la cuenta no inicia sesión: lleva a `/check-email`. Un login con el email sin verificar ofrece «Reenviar correo» |
+| `/check-email?email=` | Público | «Revisa tu correo»: avisa de que el enlace va de camino, con «Reenviar correo» y «¿Email equivocado?» |
+| `/verify-email?token=` | Público | El enlace del correo: pregunta de qué cuenta es (vista previa, que no lo gasta), muestra «Confirma la cuenta «usuario»» y pide la contraseña de ese registro; con ella verifica el email, inicia la sesión y lleva a `/` (o a `/developer` si es un estudio). Una contraseña errónea se puede reintentar (5 fallos anulan el enlace); un enlace usado o caducado ofrece pedir otro. Quita el token de la URL |
 | `/cart` | Usuario | Carrito; «Continuar al pago» crea el pedido PENDING |
 | `/orders`, `/orders/:id` | Usuario | Historial y pago (200 → PAID, 402 → FAILED) |
 | `/library`, `/wishlist` | Usuario | Colecciones del usuario; «Jugar» simula una sesión de 30 a 90 minutos (`POST /library/{id}/play`) |
@@ -92,13 +94,14 @@ Minijuegos propios (sin sprites, música ni nombres de los juegos reales) inspir
 
 ## Tests
 
-`npm test`: 145 tests en 22 archivos.
+`npm test`: 165 tests en 23 archivos.
 
 | Archivo | Qué comprueba |
 |---|---|
 | `api/client.test.ts` | Token en las cabeceras, query de los filtros, `FormData` sin `Content-Type`, ProblemDetail → `ApiError` con errores por campo, 402 aceptado, 401 → cierre de sesión y la renovación con refresh token (un solo refresh compartido, cierre de sesión si falla con 400 o 401, un 5xx no la borra, un 401 de `/auth/login` no refresca ni se repite una petición sin token) |
 | `lib/format.test.ts` | Precios en €, tiempo jugado, portadas apaisadas e iniciales |
 | `pages/Auth.test.tsx` | Login correcto (token guardado y redirección), credenciales incorrectas y errores de validación del registro |
+| `pages/EmailVerification.test.tsx` | Registro → `/check-email`, reenviar, `/verify-email` (vista previa, contraseña, contraseña errónea, enlace inválido, fallos que no son 400, `StrictMode`, estudio a `/developer` y sin token) |
 | `pages/Checkout.test.tsx` | Carrito → pedido → pago aprobado; pago rechazado (402) con su motivo; validación de la tarjeta; carrito sin sesión → login |
 | `pages/Settings.test.tsx` | Muestra el idioma de los correos del usuario y lo envía al guardar |
 | `pages/GameDetail.test.tsx` | Etiqueta y % de reseñas positivas, filtro por idioma y «Todos los idiomas», voto 👍/👎 con idioma y sin puntuación, la lista se refresca al editar, editar conserva el idioma de la reseña y cambiar de idioma vuelve a la página 0 |

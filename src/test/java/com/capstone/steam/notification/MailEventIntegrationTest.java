@@ -38,6 +38,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.capstone.steam.notification.event.UserRegisteredEvent;
+import com.capstone.steam.notification.event.VerificationEmailEvent;
 import com.jayway.jsonpath.JsonPath;
 
 import jakarta.mail.Session;
@@ -96,9 +97,26 @@ class MailEventIntegrationTest {
     }
 
     @Test
+    void registrationEventWithATokenSendsTheVerificationMail() {
+        transactionTemplate.executeWithoutResult(tx -> publisher.publishEvent(
+                new UserRegisteredEvent(998L, "nuevo@test.com", "Nuevo", "es", "tok_123", "nuevo")));
+
+        await().atMost(Duration.ofSeconds(5)).until(() -> sentBy.containsKey("¡Bienvenido a ARCADE! Confirma tu email"));
+        assertThat(sentBy.get("¡Bienvenido a ARCADE! Confirma tu email")).startsWith("mail-");
+    }
+
+    @Test
+    void resendEventSendsTheVerificationMailInTheUsersLanguage() {
+        transactionTemplate.executeWithoutResult(tx -> publisher.publishEvent(
+                new VerificationEmailEvent("nuevo@test.com", "Nuevo", "it", "tok_456", "nuevo")));
+
+        await().atMost(Duration.ofSeconds(5)).until(() -> sentBy.containsKey("Benvenuto su ARCADE! Conferma la tua email"));
+    }
+
+    @Test
     void rolledBackTransactionSendsNoMail() {
         transactionTemplate.executeWithoutResult(tx -> {
-            publisher.publishEvent(new UserRegisteredEvent(999L, "ghost@test.com", "Ghost", "es"));
+            publisher.publishEvent(new UserRegisteredEvent(999L, "ghost@test.com", "Ghost", "es", null, null));
             tx.setRollbackOnly();
         });
 

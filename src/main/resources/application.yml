@@ -51,9 +51,10 @@ spring:
           starttls:
             enable: true
             required: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
+          # Gmail desde Render a veces tarda en conectar: 15 s y EmailService reintenta los fallos de conexión
+          connectiontimeout: ${MAIL_TIMEOUT:15000}
+          timeout: ${MAIL_TIMEOUT:15000}
+          writetimeout: ${MAIL_TIMEOUT:15000}
 
 app:
   jwt:
@@ -64,6 +65,14 @@ app:
     # Purga diaria de refresh_tokens: solo familias enteras caducadas hace más de grace (respeta la detección de reutilización)
     refresh-purge-cron: ${REFRESH_PURGE_CRON:0 30 3 * * *}
     refresh-purge-grace: ${REFRESH_PURGE_GRACE:P1D}
+    # Peticiones por minuto y IP al registro, reenvío y verificación de email (429 después)
+    ip-limit:
+      per-minute: ${AUTH_IP_LIMIT_PER_MINUTE:60}
+    email-verification:
+      # Sin verificar el email no se puede iniciar sesión. Solo los tests lo desactivan.
+      required: ${EMAIL_VERIFICATION_REQUIRED:true}
+      ttl: ${EMAIL_VERIFICATION_TTL:P1D}
+      resend-per-hour: 3
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   payments:
@@ -100,7 +109,7 @@ app:
     # adónde llevan los botones de los correos; sin FRONTEND_URL se usa el primer origen de CORS
     store-url: ${FRONTEND_URL:${CORS_ALLOWED_ORIGINS:http://localhost:5173}}
     executor:
-      core-pool-size: 2
+      core-pool-size: 4
       max-pool-size: 5
       queue-capacity: 100
 

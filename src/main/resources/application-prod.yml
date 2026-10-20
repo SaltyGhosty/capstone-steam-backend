@@ -7,6 +7,11 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASSWORD}
 
+# Render pone un proxy delante: Tomcat toma la IP real de X-Forwarded-For (la más a la derecha que no sea un proxy
+# interno), así el límite por IP de las rutas de cuenta no ve siempre la IP del proxy ni se puede falsificar
+server:
+  forward-headers-strategy: native
+
 logging:
   level:
     root: INFO

@@ -3,9 +3,12 @@ package com.capstone.steam.user;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 public interface UserRepository extends JpaRepository<User, Long> {
@@ -28,7 +31,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("""
             select u from User u
-             where u.enabled = true and u.id <> :excludeId
+             where u.enabled = true and u.emailVerified = true and u.id <> :excludeId
                and (lower(u.username) like lower(:pattern) escape '!'
                     or lower(u.displayName) like lower(:pattern) escape '!')
                and not exists (select r.id from u.roles r
@@ -36,6 +39,25 @@ public interface UserRepository extends JpaRepository<User, Long> {
                                                  com.capstone.steam.user.RoleName.ROLE_ADMIN))
              order by lower(u.username)""")
     List<User> searchPlayers(String pattern, Long excludeId, Pageable pageable);
+
+    Optional<User> findByEmail(String email);
+
+    org.springframework.data.domain.Page<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+            String username, String email, Pageable pageable);
+
+    /** Ids por email y por usuario, sin cargar la fila: así se pueden bloquear en orden de id (sin interbloqueos). */
+    @Query("select u.id from User u where u.email = :email")
+    Optional<Long> findIdByEmail(String email);
+
+    @Query("select u.id from User u where lower(u.username) = lower(:username)")
+    Optional<Long> findIdByUsernameIgnoreCase(String username);
+
+    /** Lee la fila con bloqueo de escritura: registro y verificación no se pisan sobre la misma cuenta. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.id = :id")
+    Optional<User> findByIdForUpdate(Long id);
+
+    Optional<User> findByUsernameIgnoreCase(String username);
 
     boolean existsByEmail(String email);
 

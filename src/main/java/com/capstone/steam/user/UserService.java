@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.capstone.steam.auth.EmailVerificationService;
 import com.capstone.steam.auth.RefreshTokenService;
 import com.capstone.steam.common.dto.PageResponse;
 import com.capstone.steam.common.exception.BadRequestException;
@@ -22,9 +23,12 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final RefreshTokenService refreshTokenService;
     private final AccessTokenRevocations accessTokenRevocations;
+    private final EmailVerificationService emailVerificationService;
 
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
-            RefreshTokenService refreshTokenService, AccessTokenRevocations accessTokenRevocations) {
+            RefreshTokenService refreshTokenService, AccessTokenRevocations accessTokenRevocations,
+            EmailVerificationService emailVerificationService) {
+        this.emailVerificationService = emailVerificationService;
         this.accessTokenRevocations = accessTokenRevocations;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -57,9 +61,14 @@ public class UserService {
     // ---------------------------- Administración ----------------------------
 
     @Transactional(readOnly = true)
-    public PageResponse<UserResponse> listUsers(Pageable pageable) {
+    public PageResponse<UserResponse> listUsers(Pageable pageable, String q) {
         // Los roles se cargan por lotes (hibernate.default_batch_fetch_size), no con un fetch join,
         // para que la paginación la haga la BD y no Hibernate en memoria.
+        String term = q == null ? "" : q.trim();
+        if (!term.isEmpty()) { // filtro opcional por usuario o email (lo usa el seed para encontrar una cuenta)
+            return PageResponse.of(userRepository
+                    .findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(term, term, pageable), UserResponse::from);
+        }
         return PageResponse.of(userRepository.findAll(pageable), UserResponse::from);
     }
 
@@ -91,6 +100,12 @@ public class UserService {
             accessTokenRevocations.revokeUser(userId);
         }
         return UserResponse.from(user);
+    }
+
+    /** El admin da el email por verificado (soporte y seed), con los datos del último enlace. Idempotente. */
+    @Transactional
+    public UserResponse verifyEmail(Long userId) {
+        return UserResponse.from(emailVerificationService.verifyByAdmin(userId));
     }
 
     private User findWithRoles(Long userId) {

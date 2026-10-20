@@ -22,6 +22,11 @@ public abstract class ApiException extends RuntimeException {
         this.args = args;
     }
 
+    /** Clave del texto (messages*.properties); el frontend la usa para distinguir errores del mismo status. */
+    public String getCode() {
+        return code;
+    }
+
     public HttpStatus getStatus() {
         return status;
     }

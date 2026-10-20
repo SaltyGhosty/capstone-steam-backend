@@ -13,7 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Verifica que las migraciones V1-V11 se aplican sobre H2 y que las
+ * Verifica que las migraciones V1-V12 se aplican sobre H2 y que las
  * restricciones clave del esquema funcionan.
  */
 @SpringBootTest
@@ -28,10 +28,62 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV11() {
+    void appliesAllMigrationsUpToV12_1() {
         var applied = flyway.info().applied();
-        assertThat(applied).hasSize(11);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("11");
+        assertThat(applied).hasSize(13);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("12.1");
+    }
+
+    @Test
+    void existingUsersAreVerifiedAfterV12() {
+        assertThat(jdbc.queryForObject("SELECT email_verified FROM users WHERE username = 'admin'", Boolean.class))
+                .isTrue();
+    }
+
+    @Test
+    void usernamesAreUniqueIgnoringCase() {
+        insertUser("JuanP");
+        assertThatThrownBy(() -> insertUser("juanp")).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void verificationLinksStartWithZeroFailedAttempts() {
+        long userId = insertUser("intentos");
+        jdbc.update("INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, username, password_hash) "
+                + "VALUES (?, 'h-int', CURRENT_TIMESTAMP, 'x', 'y')", userId);
+        assertThat(jdbc.queryForObject("SELECT failed_attempts FROM email_verification_tokens WHERE token_hash = 'h-int'",
+                Integer.class)).isZero();
+    }
+
+    @Test
+    void newUsersAreUnverifiedByDefault() {
+        long id = insertUser("sinverificar");
+        assertThat(jdbc.queryForObject("SELECT email_verified FROM users WHERE id = ?", Boolean.class, id)).isFalse();
+    }
+
+    @Test
+    void emailVerificationTokenHashIsUniqueAndDiesWithItsUser() {
+        long userId = insertUser("verificador");
+        String sql = "INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, username, password_hash) "
+                + "VALUES (?, 'h1', CURRENT_TIMESTAMP, 'nuevo', 'x')";
+        jdbc.update(sql, userId);
+        assertThatThrownBy(() -> jdbc.update(sql, userId)).isInstanceOf(DataIntegrityViolationException.class);
+
+        jdbc.update("DELETE FROM users WHERE id = ?", userId);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM email_verification_tokens", Integer.class)).isZero();
+    }
+
+    @Test
+    void emailVerificationTokensCarryTheRegistrationDataWithAValidLocale() {
+        long userId = insertUser("datos");
+        jdbc.update("INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, username, password_hash, "
+                + "display_name, locale, developer) VALUES (?, 'h2', CURRENT_TIMESTAMP, 'otro', 'hash', 'Otro', 'it', TRUE)",
+                userId);
+        assertThat(jdbc.queryForObject("SELECT developer FROM email_verification_tokens WHERE token_hash = 'h2'",
+                Boolean.class)).isTrue();
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, "
+                + "username, password_hash, locale) VALUES (?, 'h3', CURRENT_TIMESTAMP, 'x', 'y', 'fr')", userId))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
