@@ -65,6 +65,9 @@ app:
     # Purga diaria de refresh_tokens: solo familias enteras caducadas hace más de grace (respeta la detección de reutilización)
     refresh-purge-cron: ${REFRESH_PURGE_CRON:0 30 3 * * *}
     refresh-purge-grace: ${REFRESH_PURGE_GRACE:P1D}
+    # Peticiones por minuto y IP al registro, reenvío y verificación de email (429 después)
+    ip-limit:
+      per-minute: ${AUTH_IP_LIMIT_PER_MINUTE:20}
     email-verification:
       # Sin verificar el email no se puede iniciar sesión. Solo los tests lo desactivan.
       required: ${EMAIL_VERIFICATION_REQUIRED:true}

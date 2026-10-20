@@ -46,14 +46,23 @@ async function call(method, path, { token, body, accept = [] } = {}) {
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  // La API limita por IP (20 por minuto) el registro y la verificación: ante un 429 de /api/auth se espera y se repite
+  const sendPatiently = async (tk) => {
+    for (let waited = 0; ; waited++) {
+      const r = await send(tk);
+      if (r.status !== 429 || !path.startsWith('/api/auth/') || waited >= 40) return r;
+      if (waited === 0) console.log('  … límite de peticiones por IP: espero a que se libere');
+      await new Promise((resolve) => setTimeout(resolve, 15000));
+    }
+  };
   let current = renewed.get(token) ?? token;
-  let res = await send(current);
+  let res = await sendPatiently(current);
   if (res.status === 401 && current && !path.startsWith('/api/auth/') && sessionUser.has(current)) {
     const login = await call('POST', '/api/auth/login', { body: { login: sessionUser.get(current), password: data.password } });
     sessionUser.set(login.accessToken, sessionUser.get(current));
     renewed.set(token, login.accessToken);
     current = login.accessToken;
-    res = await send(current);
+    res = await sendPatiently(current);
   }
   const text = await res.text();
   const json = text ? JSON.parse(text) : null;
