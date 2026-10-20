@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 321 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 69 tests en 14 archivos · CI en GitHub Actions |
+| **Tests** | Backend: 323 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 69 tests en 14 archivos · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 73 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -293,7 +293,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 321 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 323 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
@@ -375,5 +375,5 @@ La justificación de cada decisión (D1 a D51) está en [handoff.md](handoff.md)
 - La purga diaria de `refresh_tokens` solo borra familias enteras ya caducadas; con varias instancias correría en todas (es idempotente).
 - El límite de mensajes del asistente vive en memoria: se pierde al reiniciar y no se comparte entre varias instancias del backend.
 - Las etiquetas «Extremadamente positivas» y «Extremadamente negativas» necesitan 500 reseñas; la demo no llega y no salen.
-- Si llegan dos pagos simultáneos del mismo pedido, la pasarela simulada se llama dos veces, aunque solo uno se completa y el otro hace rollback. Con un proveedor real habría que usar una idempotency key.
+- El pago bloquea el pedido (`SELECT … FOR UPDATE`) mientras llama a la pasarela, así que dos pagos simultáneos no cobran dos veces. Con un proveedor real seguiría haciendo falta una idempotency key para los reintentos tras un timeout de red.
 - La portada del recibo se carga desde la URL de la portada del juego. Las portadas **subidas** van a Cloudinary (https), un almacenamiento propio, y ya no filtran la apertura del correo a un servidor ajeno. Las portadas **pegadas como URL** siguen igual: ese servidor puede saber cuándo se abre el correo (como un píxel de seguimiento), igual que en la tienda web. Gmail lo atenúa porque sirve las imágenes a través de su proxy.

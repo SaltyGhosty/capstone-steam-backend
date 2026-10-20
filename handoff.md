@@ -12,7 +12,7 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 |---|---|
 | Paquete base | `com.capstone.steam` |
 | Artifact | `capstone-steam-backend` |
-| Estado actual | **✅ Bloques 0 a 16, bloque A (cierre) y los seis extras B a G, más la pasada de arreglos tras la revisión: backend (321 tests, JaCoCo exige el 80 % de líneas, Swagger) + frontend React en es/en/it (69 tests en 14 archivos) + CI + despliegue preparado. Migraciones V1 a V11. Último trabajo: las pasadas de arreglos de las oleadas 1 y 2, la BD demo migrada y sembrada, y Newman en verde (2026-10-19)** |
+| Estado actual | **✅ Bloques 0 a 16, bloque A (cierre) y los seis extras B a G, más la pasada de arreglos tras la revisión: backend (323 tests, JaCoCo exige el 80 % de líneas, Swagger) + frontend React en es/en/it (69 tests en 14 archivos) + CI + despliegue preparado. Migraciones V1 a V11. Último trabajo: las pasadas de arreglos de las oleadas 1 y 2, la BD demo migrada y sembrada, y Newman en verde (2026-10-19)** |
 | Siguiente paso | En GitHub: **https://github.com/SaltyGhosty/capstone-steam-backend** (privado). <br>El plan `docs/superpowers/specs/2026-10-19-cierre-y-extras-design.md` está **entero en `main`** (bloques A a G). Cloudinary, OpenRouter y los correos en/it ya están probados con las cuentas reales. **Desplegado en Render** (2026-10-19): backend https://capstone-steam-api.onrender.com y frontend https://capstone-steam-web.onrender.com. Las rutas profundas van con la regla *Rewrite* `/*` → `/index.html` (puesta a mano por el usuario el 2026-10-20) y responden 200; el `404.html` del `postbuild` queda de respaldo |
 | Última actualización | 2026-10-19 |
 
@@ -51,7 +51,6 @@ Proyecto final (capstone) del curso Full Stack de Epicode: una plataforma de vid
 - **Las etiquetas «Extremadamente positivas/negativas» necesitan 500 reseñas** y no salen en la demo (el juego con más reseñas tiene 60). Se explica en la defensa.
 - La purga de `refresh_tokens` (D52) correría en cada instancia si hubiera varias: es idempotente, solo duplica trabajo.
 - **Una cuenta desactivada conserva su acceso hasta 15 minutos**: el filtro JWT no consulta la base de datos (D16). Sus refresh tokens sí se revocan al instante, así que no puede renovar.
-- Dos pagos simultáneos del mismo pedido llaman dos veces a la pasarela simulada (D33).
 - Las portadas **pegadas como URL** siguen cargándose desde un servidor ajeno, también en el correo (D43). Las subidas a Cloudinary no.
 - Amistades: dos solicitudes cruzadas simultáneas dan un 409 genérico porque lo resuelve la UNIQUE del par.
 
@@ -118,7 +117,7 @@ Spring Boot **4.1.1** · jjwt **0.13.0** · Java **25** · Flyway (gestionado po
 | D30 | Pago simulado (`SimulatedPaymentGateway`, detrás de la interfaz `PaymentGateway`): <br>• Una tarjeta que acaba en `0000` se rechaza siempre. <br>• `PAYMENT_FAILURE_RATE` (0.0 por defecto) permite rechazos aleatorios en demos. <br>• El número de tarjeta **nunca se persiste**. <br>• La referencia es `SIM-<uuid>`. | Bloque 6 | ✅ Aplicada |
 | D31 | Un pedido ajeno responde **404, no 403**, para no revelar que existe | Bloque 6 | ✅ Aplicada |
 | D32 | Tras un UPDATE atómico con `clearAutomatically`, los proxies LAZY ya no se pueden inicializar: los datos del evento (email, nombre y total) se leen **antes**, y la respuesta se vuelve a consultar al final (`load`) | Bloque 6 | ✅ Aplicada |
-| D33 | Limitación conocida: dos "pagar" simultáneos sobre el mismo pedido llaman **dos veces** al gateway. El segundo recibe 409 y su transacción hace rollback, pero con un proveedor real habría que usar una idempotency key | Bloque 6 | 📝 Documentada |
+| D33 | Pagos simultáneos del mismo pedido. Antes llamaban **dos veces** al gateway (el segundo daba 409 y rollback). Resuelta (2026-10-20): `pay()` lee el pedido con `findOwnForUpdate` (`SELECT … FOR UPDATE`). Un segundo pago concurrente espera al commit del primero, ve el estado final y da 409 **sin llamar a la pasarela** (test con 16 hilos: `charge` se llama 1 vez). Queda para un proveedor real: una *idempotency key* para reintentos tras un timeout de red; el bloqueo dura lo que tarde `charge` | Bloque 6 · 2026-10-20 | ✅ Resuelta |
 | D34 | Un componente con 2 constructores (uno solo para tests) necesita `@Autowired` en el que debe usar Spring (visto en `SimulatedPaymentGateway`) | Bloque 6 | ✅ Aplicada |
 | D35 | Pool `mailExecutor` (2 a 5 hilos, cola 100, prefijo `mail-`): <br>• Con el pool saturado se usa **CallerRunsPolicy**: el correo se envía en el hilo que publicó el evento, ya después del commit. Es más lento, pero no se pierde. <br>• Al apagar la app se espera hasta 30 s a que salgan los correos en cola. <br>• Todos los `@Async` indican el pool por su nombre (`@Async("mailExecutor")`). | Bloque 7 | ✅ Aplicada |
 | D36 | `EmailService` **nunca lanza excepciones**: un fallo de SMTP se registra en el log y no afecta a la operación, que ya hizo commit. Si `MAIL_USERNAME` está vacío, el correo queda **desactivado** y solo se registra en el log, para poder desarrollar sin cuenta de Gmail. Si `MAIL_FROM` está vacío, se usa el usuario SMTP como remitente | Bloque 7 | ✅ Aplicada |
@@ -312,7 +311,7 @@ com.capstone.steam
 - **Asistente (D):** `POST /api/recommendations/chat` (D51).
 
 ### Testing
-Total: **321 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de frontend** (`npm test`, 14 archivos).
+Total: **323 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de frontend** (`npm test`, 14 archivos).
 - **Unitarios (Mockito):** `JwtServiceTest`, `AuthServiceTest`, `OrderServiceTest`, `ReviewServiceTest`, `ReviewScoreTest`, `CartServiceTest`, `GameManagementServiceTest`, `SimulatedPaymentGatewayTest`, `EmailServiceTest`, `SteamStoreClientTest`, `RefreshTokenServiceTest`, `FriendServiceTest`, `ImageTypeTest`, `CloudinaryCoverStorageTest` (con `MockRestServiceServer`), `OpenRouterChatModelTest`, `RecommendationServiceTest` y `ChatRateLimiterTest`.
 - **`@DataJpaTest` con H2 y Flyway real:** `GameCriteriaRepositoryTest` y `RepositoryIntegrationTest` (UPDATE atómicos y doble pago). Concurrencia con 16 hilos en `AtomicUpdateConcurrencyTest`, y con varios refresh simultáneos en `RefreshTokenConcurrencyTest` (solo uno gana).
 - **`@SpringBootTest` + MockMvc:**
@@ -359,6 +358,7 @@ Total: **321 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de 
 | Despliegue | Render: backend, frontend y BD | ✅ Hecho | 2026-10-19 | Con el conector de Render, no con el Blueprint. `capstone-steam-api` (Docker, perfil `prod`), `capstone-steam-web` (*static site*: `cd frontend && npm ci && npm run build`, publica `frontend/dist`, `VITE_API_URL`) y `capstone-steam-db` (PostgreSQL 18 free, caduca el 2026-11-18), todo en Frankfurt. Vercel descartado: no había conector ni CLI. Render solo deja una Postgres free por cuenta; la de car-catalog quedó suspendida. `DB_PASSWORD` la puso el usuario a mano. Admin de producción con contraseña propia. Comprobado: health UP, Swagger, CORS, login, Cloudinary activo, chatbot con juegos del catálogo. Seed: 60 juegos, 80 pedidos, 2.101 reseñas. Sin la regla *Rewrite* (el conector no la crea y no se pudo entrar al panel), `frontend/package.json` tiene un `postbuild` que copia `index.html` como `404.html`: Render lo sirve en las rutas que no existen y React Router las resuelve (`34b97ae`) |
 | Remate A | Dos menores del bloque A | ✅ Hecho | 2026-10-19 | `coverUrl` vacía o en blanco se guarda como `null`, como `avatarUrl` (`da83628`). Tests de URLs con espacios alrededor en `coverUrl` y `avatarUrl`: ya daban 400, ahora está cubierto (`5558597`). `clean verify`: **315 tests**, 0 fallos, 95 % de instrucciones |
 | Limitaciones | V11 y purga de refresh tokens | ✅ Hecho | 2026-10-20 | Dos subagentes Sonnet en paralelo, cada uno en su worktree, revisados y fusionados (D52). • V11 `ck_friendships_pair` + test en `FlywayMigrationTest` (`94ef6f2`) • Purga programada por familias caducadas + 5 tests (`b22ccce`) • `clean verify`: **321 tests**, 0 fallos, 95 % de instrucciones • Se limpiaron los 16 worktrees ya fusionados |
+| D33 | Bloqueo del pedido al pagar | ✅ Hecho | 2026-10-20 | Subagente Sonnet en worktree, revisado y fusionado (`b4e0259`, `5d58773`). `OrderRepository.findOwnForUpdate` (`@Lock(PESSIMISTIC_WRITE)`) en `pay()`; el 404 de pedido ajeno se mantiene (D31). Tests: 16 pagos concurrentes → 1 OK, 15 × 409 y `charge` 1 vez; pedido ajeno → 404. `clean verify`: **323 tests**, 0 fallos, 95 % |
 | Docs | README, handoff, Postman y agentes al día | ✅ Hecho | 2026-10-19 | `README.md` y `frontend/README.md` con las funciones nuevas, endpoints, variables y cifras; spec corregida (familia en vez de todos); Postman reescrita a 73 peticiones (reseñas 👍/👎, refresh y logout, amigos, estado de portadas y asistente con 200 o 503); cifras de los agentes. **Newman sin ejecutar** con la colección nueva |
 
 ---
@@ -392,6 +392,6 @@ Total: **321 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **69 de 
    `& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -h localhost -c "CREATE DATABASE capstone_steam;"`
 1. `docker compose up -d` (solo si se usa Docker en lugar de Postgres local)
 2. `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`: Flyway aplica V1 a V11 y Hibernate valida el esquema.
-3. `./mvnw test`: todo en verde sobre H2 (321 tests). Frontend: `cd frontend && npm test` (69 tests).
+3. `./mvnw test`: todo en verde sobre H2 (323 tests). Frontend: `cd frontend && npm test` (69 tests).
 4. Prueba manual: register → login → buscar con filtros → carrito → checkout → biblioteca → reseña.
 5. Comprobar que llega el correo y que en los logs el envío aparece en un hilo `mail-*`.

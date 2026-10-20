@@ -28,7 +28,7 @@ Dentro de `src/main/java/com/capstone/steam/`:
 - **`EmailService` nunca lanza excepciones (D36).** Un fallo de SMTP va al log y no afecta a la compra. Con `MAIL_USERNAME` vacío, el correo queda desactivado y solo se registra en el log.
 - **Los datos del usuario se escapan en el HTML de los correos.**
 
-Limitación conocida (D33): dos pagos simultáneos del mismo pedido llaman dos veces a la pasarela simulada. Con un proveedor real haría falta una idempotency key. No la «arregles» sin que te lo pidan; está documentada.
+D33 (resuelta el 2026-10-20): `pay()` lee el pedido con `findOwnForUpdate` (`SELECT … FOR UPDATE`), así que dos pagos simultáneos no llaman dos veces a la pasarela. No quites ese bloqueo. Con un proveedor real faltaría una idempotency key para reintentos tras un timeout.
 
 ## Trabajo pendiente en tu zona
 
