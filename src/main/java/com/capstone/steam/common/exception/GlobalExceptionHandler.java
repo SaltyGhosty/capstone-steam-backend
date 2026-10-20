@@ -42,6 +42,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return pd;
     }
 
+    /** 429 de un límite por ventana: con la cabecera Retry-After (segundos) para que el cliente sepa cuándo volver. */
+    @ExceptionHandler(RateLimitedException.class)
+    ResponseEntity<ProblemDetail> handleRateLimited(RateLimitedException ex) {
+        ProblemDetail pd = problem(ex.getStatus(), ex.getLocalizedMessage());
+        pd.setProperty("code", ex.getCode());
+        return ResponseEntity.status(ex.getStatus()).header(HttpHeaders.RETRY_AFTER,
+                String.valueOf(ex.getRetryAfterSeconds())).body(pd);
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     ProblemDetail handleBadCredentials(BadCredentialsException ex) {
         return problem(HttpStatus.UNAUTHORIZED, Messages.get("error.badCredentials"));

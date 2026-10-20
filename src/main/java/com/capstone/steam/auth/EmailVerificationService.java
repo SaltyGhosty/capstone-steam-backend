@@ -107,8 +107,9 @@ public class EmailVerificationService {
         userRepository.findByIdForUpdate(userId).orElseThrow(EmailVerificationService::invalid);
         EmailVerificationToken token = liveToken(tokens.findByTokenHashForUpdate(hash).orElse(null), now);
         if (password == null || !passwordEncoder.matches(password, token.getPasswordHash())) {
-            tokens.incrementFailedAttempts(token.getId());
-            tokens.invalidateIfTooManyFailures(token.getId(), now, MAX_PASSWORD_FAILURES);
+            tokens.incrementFailedAttempts(token.getUserId(), token.getUsername(), token.getPasswordHash());
+            tokens.invalidateIfTooManyFailures(token.getUserId(), token.getUsername(), token.getPasswordHash(), now,
+                    MAX_PASSWORD_FAILURES);
             throw new BadRequestException("auth.verificationPasswordInvalid");
         }
         requireUsernameFree(token.getUsername(), userId);
@@ -165,10 +166,16 @@ public class EmailVerificationService {
         String key = normalize(email);
         rateLimiter.check(key);
         userRepository.findByEmail(key).filter(user -> !user.isEmailVerified()).ifPresent(user -> {
+            List<EmailVerificationToken> all = tokens.findByUserIdOrderByIdDesc(user.getId());
             for (EmailVerificationToken source : pendingRegistrations(user.getId())) {
                 PendingRegistration data = source.pending();
-                // el enlace nuevo hereda las contraseñas erróneas: reenviar no devuelve los 5 intentos
-                String token = issue(user, data, source.getFailedAttempts());
+                // el enlace nuevo hereda el máximo de fallos de todos los enlaces del mismo registro: son 5 intentos
+                // por registro, y reenviar no los devuelve
+                int inherited = all.stream()
+                        .filter(t -> t.getUsername().equalsIgnoreCase(data.username())
+                                && t.getPasswordHash().equals(data.passwordHash()))
+                        .mapToInt(EmailVerificationToken::getFailedAttempts).max().orElse(0);
+                String token = issue(user, data, inherited);
                 events.publishEvent(new VerificationEmailEvent(user.getEmail(), data.displayName(), data.locale(),
                         token, data.username()));
             }

@@ -343,6 +343,36 @@ class EmailVerificationIntegrationTest {
     }
 
     @Test
+    void attemptsAreCountedPerRegistrationNotPerLink() throws Exception {
+        register("ana", "ana@test.com").andExpect(status().isCreated());
+        String link = lastToken();
+        for (int i = 0; i < 3; i++) {
+            verify(link, "equivocada" + i).andExpect(status().isBadRequest());
+        }
+        resend("ana@test.com").andExpect(status().isNoContent());
+        String newLink = events.stream(VerificationEmailEvent.class).reduce((a, b) -> b).orElseThrow().verificationToken();
+
+        // 2 intentos más en el enlace ORIGINAL agotan los 5 del registro: el enlace nuevo también queda anulado
+        verify(link, "mala1").andExpect(status().isBadRequest());
+        verify(link, "mala2").andExpect(status().isBadRequest());
+        verify(newLink).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("auth.verificationInvalid"));
+    }
+
+    @Test
+    void adminUserListCanBeFilteredByUsernameOrEmail() throws Exception {
+        register("buscame", "buscame@test.com").andExpect(status().isCreated());
+        register("otra", "otra@test.com").andExpect(status().isCreated());
+
+        mvc.perform(get("/api/admin/users").param("q", "BUSCAM").header(HttpHeaders.AUTHORIZATION, "Bearer " + admin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].username").value("buscame"))
+                .andExpect(jsonPath("$.content[0].emailVerified").value(false));
+        mvc.perform(get("/api/admin/users").param("q", "otra@test").header(HttpHeaders.AUTHORIZATION, "Bearer " + admin()))
+                .andExpect(jsonPath("$.content.length()").value(1));
+    }
+
+    @Test
     void conflictingRegistrationsDoNotSpendTheEmailsQuota() throws Exception {
         register("ocupado", "ocupado@test.com").andExpect(status().isCreated());
         verify(lastToken()).andExpect(status().isOk());

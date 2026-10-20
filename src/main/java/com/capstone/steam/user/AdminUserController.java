@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.capstone.steam.common.dto.PageResponse;
@@ -34,8 +35,8 @@ public class AdminUserController {
 
     @GetMapping
     public PageResponse<UserResponse> list(@PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC)
-            Pageable pageable) {
-        return userService.listUsers(pageable);
+            Pageable pageable, @RequestParam(required = false) String q) {
+        return userService.listUsers(pageable, q);
     }
 
     @PutMapping("/{id}/roles")

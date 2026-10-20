@@ -7,7 +7,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.capstone.steam.common.exception.TooManyRequestsException;
+import com.capstone.steam.common.exception.RateLimitedException;
 
 /**
  * Límite de {@code max} peticiones por clave dentro de una ventana deslizante, en memoria (se pierde al reiniciar
@@ -27,6 +27,9 @@ public class SlidingWindowLimiter {
     private final int maxEntries;
     private final String errorCode;
     private volatile Instant nextSweep;
+    /** Último barrido completo hecho por tener el mapa lleno: como mucho uno por segundo. */
+    private volatile Instant lastFullSweep = Instant.MIN;
+    private final java.util.concurrent.atomic.AtomicInteger fullSweeps = new java.util.concurrent.atomic.AtomicInteger();
 
     /** @param errorCode clave del texto 429 en messages*.properties */
     protected SlidingWindowLimiter(Clock clock, int max, Duration window, int maxEntries, String errorCode) {
@@ -43,29 +46,44 @@ public class SlidingWindowLimiter {
         Instant now = clock.instant();
         sweepIfDue(now);
         if (hits.size() >= maxEntries && !hits.containsKey(key)) {
-            sweep(now);
+            // lleno: un barrido completo recorre todo el mapa, así que se hace como mucho una vez por segundo
+            // (un atacante no puede forzar uno por petición)
+            if (Duration.between(lastFullSweep, now).compareTo(Duration.ofSeconds(1)) >= 0) {
+                lastFullSweep = now;
+                fullSweeps.incrementAndGet();
+                sweep(now);
+            }
             if (hits.size() >= maxEntries) {
-                throw new TooManyRequestsException(errorCode);
+                throw new RateLimitedException(errorCode, window.toSeconds());
             }
         }
         boolean[] allowed = {false};
+        long[] retryAfter = {1};
         hits.compute(key, (k, queue) -> {
             Deque<Instant> q = queue == null ? new ArrayDeque<>() : queue;
             evictOld(q, now);
             if (q.size() < max) {
                 q.addLast(now);
                 allowed[0] = true;
+            } else {
+                // cuando caduque el intento más antiguo de la ventana vuelve a haber hueco
+                retryAfter[0] = Duration.between(now, q.peekFirst().plus(window)).toSeconds() + 1;
             }
             return q.isEmpty() ? null : q;
         });
         if (!allowed[0]) {
-            throw new TooManyRequestsException(errorCode);
+            throw new RateLimitedException(errorCode, retryAfter[0]);
         }
     }
 
     /** Vacía el estado (para los tests). */
     void clear() {
         hits.clear();
+    }
+
+    /** Barridos completos hechos por tener el mapa lleno (para los tests). */
+    int fullSweeps() {
+        return fullSweeps.get();
     }
 
     /** Claves con intentos en el mapa (para los tests). */

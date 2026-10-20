@@ -1,6 +1,7 @@
 package com.capstone.steam.auth;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -37,6 +38,7 @@ class IpRateLimitIntegrationTest {
         }
 
         preview("203.0.113.7").andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", org.hamcrest.Matchers.matchesPattern("\\d+")))
                 .andExpect(jsonPath("$.code").value("auth.tooManyRequests"))
                 .andExpect(jsonPath("$.detail").value("Demasiadas peticiones. Espera un momento."));
         preview("203.0.113.8").andExpect(status().isBadRequest());

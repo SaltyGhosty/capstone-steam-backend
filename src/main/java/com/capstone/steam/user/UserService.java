@@ -61,9 +61,14 @@ public class UserService {
     // ---------------------------- Administración ----------------------------
 
     @Transactional(readOnly = true)
-    public PageResponse<UserResponse> listUsers(Pageable pageable) {
+    public PageResponse<UserResponse> listUsers(Pageable pageable, String q) {
         // Los roles se cargan por lotes (hibernate.default_batch_fetch_size), no con un fetch join,
         // para que la paginación la haga la BD y no Hibernate en memoria.
+        String term = q == null ? "" : q.trim();
+        if (!term.isEmpty()) { // filtro opcional por usuario o email (lo usa el seed para encontrar una cuenta)
+            return PageResponse.of(userRepository
+                    .findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(term, term, pageable), UserResponse::from);
+        }
         return PageResponse.of(userRepository.findAll(pageable), UserResponse::from);
     }
 

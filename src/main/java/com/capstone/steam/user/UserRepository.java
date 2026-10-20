@@ -42,6 +42,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
+    org.springframework.data.domain.Page<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+            String username, String email, Pageable pageable);
+
     /** Ids por email y por usuario, sin cargar la fila: así se pueden bloquear en orden de id (sin interbloqueos). */
     @Query("select u.id from User u where u.email = :email")
     Optional<Long> findIdByEmail(String email);

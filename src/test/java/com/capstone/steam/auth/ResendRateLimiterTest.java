@@ -102,6 +102,34 @@ class ResendRateLimiterTest {
     }
 
     @Test
+    void aFullMapSweepsAtMostOncePerSecond() {
+        limiter = new ResendRateLimiter(clock, 3, 5);
+        for (int i = 0; i < 5; i++) {
+            limiter.check("clave" + i + "@test.com");
+        }
+        for (int i = 0; i < 50; i++) {
+            assertThatThrownBy(() -> limiter.check("nueva@test.com")).isInstanceOf(TooManyRequestsException.class);
+        }
+        assertThat(limiter.fullSweeps()).isEqualTo(1); // 50 peticiones en el mismo instante, un solo barrido
+
+        clock.advance(Duration.ofSeconds(1));
+        assertThatThrownBy(() -> limiter.check("nueva@test.com")).isInstanceOf(TooManyRequestsException.class);
+        assertThat(limiter.fullSweeps()).isEqualTo(2);
+    }
+
+    @Test
+    void theRejectionCarriesTheSecondsUntilThereIsRoomAgain() {
+        limiter.check("ana@test.com");
+        clock.advance(Duration.ofMinutes(10));
+        limiter.check("ana@test.com");
+        limiter.check("ana@test.com");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> limiter.check("ana@test.com"))
+                .isInstanceOfSatisfying(com.capstone.steam.common.exception.RateLimitedException.class,
+                        e -> assertThat(e.getRetryAfterSeconds()).isBetween(3000L, 3001L)); // caduca el primero en 50 min
+    }
+
+    @Test
     void idleEntriesAreSweptSoTheMapDoesNotGrowForever() {
         limiter.check("ana@test.com");
         limiter.check("leo@test.com");

@@ -38,15 +38,23 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
     @Query("update EmailVerificationToken t set t.usedAt = :now where t.userId = :userId and t.usedAt is null")
     int invalidateActive(Long userId, Instant now);
 
-    /** Cuenta una contraseña errónea. */
+    /**
+     * Cuenta una contraseña errónea en TODOS los enlaces del mismo registro (usuario + contraseña): los intentos
+     * son por registro, no por enlace, así que pedir más enlaces no da más intentos.
+     */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("update EmailVerificationToken t set t.failedAttempts = t.failedAttempts + 1 where t.id = :id")
-    int incrementFailedAttempts(Long id);
+    @Query("""
+            update EmailVerificationToken t set t.failedAttempts = t.failedAttempts + 1
+             where t.userId = :userId and lower(t.username) = lower(:username) and t.passwordHash = :passwordHash""")
+    int incrementFailedAttempts(Long userId, String username, String passwordHash);
 
-    /** Anula el enlace si ya llegó al máximo de contraseñas erróneas. */
+    /** Anula los enlaces del registro si ya llegó al máximo de contraseñas erróneas. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("update EmailVerificationToken t set t.usedAt = :now where t.id = :id and t.usedAt is null and t.failedAttempts >= :max")
-    int invalidateIfTooManyFailures(Long id, Instant now, int max);
+    @Query("""
+            update EmailVerificationToken t set t.usedAt = :now
+             where t.userId = :userId and lower(t.username) = lower(:username) and t.passwordHash = :passwordHash
+               and t.usedAt is null and t.failedAttempts >= :max""")
+    int invalidateIfTooManyFailures(Long userId, String username, String passwordHash, Instant now, int max);
 
     /** Marca el token como usado solo si seguía sin usar; de dos clics simultáneos solo uno recibe 1. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)

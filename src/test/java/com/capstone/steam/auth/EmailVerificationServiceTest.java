@@ -166,8 +166,9 @@ class EmailVerificationServiceTest {
         assertThatThrownBy(() -> service.verify("raw", "mala")).isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("contraseña");
 
-        verify(tokens).incrementFailedAttempts(10L);
-        verify(tokens).invalidateIfTooManyFailures(10L, NOW, 5);
+        // los fallos se cuentan sobre el registro (usuario + contraseña), no sobre este enlace
+        verify(tokens).incrementFailedAttempts(5L, "nuevo", "hash-nuevo");
+        verify(tokens).invalidateIfTooManyFailures(5L, "nuevo", "hash-nuevo", NOW, 5);
         verify(tokens, never()).markUsedIfUnused(anyLong(), any());
     }
 
@@ -181,7 +182,7 @@ class EmailVerificationServiceTest {
 
         assertThatThrownBy(() -> service.verify("raw", "pw")).isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("enlace");
-        verify(tokens, never()).incrementFailedAttempts(anyLong());
+        verify(tokens, never()).incrementFailedAttempts(anyLong(), any(), any());
         verify(tokens, never()).markUsedIfUnused(anyLong(), any());
     }
 

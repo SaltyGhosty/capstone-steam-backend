@@ -38,7 +38,7 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public RegistrationResult register(@Valid @RequestBody RegisterRequest request, HttpServletRequest http) {
-        ipLimiter.check(http.getRemoteAddr());
+        ipLimiter.checkAddress(http.getRemoteAddr());
         return authService.register(request);
     }
 
@@ -50,7 +50,7 @@ public class AuthController {
     /** Canjea el enlace del correo: verifica el email e inicia la sesión. */
     @PostMapping("/verify-email")
     public AuthResponse verifyEmail(@Valid @RequestBody VerifyEmailRequest request, HttpServletRequest http) {
-        ipLimiter.check(http.getRemoteAddr());
+        ipLimiter.checkAddress(http.getRemoteAddr());
         return authService.verifyEmail(request.token(), request.password());
     }
 
@@ -58,7 +58,7 @@ public class AuthController {
     @PostMapping("/verify-email/preview")
     public VerificationPreview previewVerification(@Valid @RequestBody VerificationPreviewRequest request,
             HttpServletRequest http) {
-        ipLimiter.check(http.getRemoteAddr());
+        ipLimiter.checkAddress(http.getRemoteAddr());
         return new VerificationPreview(verificationService.preview(request.token()));
     }
 
@@ -66,7 +66,7 @@ public class AuthController {
     @PostMapping("/resend-verification")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void resendVerification(@Valid @RequestBody ResendVerificationRequest request, HttpServletRequest http) {
-        ipLimiter.check(http.getRemoteAddr());
+        ipLimiter.checkAddress(http.getRemoteAddr());
         verificationService.resend(request.email());
     }
 
