@@ -489,6 +489,8 @@ const es = {
   'demos.balatro.mechanic': 'Cartas y póquer: supera el objetivo de puntos',
   'demos.balatro.controls': 'Elige hasta 5 cartas y juega la mejor mano',
   'demos.celeste.summit': '¡Cumbre! {time} s y {deaths} caídas',
+  'demos.vampire.survived': '¡Has sobrevivido! {kills} enemigos',
+  'demos.vampire.defeated': 'Te han alcanzado a los {time} s',
 };
 
 export type MessageKey = keyof typeof es;
@@ -965,6 +967,8 @@ const en: Messages = {
   'demos.balatro.mechanic': 'Cards and poker: beat the score target',
   'demos.balatro.controls': 'Pick up to 5 cards and play the best hand',
   'demos.celeste.summit': 'Summit! {time} s and {deaths} falls',
+  'demos.vampire.survived': 'You survived! {kills} enemies',
+  'demos.vampire.defeated': 'They caught you after {time} s',
 };
 
 const it: Messages = {
@@ -1438,6 +1442,8 @@ const it: Messages = {
   'demos.balatro.mechanic': 'Carte e poker: supera l’obiettivo di punti',
   'demos.balatro.controls': 'Scegli fino a 5 carte e gioca la mano migliore',
   'demos.celeste.summit': 'In vetta! {time} s e {deaths} cadute',
+  'demos.vampire.survived': 'Sei sopravvissuto! {kills} nemici',
+  'demos.vampire.defeated': 'Ti hanno raggiunto dopo {time} s',
 };
 
 export const MESSAGES = { es, en, it } as const;

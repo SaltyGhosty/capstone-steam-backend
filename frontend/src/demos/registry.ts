@@ -14,7 +14,7 @@ export const DEMOS: DemoDefinition[] = [
     mechanicKey: 'demos.vampire.mechanic',
     controlsKey: 'demos.vampire.controls',
     needsKeyboard: true,
-    load: () => import('./placeholder/PlaceholderDemo'),
+    load: () => import('./vampire-survivors/VampireSurvivorsDemo'),
   },
   {
     slug: 'rocket-league',
