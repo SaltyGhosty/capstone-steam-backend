@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.List;
 
 import jakarta.persistence.EntityManager;
 
@@ -244,16 +245,48 @@ class EmailVerificationIntegrationTest {
     }
 
     @Test
-    void resendCopiesTheDataOfTheLatestLink() throws Exception {
+    void resendSendsOneLinkPerPendingRegistration() throws Exception {
+        register("victima", "v@test.com", "ClaveVictima1", "PLAYER").andExpect(status().isCreated());
+        register("atacante", "v@test.com", "ClaveAtacante1", "PLAYER").andExpect(status().isCreated());
+        events.clear();
+
+        resend("v@test.com").andExpect(status().isNoContent());
+
+        List<VerificationEmailEvent> sent = events.stream(VerificationEmailEvent.class).toList();
+        assertThat(sent).extracting(VerificationEmailEvent::username).containsExactlyInAnyOrder("victima", "atacante");
+        String victimLink = sent.stream().filter(e -> e.username().equals("victima")).findFirst().orElseThrow()
+                .verificationToken();
+        verify(victimLink).andExpect(status().isOk()).andExpect(jsonPath("$.user.username").value("victima"));
+        login("victima", "ClaveVictima1").andExpect(status().isOk());
+        login("victima", "ClaveAtacante1").andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void resendWithOnlyExpiredLinksRepeatsTheLatestOne() throws Exception {
         register("ana", "ana@test.com").andExpect(status().isCreated());
-        register("ana2", "ana@test.com", "otra-clave-123", "PLAYER").andExpect(status().isCreated());
+        clock.now = clock.now.plus(Duration.ofHours(25));
+        events.clear();
 
         resend("ana@test.com").andExpect(status().isNoContent());
-        VerificationEmailEvent event = events.stream(VerificationEmailEvent.class).reduce((a, b) -> b).orElseThrow();
-        assertThat(event.username()).isEqualTo("ana2");
 
-        verify(event.verificationToken()).andExpect(status().isOk()).andExpect(jsonPath("$.user.username").value("ana2"));
-        login("ana2", "otra-clave-123").andExpect(status().isOk());
+        assertThat(events.stream(VerificationEmailEvent.class).map(VerificationEmailEvent::username).toList())
+                .containsExactly("ana");
+    }
+
+    @Test
+    void resendSendsAtMostThreeLinksAndSpendsOneUnitOfTheLimit() throws Exception {
+        register("ana1", "ana@test.com").andExpect(status().isCreated());
+        clock.now = clock.now.plusSeconds(1);
+        register("ana2", "ana@test.com").andExpect(status().isCreated());
+        // dos registros gastaron 2 del cupo; añade otros 2 con el cupo renovado
+        clock.now = clock.now.plus(Duration.ofHours(1)).plusSeconds(1);
+        register("ana3", "ana@test.com").andExpect(status().isCreated());
+        register("ana4", "ana@test.com").andExpect(status().isCreated());
+        events.clear();
+
+        resend("ana@test.com").andExpect(status().isNoContent()); // 3.º del cupo: manda 3 correos (a4, a3, a2)
+        assertThat(events.stream(VerificationEmailEvent.class).count()).isEqualTo(3);
+        resend("ana@test.com").andExpect(status().isTooManyRequests());
     }
 
     @Test

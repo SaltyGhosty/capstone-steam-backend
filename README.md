@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 396 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 87 tests en 15 archivos · CI en GitHub Actions |
+| **Tests** | Backend: 398 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 87 tests en 15 archivos · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 74 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -67,7 +67,7 @@ Los pagos son **simulados**: una tarjeta terminada en `0000` siempre se rechaza,
 - Al pulsarlo la cuenta queda verificada y entra ya con su sesión. Sin verificar, el login responde **403** `auth.emailNotVerified` (siempre que la contraseña sea correcta; con una mala sigue siendo 401, así no se revela qué cuentas existen).
 - El enlace es de **un solo uso** y caduca a las 24 h. En la base de datos solo se guarda su SHA-256 y el token en claro nunca se escribe en el log con el correo activo (sin `MAIL_USERNAME`, en desarrollo, el enlace sale en el log para poder probarlo).
 - **Cada enlace lleva los datos de su registro** (usuario, contraseña cifrada, nombre, idioma y tipo de cuenta). Al pulsarlo se aplican **esos** datos a la cuenta y los demás enlaces dejan de valer, así que nadie puede quedarse con una cuenta registrando antes su email: el correo nombra la cuenta («Confirma la cuenta «usuario»») y quien pulsa su enlace se queda con su contraseña.
-- «Reenviar correo» (`POST /api/auth/resend-verification`) responde siempre 204, exista o no la cuenta. Registro y reenvío comparten un máximo de **3 correos por hora y email** (429 después). El reenvío copia los datos del último enlace.
+- «Reenviar correo» (`POST /api/auth/resend-verification`) responde siempre 204, exista o no la cuenta. Registro y reenvío comparten un máximo de **3 correos por hora y email** (429 después). El reenvío manda un correo por cada registro pendiente de ese email (uno por usuario, hasta 3), cada uno nombrando su cuenta, y gasta una sola unidad del límite.
 - Registrarse con el email de una cuenta **sin verificar** responde 201 como un registro nuevo pero **no toca la cuenta**: solo emite otro enlace con los datos de esa petición. Un usuario ocupado por una cuenta sin verificar se libera si esa cuenta tiene más de 24 h, no tiene datos (pedidos, biblioteca, reseñas, juegos, amistades ni sesiones) y no tiene más roles que USER/DEVELOPER; si no, 409. Si al verificar el usuario del enlace lo ha cogido otra cuenta, 409 y el enlace queda sin usar. Una cuenta verificada nunca se toca.
 - Una cuenta desactivada por un admin que verifica su email queda verificada pero recibe 403 y no se le emite sesión. El registro y la verificación leen la fila del usuario con bloqueo pesimista.
 - Un admin puede verificar una cuenta a mano (`POST /api/admin/users/{id}/verify-email`): lo usan el seed y Postman.
@@ -310,7 +310,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 396 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 398 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 

@@ -1,6 +1,7 @@
 package com.capstone.steam.auth;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +14,9 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
 
     /** El último enlace emitido a este usuario (el reenvío copia sus datos). */
     Optional<EmailVerificationToken> findFirstByUserIdOrderByIdDesc(Long userId);
+
+    /** Enlaces sin usar y aún vigentes de un usuario, del más reciente al más antiguo. */
+    List<EmailVerificationToken> findByUserIdAndUsedAtIsNullAndExpiresAtAfterOrderByIdDesc(Long userId, Instant now);
 
     /** Anula los enlaces aún sin usar de un usuario (al verificar con uno, los demás dejan de valer). */
     @Modifying(flushAutomatically = true, clearAutomatically = true)

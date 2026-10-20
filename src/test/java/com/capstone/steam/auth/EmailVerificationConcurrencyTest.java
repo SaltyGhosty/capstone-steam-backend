@@ -34,7 +34,9 @@ import com.capstone.steam.notification.event.UserRegisteredEvent;
 @RecordApplicationEvents
 @TestPropertySource(properties = {
         "spring.datasource.url=jdbc:h2:mem:verification_concurrency;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
-        "app.auth.email-verification.required=true"})
+        "app.auth.email-verification.required=true",
+        "spring.mail.username=" // el .env local puede traer un Gmail: este test no envía correos
+})
 class EmailVerificationConcurrencyTest {
 
     @Autowired private AuthService authService;

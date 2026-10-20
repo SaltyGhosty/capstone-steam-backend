@@ -30,6 +30,8 @@ import com.capstone.steam.user.UserRepository;
 @Service
 public class EmailVerificationService {
 
+    private static final int MAX_RESENT = 3;
+
     private final EmailVerificationTokenRepository tokens;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -117,20 +119,39 @@ public class EmailVerificationService {
 
     /**
      * Reenvía el enlace. Responde igual exista o no la cuenta, esté o no verificada (el controlador
-     * devuelve siempre 204). Solo una cuenta pendiente recibe un enlace nuevo, con los datos del último.
+     * devuelve siempre 204). Solo una cuenta pendiente recibe enlaces nuevos: uno por cada registro pendiente.
      * El límite por email se aplica antes de mirar la BD, así el 429 tampoco delata nada.
      */
     @Transactional
     public void resend(String email) {
         String key = normalize(email);
         rateLimiter.check(key);
-        userRepository.findByEmail(key).filter(user -> !user.isEmailVerified()).ifPresent(user ->
-                tokens.findFirstByUserIdOrderByIdDesc(user.getId()).ifPresent(latest -> {
-                    String token = issue(user, latest.pending());
-                    PendingRegistration data = latest.pending();
-                    events.publishEvent(new VerificationEmailEvent(user.getEmail(), data.displayName(), data.locale(),
-                            token, data.username()));
-                }));
+        userRepository.findByEmail(key).filter(user -> !user.isEmailVerified()).ifPresent(user -> {
+            for (PendingRegistration data : pendingRegistrations(user.getId())) {
+                String token = issue(user, data);
+                events.publishEvent(new VerificationEmailEvent(user.getEmail(), data.displayName(), data.locale(),
+                        token, data.username()));
+            }
+        });
+    }
+
+    /**
+     * Un registro pendiente por cada usuario distinto con un enlace vigente sin usar (el más reciente de cada
+     * uno, como mucho {@value #MAX_RESENT}): quien es dueño del email recibe un correo por cuenta pedida y
+     * pulsa el de la suya, nunca solo el de otra persona. Si no queda ninguno vigente pero la cuenta sigue sin
+     * verificar, se repite el último enlace de todos.
+     */
+    private java.util.List<PendingRegistration> pendingRegistrations(Long userId) {
+        java.util.Map<String, PendingRegistration> byUsername = new java.util.LinkedHashMap<>();
+        for (EmailVerificationToken t : tokens.findByUserIdAndUsedAtIsNullAndExpiresAtAfterOrderByIdDesc(userId,
+                clock.instant())) {
+            byUsername.putIfAbsent(t.getUsername().toLowerCase(Locale.ROOT), t.pending());
+        }
+        if (byUsername.isEmpty()) {
+            return tokens.findFirstByUserIdOrderByIdDesc(userId).map(t -> java.util.List.of(t.pending()))
+                    .orElse(java.util.List.of());
+        }
+        return byUsername.values().stream().limit(MAX_RESENT).toList();
     }
 
     /**
