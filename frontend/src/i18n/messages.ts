@@ -488,6 +488,7 @@ const es = {
   'demos.rocket.controls': '↑ acelerar · ↓ frenar · ← → girar · Espacio turbo',
   'demos.balatro.mechanic': 'Cartas y póquer: supera el objetivo de puntos',
   'demos.balatro.controls': 'Elige hasta 5 cartas y juega la mejor mano',
+  'demos.celeste.summit': '¡Cumbre! {time} s y {deaths} caídas',
 };
 
 export type MessageKey = keyof typeof es;
@@ -963,6 +964,7 @@ const en: Messages = {
   'demos.rocket.controls': '↑ accelerate · ↓ brake · ← → steer · Space boost',
   'demos.balatro.mechanic': 'Cards and poker: beat the score target',
   'demos.balatro.controls': 'Pick up to 5 cards and play the best hand',
+  'demos.celeste.summit': 'Summit! {time} s and {deaths} falls',
 };
 
 const it: Messages = {
@@ -1435,6 +1437,7 @@ const it: Messages = {
   'demos.rocket.controls': '↑ accelerare · ↓ frenare · ← → sterzare · Spazio turbo',
   'demos.balatro.mechanic': 'Carte e poker: supera l’obiettivo di punti',
   'demos.balatro.controls': 'Scegli fino a 5 carte e gioca la mano migliore',
+  'demos.celeste.summit': 'In vetta! {time} s e {deaths} cadute',
 };
 
 export const MESSAGES = { es, en, it } as const;

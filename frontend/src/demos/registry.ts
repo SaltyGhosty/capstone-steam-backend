@@ -7,7 +7,7 @@ export const DEMOS: DemoDefinition[] = [
     mechanicKey: 'demos.celeste.mechanic',
     controlsKey: 'demos.celeste.controls',
     needsKeyboard: true,
-    load: () => import('./placeholder/PlaceholderDemo'),
+    load: () => import('./celeste/CelesteDemo'),
   },
   {
     slug: 'vampire-survivors',
