@@ -21,7 +21,7 @@ export const DEMOS: DemoDefinition[] = [
     mechanicKey: 'demos.rocket.mechanic',
     controlsKey: 'demos.rocket.controls',
     needsKeyboard: true,
-    load: () => import('./placeholder/PlaceholderDemo'),
+    load: () => import('./rocket-league/RocketLeagueDemo'),
   },
   {
     slug: 'balatro',

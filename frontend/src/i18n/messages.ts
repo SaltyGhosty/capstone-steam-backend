@@ -491,6 +491,8 @@ const es = {
   'demos.celeste.summit': '¡Cumbre! {time} s y {deaths} caídas',
   'demos.vampire.survived': '¡Has sobrevivido! {kills} enemigos',
   'demos.vampire.defeated': 'Te han alcanzado a los {time} s',
+  'demos.rocket.result': 'Resultado final: {player} - {ai}',
+  'demos.rocket.goal': '¡GOL!',
 };
 
 export type MessageKey = keyof typeof es;
@@ -969,6 +971,8 @@ const en: Messages = {
   'demos.celeste.summit': 'Summit! {time} s and {deaths} falls',
   'demos.vampire.survived': 'You survived! {kills} enemies',
   'demos.vampire.defeated': 'They caught you after {time} s',
+  'demos.rocket.result': 'Final score: {player} - {ai}',
+  'demos.rocket.goal': 'GOAL!',
 };
 
 const it: Messages = {
@@ -1444,6 +1448,8 @@ const it: Messages = {
   'demos.celeste.summit': 'In vetta! {time} s e {deaths} cadute',
   'demos.vampire.survived': 'Sei sopravvissuto! {kills} nemici',
   'demos.vampire.defeated': 'Ti hanno raggiunto dopo {time} s',
+  'demos.rocket.result': 'Risultato finale: {player} - {ai}',
+  'demos.rocket.goal': 'GOL!',
 };
 
 export const MESSAGES = { es, en, it } as const;
