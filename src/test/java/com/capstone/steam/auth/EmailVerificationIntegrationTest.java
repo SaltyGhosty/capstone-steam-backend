@@ -282,6 +282,67 @@ class EmailVerificationIntegrationTest {
     }
 
     @Test
+    void adminVerifyConsidersAnnulledLinksAndNeverAppliesTheWrongRegistration() throws Exception {
+        long id = id(register("juanp", "v@test.com", "ClaveVictima1", "PLAYER").andExpect(status().isCreated()));
+        register("juanp", "v@test.com", "ClaveAtacante1", "PLAYER").andExpect(status().isCreated());
+        String attackerLink = lastToken();
+        // la víctima teclea 5 veces su contraseña en el enlace del atacante: ese enlace se anula
+        for (int i = 0; i < 5; i++) {
+            verify(attackerLink, "ClaveVictima1").andExpect(status().isBadRequest());
+        }
+        // sigue habiendo 2 registros distintos (el anulado cuenta): el admin no puede elegir, y no aplica ninguno
+        mvc.perform(post("/api/admin/users/" + id + "/verify-email").header(HttpHeaders.AUTHORIZATION, "Bearer " + admin()))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("auth.verificationAmbiguous"));
+        login("juanp", "ClaveVictima1").andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminVerifyAppliesTheOnlyRegistrationEvenIfItsLinkExpired() throws Exception {
+        long id = id(register("solo", "solo@test.com", "ClaveSolo1234", "PLAYER").andExpect(status().isCreated()));
+        clock.now = clock.now.plus(Duration.ofHours(25));
+
+        mvc.perform(post("/api/admin/users/" + id + "/verify-email").header(HttpHeaders.AUTHORIZATION, "Bearer " + admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.username").value("solo"));
+        login("solo", "ClaveSolo1234").andExpect(status().isOk());
+    }
+
+    @Test
+    void resendInheritsTheFailedAttemptsOfTheRegistration() throws Exception {
+        register("ana", "ana@test.com").andExpect(status().isCreated());
+        String link = lastToken();
+        for (int i = 0; i < 3; i++) {
+            verify(link, "equivocada" + i).andExpect(status().isBadRequest());
+        }
+
+        resend("ana@test.com").andExpect(status().isNoContent());
+        String newLink = events.stream(VerificationEmailEvent.class).reduce((a, b) -> b).orElseThrow().verificationToken();
+
+        assertThat(jdbc.queryForObject("SELECT failed_attempts FROM email_verification_tokens WHERE token_hash = ?",
+                Integer.class, TokenHashing.sha256Hex(newLink))).isEqualTo(3);
+        // al nuevo le quedan 2 intentos
+        verify(newLink, "mala1").andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("auth.verificationPasswordInvalid"));
+        verify(newLink, "mala2").andExpect(status().isBadRequest());
+        verify(newLink).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("auth.verificationInvalid"));
+    }
+
+    @Test
+    void resendDoesNotReissueARegistrationWhoseLinkWasAnnulledByFailures() throws Exception {
+        register("ana", "ana@test.com").andExpect(status().isCreated());
+        String link = lastToken();
+        for (int i = 0; i < 5; i++) {
+            verify(link, "equivocada" + i).andExpect(status().isBadRequest());
+        }
+        events.clear();
+
+        resend("ana@test.com").andExpect(status().isNoContent());
+
+        assertThat(events.stream(VerificationEmailEvent.class).count()).isZero();
+        // la vía es registrarse de nuevo
+        register("ana", "ana@test.com").andExpect(status().isCreated());
+        verify(lastToken()).andExpect(status().isOk());
+    }
+
+    @Test
     void conflictingRegistrationsDoNotSpendTheEmailsQuota() throws Exception {
         register("ocupado", "ocupado@test.com").andExpect(status().isCreated());
         verify(lastToken()).andExpect(status().isOk());

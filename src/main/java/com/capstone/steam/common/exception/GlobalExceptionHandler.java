@@ -61,7 +61,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     /** Red de seguridad: una restricción UNIQUE/CHECK de la BD que el service no validó antes. */
     @ExceptionHandler(DataIntegrityViolationException.class)
     ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
-        log.warn("Violación de integridad: {}", ex.getMostSpecificCause().getMessage());
+        String cause = ex.getMostSpecificCause().getMessage();
+        log.warn("Violación de integridad: {}", cause);
+        // dos registros simultáneos con el mismo usuario (sin mayúsculas) se cuelan por la comprobación y los frena el índice
+        if (cause != null && cause.toLowerCase(java.util.Locale.ROOT).contains("uk_users_username_lower")) {
+            ProblemDetail pd = problem(HttpStatus.CONFLICT, Messages.get("auth.usernameTaken"));
+            pd.setProperty("code", "auth.usernameTaken");
+            return pd;
+        }
         return problem(HttpStatus.CONFLICT, Messages.get("error.dataConflict"));
     }
 

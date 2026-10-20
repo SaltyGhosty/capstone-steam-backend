@@ -17,6 +17,8 @@ app:
     expiration: PT15M
     refresh-expiration: P7D
   auth:
+    ip-limit:
+      per-minute: 100000 # los tests hacen cientos de peticiones desde la misma IP; IpRateLimitIntegrationTest lo baja a 20
     email-verification:
       required: false # los tests registran y usan el token al momento; EmailVerificationIntegrationTest lo activa
   admin:

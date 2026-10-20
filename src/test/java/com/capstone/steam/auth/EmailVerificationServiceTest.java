@@ -78,7 +78,8 @@ class EmailVerificationServiceTest {
     void verifyAppliesTheDataOfTheLinkAndInvalidatesTheOthers() {
         User ana = user(5L);
         EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
-        when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(tokens.findByTokenHashForUpdate(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        stubOwner("raw");
         when(passwordEncoder.matches("pw", "hash-nuevo")).thenReturn(true);
         when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(ana));
         when(userRepository.findIdByUsernameIgnoreCase("nuevo")).thenReturn(Optional.empty());
@@ -102,7 +103,8 @@ class EmailVerificationServiceTest {
     @Test
     void verifyFailsWith409AndKeepsTheLinkWhenAnotherAccountHasTheUsername() {
         EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
-        when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(tokens.findByTokenHashForUpdate(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        stubOwner("raw");
         when(passwordEncoder.matches("pw", "hash-nuevo")).thenReturn(true);
         when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(user(5L)));
         when(userRepository.findIdByUsernameIgnoreCase("nuevo")).thenReturn(Optional.of(99L));
@@ -115,7 +117,9 @@ class EmailVerificationServiceTest {
     void verifyRejectsAUsedToken() {
         EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
         ReflectionTestUtils.setField(token, "usedAt", NOW.minusSeconds(5));
-        when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(tokens.findByTokenHashForUpdate(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        stubOwner("raw");
+        when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(user(5L)));
 
         assertThatThrownBy(() -> service.verify("raw", "pw")).isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("enlace");
@@ -123,19 +127,26 @@ class EmailVerificationServiceTest {
     }
 
     @Test
-    void verifyRejectsUnknownAndExpiredTokens() {
-        when(tokens.findByTokenHash(TokenHashing.sha256Hex("nope"))).thenReturn(Optional.empty());
-        when(tokens.findByTokenHash(TokenHashing.sha256Hex("old")))
-                .thenReturn(Optional.of(token(11L, 5L, NOW)));  // caduca justo ahora: ya no vale
-
+    void verifyRejectsUnknownTokens() {
         assertThatThrownBy(() -> service.verify("nope", "pw")).isInstanceOf(BadRequestException.class);
+        verify(userRepository, never()).findByIdForUpdate(anyLong());
+    }
+
+    @Test
+    void verifyRejectsExpiredTokens() {
+        when(tokens.findByTokenHashForUpdate(TokenHashing.sha256Hex("old")))
+                .thenReturn(Optional.of(token(11L, 5L, NOW)));  // caduca justo ahora: ya no vale
+        stubOwner("old");
+        when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(user(5L)));
+
         assertThatThrownBy(() -> service.verify("old", "pw")).isInstanceOf(BadRequestException.class);
     }
 
     @Test
     void verifyLosesTheRaceWhenAnotherRequestUsedTheTokenFirst() {
         EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
-        when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(tokens.findByTokenHashForUpdate(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        stubOwner("raw");
         when(passwordEncoder.matches("pw", "hash-nuevo")).thenReturn(true);
         when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(user(5L)));
         when(userRepository.findIdByUsernameIgnoreCase("nuevo")).thenReturn(Optional.empty());
@@ -147,7 +158,9 @@ class EmailVerificationServiceTest {
     @Test
     void aWrongPasswordCountsAsAFailureAndDoesNotConsumeTheLink() {
         EmailVerificationToken token = token(10L, 5L, NOW.plusSeconds(60));
-        when(tokens.findByTokenHash(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        when(tokens.findByTokenHashForUpdate(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        stubOwner("raw");
+        when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(user(5L)));
         when(passwordEncoder.matches("mala", "hash-nuevo")).thenReturn(false);
 
         assertThatThrownBy(() -> service.verify("raw", "mala")).isInstanceOf(BadRequestException.class)
@@ -155,6 +168,20 @@ class EmailVerificationServiceTest {
 
         verify(tokens).incrementFailedAttempts(10L);
         verify(tokens).invalidateIfTooManyFailures(10L, NOW, 5);
+        verify(tokens, never()).markUsedIfUnused(anyLong(), any());
+    }
+
+    @Test
+    void aLinkWithFiveWrongPasswordsIsInvalidEvenIfItWasStillUnusedWhenRead() {
+        EmailVerificationToken token = new EmailVerificationToken(5L, "hash", NOW.plusSeconds(60), DATA, 5);
+        ReflectionTestUtils.setField(token, "id", 10L);
+        when(tokens.findByTokenHashForUpdate(TokenHashing.sha256Hex("raw"))).thenReturn(Optional.of(token));
+        stubOwner("raw");
+        when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(user(5L)));
+
+        assertThatThrownBy(() -> service.verify("raw", "pw")).isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("enlace");
+        verify(tokens, never()).incrementFailedAttempts(anyLong());
         verify(tokens, never()).markUsedIfUnused(anyLong(), any());
     }
 
@@ -197,6 +224,10 @@ class EmailVerificationServiceTest {
         ReflectionTestUtils.setField(verified, "createdAt", NOW.minus(Duration.ofDays(2)));
         verified.setEmailVerified(true);
         assertThat(service.isReclaimable(verified)).isFalse();
+    }
+
+    private void stubOwner(String raw) {
+        when(tokens.findUserIdByTokenHash(TokenHashing.sha256Hex(raw))).thenReturn(Optional.of(5L));
     }
 
     private static EmailVerificationToken token(long id, long userId, Instant expiresAt) {

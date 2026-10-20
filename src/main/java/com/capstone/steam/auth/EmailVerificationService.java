@@ -2,6 +2,7 @@ package com.capstone.steam.auth;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,9 +64,13 @@ public class EmailVerificationService {
     /** Emite un enlace nuevo con los datos del registro y devuelve el token en claro. No anula los anteriores. */
     @Transactional
     public String issue(User user, PendingRegistration data) {
+        return issue(user, data, 0);
+    }
+
+    private String issue(User user, PendingRegistration data, int failedAttempts) {
         String raw = TokenHashing.newRawToken();
         tokens.save(new EmailVerificationToken(user.getId(), TokenHashing.sha256Hex(raw),
-                clock.instant().plus(properties.ttl()), data));
+                clock.instant().plus(properties.ttl()), data, failedAttempts));
         return raw;
     }
 
@@ -77,7 +82,7 @@ public class EmailVerificationService {
     /** El usuario de un enlace vigente (sin usar y sin caducar); 400 si no, sin distinguir por qué. */
     @Transactional(readOnly = true)
     public String preview(String rawToken) {
-        return liveToken(rawToken, clock.instant()).getUsername();
+        return liveToken(tokens.findByTokenHash(TokenHashing.sha256Hex(rawToken)).orElse(null), clock.instant()).getUsername();
     }
 
     /**
@@ -94,14 +99,18 @@ public class EmailVerificationService {
     @Transactional(noRollbackFor = BadRequestException.class)
     public User verify(String rawToken, String password) {
         Instant now = clock.instant();
-        EmailVerificationToken token = liveToken(rawToken, now);
+        String hash = TokenHashing.sha256Hex(rawToken);
+        // Orden de bloqueos: primero la fila del usuario y luego sus enlaces (así dos verificaciones de enlaces
+        // distintos de la misma cuenta se turnan en vez de interbloquearse). Con el enlace bloqueado, de dos
+        // intentos simultáneos el segundo lo ve ya gastado o con 5 fallos.
+        Long userId = tokens.findUserIdByTokenHash(hash).orElseThrow(EmailVerificationService::invalid);
+        userRepository.findByIdForUpdate(userId).orElseThrow(EmailVerificationService::invalid);
+        EmailVerificationToken token = liveToken(tokens.findByTokenHashForUpdate(hash).orElse(null), now);
         if (password == null || !passwordEncoder.matches(password, token.getPasswordHash())) {
             tokens.incrementFailedAttempts(token.getId());
             tokens.invalidateIfTooManyFailures(token.getId(), now, MAX_PASSWORD_FAILURES);
             throw new BadRequestException("auth.verificationPasswordInvalid");
         }
-        Long userId = token.getUserId();
-        userRepository.findByIdForUpdate(userId).orElseThrow(EmailVerificationService::invalid); // bloquea la fila
         requireUsernameFree(token.getUsername(), userId);
         // Atómico: de dos clics simultáneos con el mismo enlace solo uno gana
         if (tokens.markUsedIfUnused(token.getId(), now) == 0) {
@@ -115,25 +124,32 @@ public class EmailVerificationService {
     }
 
     /**
-     * Verificación a mano por un admin (soporte y seed): aplica los datos del último enlace, si hay, y marca la
-     * cuenta como verificada. Idempotente.
+     * Verificación a mano por un admin (soporte y seed): aplica el único registro pendiente que tenga la cuenta, si
+     * hay, y la marca como verificada; con varios registros distintos, 409. Idempotente.
      */
     @Transactional
     public User verifyByAdmin(Long userId) {
-        userRepository.findByIdForUpdate(userId).orElseThrow(() -> NotFoundException.of("user", userId));
+        boolean alreadyVerified = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> NotFoundException.of("user", userId)).isEmailVerified();
         Instant now = clock.instant();
-        // varios registros pendientes distintos para el mismo email: el admin no puede elegir por el dueño
-        if (distinctPending(tokens.findByUserIdAndUsedAtIsNullAndExpiresAtAfterOrderByIdDesc(userId, now)).size() > 1) {
-            throw new ConflictException("auth.verificationAmbiguous");
-        }
-        EmailVerificationToken latest = tokens.findFirstByUserIdOrderByIdDesc(userId).orElse(null);
-        if (latest != null) {
-            requireUsernameFree(latest.getUsername(), userId);
+        PendingRegistration toApply = null;
+        if (!alreadyVerified) {
+            // Una cuenta sin verificar no tiene enlaces «gastados» de verdad (un enlace anulado por fallos o caducado
+            // sigue siendo un registro pedido): se miran todos. Con varios registros distintos el admin no puede
+            // elegir por el dueño; con uno solo se aplica ese mismo.
+            List<EmailVerificationToken> registrations = distinctTokens(tokens.findByUserIdOrderByIdDesc(userId));
+            if (registrations.size() > 1) {
+                throw new ConflictException("auth.verificationAmbiguous");
+            }
+            if (!registrations.isEmpty()) {
+                toApply = registrations.get(0).pending();
+                requireUsernameFree(toApply.username(), userId);
+            }
         }
         tokens.invalidateActive(userId, now);
         User user = userRepository.findWithRolesById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
-        if (latest != null && !user.isEmailVerified()) {
-            apply(user, latest.pending());
+        if (toApply != null) {
+            apply(user, toApply);
         }
         user.setEmailVerified(true);
         return user;
@@ -149,8 +165,10 @@ public class EmailVerificationService {
         String key = normalize(email);
         rateLimiter.check(key);
         userRepository.findByEmail(key).filter(user -> !user.isEmailVerified()).ifPresent(user -> {
-            for (PendingRegistration data : pendingRegistrations(user.getId())) {
-                String token = issue(user, data);
+            for (EmailVerificationToken source : pendingRegistrations(user.getId())) {
+                PendingRegistration data = source.pending();
+                // el enlace nuevo hereda las contraseñas erróneas: reenviar no devuelve los 5 intentos
+                String token = issue(user, data, source.getFailedAttempts());
                 events.publishEvent(new VerificationEmailEvent(user.getEmail(), data.displayName(), data.locale(),
                         token, data.username()));
             }
@@ -163,29 +181,31 @@ public class EmailVerificationService {
      * pedida y pulsa el de la suya (y solo con su contraseña entra), nunca solo el de otra persona. Si no queda ninguno vigente pero la cuenta sigue sin
      * verificar, se repite el último enlace de todos.
      */
-    private java.util.List<PendingRegistration> pendingRegistrations(Long userId) {
-        java.util.List<PendingRegistration> pending = distinctPending(
+    private List<EmailVerificationToken> pendingRegistrations(Long userId) {
+        List<EmailVerificationToken> pending = distinctTokens(
                 tokens.findByUserIdAndUsedAtIsNullAndExpiresAtAfterOrderByIdDesc(userId, clock.instant()));
         if (pending.isEmpty()) {
-            return tokens.findFirstByUserIdOrderByIdDesc(userId).map(t -> java.util.List.of(t.pending()))
-                    .orElse(java.util.List.of());
+            // ninguno vigente: se repite el último, salvo que se anulara por demasiadas contraseñas erróneas (para
+            // ese registro la vía es registrarse de nuevo o el admin)
+            return tokens.findFirstByUserIdOrderByIdDesc(userId)
+                    .filter(t -> t.getFailedAttempts() < MAX_PASSWORD_FAILURES).map(List::of).orElse(List.of());
         }
         return pending.stream().limit(MAX_RESENT).toList();
     }
 
-    /** Registros distintos (usuario y contraseña) de una lista de enlaces, del más reciente al más antiguo. */
-    private static java.util.List<PendingRegistration> distinctPending(java.util.List<EmailVerificationToken> list) {
-        java.util.Map<String, PendingRegistration> distinct = new java.util.LinkedHashMap<>();
+    /** El enlace más reciente de cada registro distinto (usuario y contraseña), del más reciente al más antiguo. */
+    private static List<EmailVerificationToken> distinctTokens(List<EmailVerificationToken> list) {
+        java.util.Map<String, EmailVerificationToken> distinct = new java.util.LinkedHashMap<>();
         for (EmailVerificationToken t : list) {
-            distinct.putIfAbsent(t.getUsername().toLowerCase(Locale.ROOT) + "|" + t.getPasswordHash(), t.pending());
+            distinct.putIfAbsent(t.getUsername().toLowerCase(Locale.ROOT) + "|" + t.getPasswordHash(), t);
         }
-        return java.util.List.copyOf(distinct.values());
+        return List.copyOf(distinct.values());
     }
 
-    private EmailVerificationToken liveToken(String rawToken, Instant now) {
-        EmailVerificationToken token = tokens.findByTokenHash(TokenHashing.sha256Hex(rawToken))
-                .orElseThrow(EmailVerificationService::invalid);
-        if (token.isUsed() || !token.getExpiresAt().isAfter(now)) {
+    /** El enlace tiene que existir, estar sin usar, vigente y con menos de 5 contraseñas erróneas. */
+    private static EmailVerificationToken liveToken(EmailVerificationToken token, Instant now) {
+        if (token == null || token.isUsed() || !token.getExpiresAt().isAfter(now)
+                || token.getFailedAttempts() >= MAX_PASSWORD_FAILURES) {
             throw invalid();
         }
         return token;

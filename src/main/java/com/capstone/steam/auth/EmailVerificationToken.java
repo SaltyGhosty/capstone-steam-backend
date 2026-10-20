@@ -60,6 +60,13 @@ public class EmailVerificationToken {
     }
 
     public EmailVerificationToken(Long userId, String tokenHash, Instant expiresAt, PendingRegistration data) {
+        this(userId, tokenHash, expiresAt, data, 0);
+    }
+
+    /** {@code failedAttempts}: un enlace de reenvío hereda las contraseñas erróneas del registro del que sale. */
+    public EmailVerificationToken(Long userId, String tokenHash, Instant expiresAt, PendingRegistration data,
+            int failedAttempts) {
+        this.failedAttempts = failedAttempts;
         this.userId = userId;
         this.tokenHash = tokenHash;
         this.expiresAt = expiresAt;

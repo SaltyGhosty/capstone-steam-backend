@@ -4,13 +4,28 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 public interface EmailVerificationTokenRepository extends JpaRepository<EmailVerificationToken, Long> {
 
     Optional<EmailVerificationToken> findByTokenHash(String tokenHash);
+
+    /** Solo el usuario dueño del enlace (para bloquear su fila antes que el enlace: orden usuario -> enlaces). */
+    @Query("select t.userId from EmailVerificationToken t where t.tokenHash = :tokenHash")
+    Optional<Long> findUserIdByTokenHash(String tokenHash);
+
+    /** Lee el enlace con bloqueo de escritura: dos verificaciones del mismo enlace se turnan y la segunda lo ve ya gastado. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from EmailVerificationToken t where t.tokenHash = :tokenHash")
+    Optional<EmailVerificationToken> findByTokenHashForUpdate(String tokenHash);
+
+    /** Todos los enlaces del usuario (también usados, anulados y caducados), del más reciente al más antiguo. */
+    List<EmailVerificationToken> findByUserIdOrderByIdDesc(Long userId);
 
     /** El último enlace emitido a este usuario (el reenvío copia sus datos). */
     Optional<EmailVerificationToken> findFirstByUserIdOrderByIdDesc(Long userId);
