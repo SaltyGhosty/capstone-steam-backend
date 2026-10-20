@@ -1,5 +1,6 @@
 package com.capstone.steam.security;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
@@ -7,6 +8,7 @@ import java.util.List;
 
 import javax.crypto.SecretKey;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import io.jsonwebtoken.Claims;
@@ -24,8 +26,15 @@ public class JwtService {
 
     private final SecretKey key;
     private final Duration expiration;
+    private final Clock clock;
 
     public JwtService(JwtProperties properties) {
+        this(properties, Clock.systemUTC());
+    }
+
+    @Autowired
+    public JwtService(JwtProperties properties, Clock clock) {
+        this.clock = clock;
         if (properties.secret() == null || properties.secret().isBlank()) {
             throw new IllegalStateException("Falta app.jwt.secret: define JWT_SECRET en el entorno o en .env");
         }
@@ -38,7 +47,7 @@ public class JwtService {
     }
 
     public String generateToken(AppUserPrincipal user) {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         return Jwts.builder()
                 .subject(user.getId().toString())
                 .claim(USERNAME_CLAIM, user.getUsername())
@@ -56,7 +65,8 @@ public class JwtService {
         Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
         List<?> rawRoles = claims.get(ROLES_CLAIM, List.class);
         List<String> roles = rawRoles == null ? List.of() : rawRoles.stream().map(String::valueOf).toList();
-        return AppUserPrincipal.fromToken(Long.valueOf(claims.getSubject()), claims.get(USERNAME_CLAIM, String.class), roles);
+        return AppUserPrincipal.fromToken(Long.valueOf(claims.getSubject()), claims.get(USERNAME_CLAIM, String.class), roles,
+                claims.getIssuedAt() == null ? null : claims.getIssuedAt().toInstant());
     }
 
     public long getExpirationSeconds() {
