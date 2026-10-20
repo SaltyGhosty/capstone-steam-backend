@@ -8,6 +8,7 @@ import Browse from '@/pages/Browse';
 import Cart from '@/pages/Cart';
 import { Library, Wishlist } from '@/pages/Collection';
 import { DeveloperGameForm, DeveloperGames } from '@/pages/Developer';
+import Demos from '@/pages/Demos';
 import Discover from '@/pages/Discover';
 import Friends from '@/pages/Friends';
 import GameDetail from '@/pages/GameDetail';
@@ -30,6 +31,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<Discover />} />
         <Route path="browse" element={<Browse />} />
+        <Route path="demos" element={<Demos />} />
         <Route path="games/:slug" element={<GameDetail />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />

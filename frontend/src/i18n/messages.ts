@@ -461,6 +461,33 @@ const es = {
 
   // Bloque D (arreglos)
   'assistant.badRequestUi': 'No he podido enviar ese mensaje',
+
+  // Demos jugables
+  'nav.demos': 'Demos',
+  'demos.eyebrow': 'DEMOS',
+  'demos.title': 'Prueba antes de comprar',
+  'demos.play': 'Jugar demo',
+  'demos.try': 'Probar demo',
+  'demos.playerTitle': '{title} · Demo',
+  'demos.desktopOnly': 'Demo disponible en ordenador: necesita teclado',
+  'demos.liked': '¿Te gustó?',
+  'demos.playAgain': 'Jugar otra vez',
+  'demos.owned': 'Ya lo tienes',
+  'demos.inCart': 'En el carrito · Ir a pagar',
+  'demos.finished': '¡Demo completada!',
+  'demos.close': 'Cerrar',
+  'demos.paused': 'Partida en pausa',
+  'demos.resume': 'Continuar',
+  'demos.won': 'VICTORIA',
+  'demos.lost': 'FIN DE LA PARTIDA',
+  'demos.celeste.mechanic': 'Salta y usa el impulso para llegar a la cumbre',
+  'demos.celeste.controls': '← → moverse · Espacio saltar · X impulso',
+  'demos.vampire.mechanic': 'Sobrevive 60 segundos: tu arma ataca sola',
+  'demos.vampire.controls': 'Flechas o WASD para moverte; el ataque es automático',
+  'demos.rocket.mechanic': 'Mete más goles que el coche rival en 60 segundos',
+  'demos.rocket.controls': '↑ acelerar · ↓ frenar · ← → girar · Espacio turbo',
+  'demos.balatro.mechanic': 'Cartas y póquer: supera el objetivo de puntos',
+  'demos.balatro.controls': 'Elige hasta 5 cartas y juega la mejor mano',
 };
 
 export type MessageKey = keyof typeof es;
@@ -909,6 +936,33 @@ const en: Messages = {
 
   // Bloque D (arreglos)
   'assistant.badRequestUi': 'I could not send that message',
+
+  // Demos jugables
+  'nav.demos': 'Demos',
+  'demos.eyebrow': 'DEMOS',
+  'demos.title': 'Try before you buy',
+  'demos.play': 'Play demo',
+  'demos.try': 'Try demo',
+  'demos.playerTitle': '{title} · Demo',
+  'demos.desktopOnly': 'Demo available on desktop: it needs a keyboard',
+  'demos.liked': 'Did you like it?',
+  'demos.playAgain': 'Play again',
+  'demos.owned': 'You already own it',
+  'demos.inCart': 'In your cart · Go to checkout',
+  'demos.finished': 'Demo completed!',
+  'demos.close': 'Close',
+  'demos.paused': 'Game paused',
+  'demos.resume': 'Resume',
+  'demos.won': 'VICTORY',
+  'demos.lost': 'GAME OVER',
+  'demos.celeste.mechanic': 'Jump and dash your way up to the summit',
+  'demos.celeste.controls': '← → move · Space jump · X dash',
+  'demos.vampire.mechanic': 'Survive 60 seconds: your weapon attacks on its own',
+  'demos.vampire.controls': 'Arrows or WASD to move; attacks are automatic',
+  'demos.rocket.mechanic': 'Score more goals than the rival car in 60 seconds',
+  'demos.rocket.controls': '↑ accelerate · ↓ brake · ← → steer · Space boost',
+  'demos.balatro.mechanic': 'Cards and poker: beat the score target',
+  'demos.balatro.controls': 'Pick up to 5 cards and play the best hand',
 };
 
 const it: Messages = {
@@ -1354,6 +1408,33 @@ const it: Messages = {
 
   // Bloque D (arreglos)
   'assistant.badRequestUi': 'Non sono riuscito a inviare quel messaggio',
+
+  // Demos jugables
+  'nav.demos': 'Demo',
+  'demos.eyebrow': 'DEMO',
+  'demos.title': 'Prova prima di comprare',
+  'demos.play': 'Gioca la demo',
+  'demos.try': 'Prova la demo',
+  'demos.playerTitle': '{title} · Demo',
+  'demos.desktopOnly': 'Demo disponibile su computer: serve la tastiera',
+  'demos.liked': 'Ti è piaciuto?',
+  'demos.playAgain': 'Gioca ancora',
+  'demos.owned': 'Ce l’hai già',
+  'demos.inCart': 'Nel carrello · Vai al pagamento',
+  'demos.finished': 'Demo completata!',
+  'demos.close': 'Chiudi',
+  'demos.paused': 'Partita in pausa',
+  'demos.resume': 'Continua',
+  'demos.won': 'VITTORIA',
+  'demos.lost': 'FINE PARTITA',
+  'demos.celeste.mechanic': 'Salta e usa lo scatto per arrivare in cima',
+  'demos.celeste.controls': '← → muoversi · Spazio saltare · X scatto',
+  'demos.vampire.mechanic': 'Sopravvivi 60 secondi: la tua arma attacca da sola',
+  'demos.vampire.controls': 'Frecce o WASD per muoverti; l’attacco è automatico',
+  'demos.rocket.mechanic': 'Segna più gol dell’auto avversaria in 60 secondi',
+  'demos.rocket.controls': '↑ accelerare · ↓ frenare · ← → sterzare · Spazio turbo',
+  'demos.balatro.mechanic': 'Carte e poker: supera l’obiettivo di punti',
+  'demos.balatro.controls': 'Scegli fino a 5 carte e gioca la mano migliore',
 };
 
 export const MESSAGES = { es, en, it } as const;

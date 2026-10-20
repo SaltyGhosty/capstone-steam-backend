@@ -1,0 +1,37 @@
+import type { DemoDefinition } from './types';
+
+/** Juegos del catálogo que tienen demo, por slug. Cada minijuego se carga cuando se abre. */
+export const DEMOS: DemoDefinition[] = [
+  {
+    slug: 'celeste',
+    mechanicKey: 'demos.celeste.mechanic',
+    controlsKey: 'demos.celeste.controls',
+    needsKeyboard: true,
+    load: () => import('./placeholder/PlaceholderDemo'),
+  },
+  {
+    slug: 'vampire-survivors',
+    mechanicKey: 'demos.vampire.mechanic',
+    controlsKey: 'demos.vampire.controls',
+    needsKeyboard: true,
+    load: () => import('./placeholder/PlaceholderDemo'),
+  },
+  {
+    slug: 'rocket-league',
+    mechanicKey: 'demos.rocket.mechanic',
+    controlsKey: 'demos.rocket.controls',
+    needsKeyboard: true,
+    load: () => import('./placeholder/PlaceholderDemo'),
+  },
+  {
+    slug: 'balatro',
+    mechanicKey: 'demos.balatro.mechanic',
+    controlsKey: 'demos.balatro.controls',
+    needsKeyboard: false,
+    load: () => import('./placeholder/PlaceholderDemo'),
+  },
+];
+
+export function demoFor(slug: string): DemoDefinition | undefined {
+  return DEMOS.find((d) => d.slug === slug);
+}
