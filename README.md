@@ -8,7 +8,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 332 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 69 tests en 14 archivos · CI en GitHub Actions |
+| **Tests** | Backend: 381 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 83 tests en 15 archivos · CI en GitHub Actions |
 | **API** | Swagger UI en `/swagger-ui.html` · 74 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -19,7 +19,7 @@ Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
 3. [Puesta en marcha](#puesta-en-marcha)
 4. [Frontend](#frontend)
 5. [Arquitectura](#arquitectura)
-6. [Base de datos (Flyway V1 a V11)](#base-de-datos-flyway-v1-a-v11)
+6. [Base de datos (Flyway V1 a V12)](#base-de-datos-flyway-v1-a-v12)
 7. [API](#api)
 8. [Tests](#tests)
 9. [Despliegue](#despliegue)
@@ -63,8 +63,16 @@ Los pagos son **simulados**: una tarjeta terminada en `0000` siempre se rechaza,
 - Se busca por nombre (2 a 50 caracteres), se envía una solicitud y el otro la acepta o la rechaza. Se puede cancelar una solicitud enviada y borrar un amigo. Si A pide a B y B ya había pedido a A, se aceptan las dos.
 - El perfil (`/users/:username`) enseña siempre el nombre, el avatar y la fecha de alta. La biblioteca (con horas jugadas) y la lista de amigos solo se ven si el perfil es **público**, si quien mira es **amigo** o si es el propio dueño. El perfil es privado por defecto (`profilePublic`, en *Ajustes*). Nunca se ven el email, los pedidos, el carrito ni la wishlist. La regla se aplica en el backend.
 
+**Verificación de email.** Crear la cuenta no inicia sesión: llega **un solo correo** («¡Bienvenido a ARCADE! Confirma tu email», en el idioma elegido) con un enlace a `/verify-email?token=…`.
+- Al pulsarlo la cuenta queda verificada y entra ya con su sesión. Sin verificar, el login responde **403** `auth.emailNotVerified` (solo si la contraseña es correcta; con una mala sigue siendo 401, así no se revela qué cuentas existen).
+- El enlace es de **un solo uso** y caduca a las 24 h. En la base de datos solo se guarda su SHA-256 y el token en claro nunca se escribe en el log con el correo activo (sin `MAIL_USERNAME`, en desarrollo, el enlace sale en el log para poder probarlo).
+- «Reenviar correo» (`POST /api/auth/resend-verification`) responde siempre 204, exista o no la cuenta, con un máximo de **3 por hora y email**. Cada enlace nuevo anula los anteriores.
+- Registrarse con el email de una cuenta **sin verificar** la sustituye (el dueño real siempre gana, porque solo él recibe el enlace); un usuario ocupado por una cuenta sin verificar se libera cuando su enlace caduca. Una cuenta verificada nunca se toca.
+- Un admin puede verificar una cuenta a mano (`POST /api/admin/users/{id}/verify-email`): lo usan el seed y Postman.
+- Los correos reintentan hasta 3 veces los fallos de conexión con el SMTP (Gmail desde Render a veces tarda en conectar).
+
 **Sesión con refresh token.** El token de acceso dura **15 minutos** y el refresh token **7 días**.
-- Login y registro devuelven los dos. `POST /api/auth/refresh` canjea el refresh por un par nuevo (**rotación**: el anterior queda revocado) y `POST /api/auth/logout` cierra la sesión.
+- El login y la verificación del email devuelven los dos (el registro, solo si la verificación está desactivada). `POST /api/auth/refresh` canjea el refresh por un par nuevo (**rotación**: el anterior queda revocado) y `POST /api/auth/logout` cierra la sesión.
 - En la base de datos solo se guarda el SHA-256 del refresh token. Si llega uno ya usado (posible robo), se revoca **toda su familia**, es decir, todos los tokens encadenados desde el mismo login.
 - Desactivar a un usuario o cambiarle los roles revoca sus refresh tokens.
 - El frontend renueva la sesión solo ante un 401 (una única vez, y varias peticiones simultáneas comparten el mismo refresh).
@@ -87,7 +95,7 @@ Los pagos son **simulados**: una tarjeta terminada en `0000` siempre se rechaza,
 | Spring Security + JWT stateless | [SecurityConfig](src/main/java/com/capstone/steam/security/SecurityConfig.java), [JwtService](src/main/java/com/capstone/steam/security/JwtService.java) (HS256, jjwt 0.13) y [JwtAuthFilter](src/main/java/com/capstone/steam/security/JwtAuthFilter.java) |
 | **Criteria API** para los filtros del catálogo | [GameCriteriaRepository](src/main/java/com/capstone/steam/game/search/GameCriteriaRepository.java): 9 filtros opcionales y 6 órdenes, con un subquery para los géneros y paginación en la base de datos |
 | **UPDATE atómicos escritos a mano** | [GameRepository](src/main/java/com/capstone/steam/game/GameRepository.java) (`incrementSalesCount`, `applyReviewDelta`, `bulkDiscountForDeveloper`), [OrderRepository](src/main/java/com/capstone/steam/order/OrderRepository.java) (`markPaid`, `closePending`) y [LibraryRepository](src/main/java/com/capstone/steam/library/LibraryRepository.java) (`addPlaytime`) |
-| Flyway V1 a V4 (y V5 a V11) | [db/migration](src/main/resources/db/migration) (ver [abajo](#base-de-datos-flyway-v1-a-v11)) |
+| Flyway V1 a V4 (y V5 a V12) | [db/migration](src/main/resources/db/migration) (ver [abajo](#base-de-datos-flyway-v1-a-v12)) |
 | Spring Mail + Gmail SMTP | [EmailService](src/main/java/com/capstone/steam/notification/EmailService.java), [EmailTemplates](src/main/java/com/capstone/steam/notification/EmailTemplates.java) y [MailTexts](src/main/java/com/capstone/steam/notification/MailTexts.java) (textos en es, en e it) |
 | Spring Events **AFTER_COMMIT** + `@Async` con **pool propio** | [MailListener](src/main/java/com/capstone/steam/notification/MailListener.java) y [AsyncConfig](src/main/java/com/capstone/steam/config/AsyncConfig.java) (`mailExecutor`, hilos `mail-*`) |
 | JUnit 5 + Mockito + H2 | [src/test](src/test/java/com/capstone/steam): tests unitarios, de repositorio, de integración HTTP y de concurrencia |
@@ -123,6 +131,9 @@ cp .env.example .env    # y rellena los valores
 | `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Recomendada | Si `ADMIN_PASSWORD` tiene valor, se crea el admin inicial al arrancar |
 | `MAIL_USERNAME`, `MAIL_APP_PASSWORD` | Opcional | Cuenta de Gmail y [contraseña de aplicación](https://myaccount.google.com/apppasswords). Si están vacías, los correos solo se registran en el log |
 | `MAIL_FROM_NAME` | Opcional | Nombre con el que llegan los correos y marca que aparece en ellos (por defecto `ARCADE`) |
+| `MAIL_TIMEOUT` | Opcional | Milisegundos de espera de conexión, lectura y escritura con el SMTP (por defecto `15000`). Los fallos de conexión se reintentan hasta 3 veces (pausas de 2 s y 6 s) |
+| `EMAIL_VERIFICATION_REQUIRED` | Opcional | Por defecto `true`: crear una cuenta manda un correo con un enlace y no se puede iniciar sesión hasta pulsarlo. Con `false` las cuentas nacen verificadas y el registro devuelve la sesión (solo lo usan los tests) |
+| `EMAIL_VERIFICATION_TTL` | Opcional | Validez del enlace de verificación, en formato ISO-8601 (por defecto `P1D`, 24 horas) |
 | `FRONTEND_URL` | Opcional | URL de la tienda para los botones de los correos. Si falta, se usa el primer origen de `CORS_ALLOWED_ORIGINS` |
 | `SERVER_PORT` | Opcional | Por defecto `PORT` (lo fija Render) o 8080 (`.env.example` usa 8081) |
 | `PAYMENT_FAILURE_RATE` | Opcional | Probabilidad de rechazo aleatorio en las demos (0.0 a 1.0, por defecto 0) |
@@ -200,7 +211,7 @@ La respuesta HTTP no espera al SMTP. Si la transacción hace rollback, no se env
 
 **El idioma de los correos** sale de `users.locale`. Los textos de cada idioma están en el record `MailTexts` (una constante por idioma), así el compilador obliga a que ninguno se quede sin traducir. Los tres eventos llevan el `locale`, leído del usuario dentro de la transacción. Si falta o no se reconoce, el correo sale en español.
 
-## Base de datos (Flyway V1 a V11)
+## Base de datos (Flyway V1 a V12)
 
 | Migración | Contenido |
 |---|---|
@@ -215,8 +226,9 @@ La respuesta HTTP no espera al SMTP. Si la transacción hace rollback, no se env
 | **V9** `friendships` | `users.profile_public` (falso por defecto) y la tabla `friendships`: una fila por pareja sea cual sea la dirección (`UNIQUE(user_low_id, user_high_id)`), con estado `PENDING` o `ACCEPTED` |
 | **V10** `refresh_tokens` | `refresh_tokens`: SHA-256 del token (nunca el token), familia, caducidad, fecha de revocación y sustituto |
 | **V11** `friendships_pair_check` | `CHECK ck_friendships_pair`: el par `(user_low_id, user_high_id)` tiene que ser el del solicitante y el destinatario |
+| **V12** `email_verification` | `users.email_verified` (las cuentas que ya existían quedan verificadas) y la tabla `email_verification_tokens`: SHA-256 del enlace (nunca el token), caducidad y fecha de uso |
 
-El enunciado pide V1 a V4; V5 a V11 se añadieron después (idioma de los correos, traducciones, Steam, reseñas estilo Steam, amigos, refresh tokens y la integridad del par de amigos). V1 a V3 y V5 a V11 son SQL portable. V4 tiene dos versiones ([postgresql](src/main/resources/db/migration/postgresql) y [h2](src/main/resources/db/migration/h2)), porque H2 no soporta los índices por trigramas ni los parciales. Flyway elige la adecuada con `locations: …/common, …/{vendor}`.
+El enunciado pide V1 a V4; V5 a V12 se añadieron después (idioma de los correos, traducciones, Steam, reseñas estilo Steam, amigos, refresh tokens, la integridad del par de amigos y la verificación de email). V1 a V3 y V5 a V12 son SQL portable. V4 tiene dos versiones ([postgresql](src/main/resources/db/migration/postgresql) y [h2](src/main/resources/db/migration/h2)), porque H2 no soporta los índices por trigramas ni los parciales. Flyway elige la adecuada con `locations: …/common, …/{vendor}`.
 
 Las reglas de integridad también las garantiza la base de datos, no solo el código Java: `CHECK` (precio ≥ 0, descuento 0 a 100, `positive_count <= review_count`, idioma y estados válidos), `UNIQUE` y claves foráneas con `ON DELETE` pensado caso por caso.
 
@@ -226,8 +238,10 @@ La autenticación es `Authorization: Bearer <accessToken>`. El token se obtiene 
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| POST | `/api/auth/register` | público | Registro (`accountType`: PLAYER o DEVELOPER; `locale` opcional: `es`, `en` o `it`, por defecto `es`) → 201 + `accessToken` y `refreshToken` |
-| POST | `/api/auth/login` | público | Login con username **o** email → `accessToken` y `refreshToken` |
+| POST | `/api/auth/register` | público | Registro (`accountType`: PLAYER o DEVELOPER; `locale` opcional: `es`, `en` o `it`, por defecto `es`) → 201 con `{id, email, verificationRequired: true}` y un correo con el enlace de verificación (sin sesión). Con `EMAIL_VERIFICATION_REQUIRED=false` devuelve `accessToken` y `refreshToken` |
+| POST | `/api/auth/verify-email` | público | `{token}` del correo → verifica el email y devuelve `accessToken` y `refreshToken`. 400 si el enlace está usado, caducado o no existe |
+| POST | `/api/auth/resend-verification` | público | `{email}` → 204 siempre (no revela si la cuenta existe). 429 al pasar de 3 por hora y email |
+| POST | `/api/auth/login` | público | Login con username **o** email → `accessToken` y `refreshToken`. 403 con `code: auth.emailNotVerified` si la contraseña es correcta pero falta verificar el email |
 | POST | `/api/auth/refresh` | público | `{refreshToken}` → par nuevo (rotación). 401 si está caducado, revocado o ya usado (en ese caso se revoca su familia) |
 | POST | `/api/auth/logout` | público | `{refreshToken}` → 204; revoca la sesión (idempotente) |
 | GET / PATCH | `/api/users/me` | usuario | Ver y editar el perfil (incluidos `locale`, el idioma de los correos, y `profilePublic`) |
@@ -263,6 +277,7 @@ La autenticación es `Authorization: Bearer <accessToken>`. El token se obtiene 
 | GET | `/api/admin/users` | admin | Usuarios paginados |
 | PUT | `/api/admin/users/{id}/roles` | admin | Cambiar roles |
 | PATCH | `/api/admin/users/{id}/enabled` | admin | Activar o desactivar cuenta |
+| POST | `/api/admin/users/{id}/verify-email` | admin | Dar el email de la cuenta por verificado (idempotente) |
 | POST | `/api/admin/users/{userId}/library/{gameId}` | admin | Regalar un juego |
 | POST / PUT / DELETE | `/api/admin/genres[/{id}]` | admin | CRUD de géneros |
 | GET | `/api/admin/games?status=` | admin | Juegos por estado |
@@ -293,7 +308,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 ## Tests
 
 ```bash
-./mvnw test      # 332 tests (H2 en memoria, no necesita PostgreSQL)
+./mvnw test      # 381 tests (H2 en memoria, no necesita PostgreSQL)
 ./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
 ```
 
@@ -319,7 +334,7 @@ El repositorio incluye todo lo necesario; solo faltan las cuentas.
 **Desplegado en Render:** el frontend en https://capstone-steam-web.onrender.com y la API en https://capstone-steam-api.onrender.com ([Swagger](https://capstone-steam-api.onrender.com/swagger-ui.html)). El frontend va como *static site* de Render en lugar de Vercel: build `cd frontend && npm ci && npm run build`, carpeta `frontend/dist`, `VITE_API_URL` con la URL de la API. Para las rutas de React Router hay una regla *Rewrite* `/*` → `/index.html` en el panel de Render; además, el `postbuild` copia `index.html` como `404.html` por si falta la regla.
 
 1. **Todo en Render con el Blueprint.** Ve a *New → Blueprint* y elige este repositorio: [`render.yaml`](render.yaml) crea en Frankfurt la base de datos, la API (a partir del [`Dockerfile`](Dockerfile)) y el frontend como *static site* con la regla *Rewrite*. `JWT_SECRET` se genera solo. Se piden `ADMIN_PASSWORD` y, opcionalmente, `MAIL_USERNAME`, `MAIL_APP_PASSWORD`, `MAIL_FROM`, `CLOUDINARY_URL` y `OPENROUTER_API_KEY` (sin estas dos, la subida de portadas y el asistente quedan desactivados). Si Render asigna otros nombres de servicio, ajusta `CORS_ALLOWED_ORIGINS` y `VITE_API_URL`.
-2. Carga el catálogo demo en la base de datos nueva: `node scripts/seed-demo.mjs --api https://<tu-api>.onrender.com`.
+2. Carga el catálogo demo en la base de datos nueva: `node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD> --api https://<tu-api>.onrender.com`.
 
 Render solo permite **una PostgreSQL gratuita por cuenta**, y caduca a los 30 días. Como alternativa para el frontend sigue valiendo **Vercel**: *Root Directory* = `frontend` (el [`vercel.json`](frontend/vercel.json) ya configura el build y las rutas), `VITE_API_URL` con la URL de la API y esa URL de Vercel en `CORS_ALLOWED_ORIGINS`.
 
@@ -346,9 +361,11 @@ La web solo está en línea mientras el PC esté encendido y el script en marcha
 [`scripts/seed-demo.mjs`](scripts/seed-demo.mjs) carga, **a través de la API**, un catálogo de 60 juegos reales de Steam (59 publicados y *Hollow Knight: Silksong* como borrador, con al menos 5 por género y la descripción en es, en e it), 49 estudios, 6 jugadores con sus compras (una con el pago rechazado), wishlists y tiempo de juego, y **60 reseñadores** (20 por idioma) que compran por el checkout simulado y reseñan en su idioma, con un reparto de votos parecido al de Steam: unas 2.100 reseñas, para que los juegos tengan porcentaje y etiqueta. Las «Extremadamente…» necesitan 500 reseñas y no salen. Los textos salen de un banco propio de frases cortas por idioma y voto; no se copia ninguna reseña real. Los datos están en [`scripts/demo-data.json`](scripts/demo-data.json), y se validan con `node scripts/check-demo-data.mjs` y se puede ejecutar varias veces sin duplicar nada:
 
 ```bash
-node scripts/seed-demo.mjs                                   # contra http://localhost:8081
-node scripts/seed-demo.mjs --api https://tu-api.onrender.com # contra el despliegue
+node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD>                                   # contra http://localhost:8081
+node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD> --api https://tu-api.onrender.com # contra el despliegue
 ```
+
+La API exige verificar el email de las cuentas nuevas, así que el seed las verifica con la cuenta de admin (`POST /api/admin/users/{id}/verify-email`). La contraseña va en `--admin-password` o en la variable `ADMIN_PASSWORD` (el usuario, por defecto `admin`, en `--admin-login`). Sin ella, el seed termina con «Falta --admin-password» en cuanto necesita verificar una cuenta. En una base ya sembrada, relanzarlo no crea nada y no necesita la contraseña.
 
 Las portadas, cápsulas e imágenes de cabecera se enlazan desde el CDN de Steam (`cdn.cloudflare.steamstatic.com`), tanto en la tienda como en el correo de recibo. Los nombres, las imágenes y las marcas pertenecen a sus respectivos estudios y editores; se usan solo como datos de demostración en este proyecto educativo. Los textos de las reseñas son propios; las descripciones de los juegos nuevos vienen de la tienda de Steam.
 
