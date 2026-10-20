@@ -323,7 +323,7 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 
 Los tests usan H2 en modo PostgreSQL **con las mismas migraciones de Flyway** que producción; no hay `ddl-auto=create`.
 
-**Frontend** (`cd frontend && npm test`): 69 tests en 14 archivos, con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402, y la renovación de la sesión con refresh token), los formateadores, la detección del idioma del navegador y los flujos de login, registro, checkout (pedido → pago aprobado o rechazado), ajustes, la ficha del juego (reseñas 👍/👎 y filtro por idioma), amigos y perfil, la subida de portadas y el chat del asistente sobre las páginas reales con `fetch` simulado, además de la traducción de la interfaz (mismas claves en los tres idiomas, banderas y `Accept-Language`).
+**Frontend** (`cd frontend && npm test`): 83 tests en 15 archivos, con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402, y la renovación de la sesión con refresh token), los formateadores, la detección del idioma del navegador y los flujos de login, registro, verificación de email, checkout (pedido → pago aprobado o rechazado), ajustes, la ficha del juego (reseñas 👍/👎 y filtro por idioma), amigos y perfil, la subida de portadas y el chat del asistente sobre las páginas reales con `fetch` simulado, además de la traducción de la interfaz (mismas claves en los tres idiomas, banderas y `Accept-Language`).
 
 **CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta `./mvnw verify` y los tests y el build del frontend en cada push a `main`.
 
