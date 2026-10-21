@@ -2,6 +2,7 @@ package com.capstone.steam.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -88,10 +89,41 @@ class AccountAnonymizationIntegrationTest {
     }
 
     @Test
+    void neverBeforeTheDateEvenWhenCalledDirectly() throws Exception {
+        String token = register("temprano", "temprano@test.com", "PLAYER");
+        requestDeletion(token);
+        long id = userId("temprano");
+        Map<String, Object> before = jdbc.queryForMap("SELECT * FROM users WHERE id = ?", id);
+
+        clock.now = T0.plus(java.time.Duration.ofDays(14)).minusSeconds(1);
+
+        assertThat(anonymizer.anonymize(id)).isFalse();
+        assertThat(jdbc.queryForMap("SELECT * FROM users WHERE id = ?", id)).isEqualTo(before);
+        assertThat(events.stream(AccountDeletedEvent.class)).isEmpty();
+    }
+
+    @Test
+    void runDueCountsOnlyTheAccountsReallyAnonymized() throws Exception {
+        requestDeletion(register("arrepentido", "arrepentido@test.com", "PLAYER"));
+        long id = userId("arrepentido");
+        clock.now = T0.plus(java.time.Duration.ofDays(14));
+        // la tarea ya la tiene en su lista, pero se recupera justo antes de que el anonimizador la bloquee
+        doAnswer(invocation -> {
+            jdbc.update("UPDATE users SET deletion_scheduled_at = NULL, deletion_requested_by = NULL WHERE id = ?", id);
+            return invocation.callRealMethod();
+        }).when(anonymizer).anonymize(eq(id));
+
+        assertThat(scheduler.runDue()).isZero();
+        assertThat(jdbc.queryForObject("SELECT username FROM users WHERE id = ?", String.class, id))
+                .isEqualTo("arrepentido");
+    }
+
+    @Test
     void anonymizesAfterTheDate() throws Exception {
         String studio = register("estudio", "estudio@test.com", "DEVELOPER");
         String victim = register("victima", "victima@test.com", "PLAYER");
         String friend = register("amigo", "amigo@test.com", "PLAYER");
+        String admirer = register("admirador", "admirador@test.com", "PLAYER");
         int hades = publishGame(studio, "Hades");
         int celeste = publishGame(studio, "Celeste");
         buy(victim, hades);
@@ -102,7 +134,16 @@ class AccountAnonymizationIntegrationTest {
         mvc.perform(auth(put("/api/wishlist/" + celeste), victim)).andExpect(status().isNoContent());
         mvc.perform(auth(post("/api/friends/requests"), victim).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"amigo\"}")).andExpect(status().isCreated());
+        // y una solicitud entrante: aquí el eliminado es el destinatario
+        mvc.perform(auth(post("/api/friends/requests"), admirer).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"victima\"}")).andExpect(status().isCreated());
         long victimId = userId("victima");
+        long admirerId = userId("admirador");
+        jdbc.update("""
+                INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, username, password_hash)
+                VALUES (?, 'hash-victima', CURRENT_TIMESTAMP, 'victima', 'x')""", victimId);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM friendships WHERE addressee_id = ?", Integer.class,
+                victimId)).isOne();
         assertThat(jdbc.queryForObject("SELECT review_count FROM games WHERE id = ?", Integer.class, hades)).isOne();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?", Integer.class, victimId))
                 .isPositive();
@@ -135,6 +176,9 @@ class AccountAnonymizationIntegrationTest {
         assertThat(jdbc.queryForObject(
                 "SELECT COUNT(*) FROM friendships WHERE requester_id = ? OR addressee_id = ?", Integer.class,
                 victimId, victimId)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM friendships WHERE requester_id = ?", Integer.class,
+                admirerId)).isZero();
+        assertThat(count("email_verification_tokens", victimId)).isZero();
         // pedidos y biblioteca se conservan
         assertThat(count("orders", victimId)).isOne();
         assertThat(count("library_entries", victimId)).isOne();
@@ -155,11 +199,14 @@ class AccountAnonymizationIntegrationTest {
         buy(buyer, published);
         jdbc.update("INSERT INTO wishlist_items (user_id, game_id) VALUES (?, ?)", userId("comprador"),
                 draftWithWishlist);
+        long studioId = userId("estudio2");
         requestDeletion(studio);
 
         clock.now = T0.plus(java.time.Duration.ofDays(14));
         assertThat(scheduler.runDue()).isOne();
 
+        assertThat(jdbc.queryForObject("SELECT username FROM users WHERE id = ?", String.class, studioId))
+                .isEqualTo("deleted_" + studioId);
         assertThat(statusOf(published)).isEqualTo("DELISTED");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM games WHERE id = ?", Integer.class, draft)).isZero();
         assertThat(statusOf(draftWithWishlist)).isEqualTo("DELISTED");

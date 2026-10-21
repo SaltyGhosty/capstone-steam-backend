@@ -40,25 +40,30 @@ class AccountDeletionScheduler {
         runSafely();
     }
 
-    /** Devuelve cuántas cuentas se anonimizaron. */
+    /**
+     * Devuelve cuántas cuentas se anonimizaron de verdad: una que se recuperó entre la consulta y el bloqueo no
+     * cuenta.
+     */
     int runDue() {
         List<Long> due = userRepository.findIdsDueForDeletion(clock.instant());
         int done = 0;
         for (Long id : due) {
             try {
-                anonymizer.anonymize(id);
-                done++;
+                if (anonymizer.anonymize(id)) {
+                    done++;
+                }
             } catch (RuntimeException e) {
                 log.warn("No se pudo anonimizar la cuenta {}: {}", id, e.getClass().getSimpleName());
             }
         }
+        log.info("Baja de cuentas: {} de {} cuentas vencidas anonimizadas", done, due.size());
         return done;
     }
 
     /** Ni el cron ni el arranque deben caerse por un fallo de la consulta. */
     private void runSafely() {
         try {
-            log.info("Baja de cuentas: {} cuentas anonimizadas", runDue());
+            runDue();
         } catch (RuntimeException e) {
             log.warn("No se pudieron procesar las bajas de cuentas: {}", e.getClass().getSimpleName());
         }

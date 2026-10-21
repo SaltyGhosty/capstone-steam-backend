@@ -60,14 +60,15 @@ public class AccountAnonymizer {
         this.clock = clock;
     }
 
+    /** Devuelve si la anonimizó: {@code false} si ya no tocaba (recuperada, ya eliminada o aún no vence). */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void anonymize(Long userId) {
+    public boolean anonymize(Long userId) {
         // Contexto de persistencia nuevo: el bloqueo relee la fila. Se vuelve a comprobar sobre la fila bloqueada:
         // la cuenta pudo recuperarse o anonimizarse entre que la tarea la listó y ahora.
         User user = userRepository.findByIdForUpdate(userId).orElse(null);
         if (user == null || user.isDeleted() || !user.isPendingDeletion()
                 || user.getDeletionScheduledAt().isAfter(clock.instant())) {
-            return;
+            return false;
         }
         String email = user.getEmail();
         String displayName = user.getDisplayName();
@@ -85,6 +86,7 @@ public class AccountAnonymizer {
         User fresh = userRepository.findByIdForUpdate(userId).orElseThrow();
         fresh.anonymize(passwordEncoder.encode(UUID.randomUUID().toString()), clock.instant());
         events.publishEvent(new AccountDeletedEvent(email, displayName, locale));
+        return true;
     }
 
     /** Como {@code ReviewService.delete}: reseña bloqueada, su voto sale del contador del juego y se borra. */
