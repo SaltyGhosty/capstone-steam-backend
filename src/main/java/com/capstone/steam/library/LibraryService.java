@@ -73,10 +73,11 @@ public class LibraryService {
                 .orElseThrow();
     }
 
-    /** Alta manual (regalo/soporte) por un admin: sin pedido asociado. */
+    /** Alta manual (regalo/soporte) por un admin: sin pedido asociado. Una cuenta eliminada, 404. */
     @Transactional
     public LibraryEntryResponse grant(Long userId, Long gameId) {
-        User user = userRepository.findById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
+        User user = userRepository.findById(userId).filter(u -> !u.isDeleted())
+                .orElseThrow(() -> NotFoundException.of("user", userId));
         Game game = gameRepository.findById(gameId).orElseThrow(() -> NotFoundException.of("game", gameId));
         if (libraryRepository.existsByUserIdAndGameId(userId, gameId)) {
             throw new ConflictException("library.userHasGame");

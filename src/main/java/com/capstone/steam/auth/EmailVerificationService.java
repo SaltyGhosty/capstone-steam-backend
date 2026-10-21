@@ -126,12 +126,13 @@ public class EmailVerificationService {
 
     /**
      * Verificación a mano por un admin (soporte y seed): aplica el único registro pendiente que tenga la cuenta, si
-     * hay, y la marca como verificada; con varios registros distintos, 409. Idempotente.
+     * hay, y la marca como verificada; con varios registros distintos, 409. Idempotente. Una cuenta eliminada, 404.
      */
     @Transactional
     public User verifyByAdmin(Long userId) {
-        boolean alreadyVerified = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> NotFoundException.of("user", userId)).isEmailVerified();
+        User locked = userRepository.findByIdForUpdate(userId)
+                .filter(user -> !user.isDeleted()).orElseThrow(() -> NotFoundException.of("user", userId));
+        boolean alreadyVerified = locked.isEmailVerified();
         Instant now = clock.instant();
         PendingRegistration toApply = null;
         if (!alreadyVerified) {

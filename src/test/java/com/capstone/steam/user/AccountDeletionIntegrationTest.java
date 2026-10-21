@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -47,6 +48,7 @@ class AccountDeletionIntegrationTest {
     @Autowired private MutableClock clock;
     @Autowired private UserRepository userRepository;
     @Autowired private AccountDeletionService service;
+    @Autowired private UserService userService;
     @Autowired private ApplicationEvents events;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private EntityManager em;
@@ -163,6 +165,51 @@ class AccountDeletionIntegrationTest {
         assertThat(events.stream(AccountDeletionScheduledEvent.class).count()).isZero();
         assertThat(loaded.getDeletionRequestedBy()).isEqualTo(DeletionRequester.SELF);
         assertThat(loaded.getDeletionScheduledAt()).isEqualTo(original);
+    }
+
+    @Test
+    void anAdminUpdateFromAStaleEntityKeepsAConcurrentDeletion() throws Exception {
+        long adminId = userId(login("admin", "Admin12345!"));
+        long id = userId(register("stale", "stale@test.com")[0]);
+        User loaded = userRepository.findWithRolesById(id).orElseThrow(); // la peticion del admin ya la cargo
+        em.flush();
+        // "otra peticion" programa la baja entre la carga y el flush
+        Instant scheduled = Instant.parse("2026-12-01T00:00:00Z");
+        jdbc.update("update users set deletion_scheduled_at = ?, deletion_requested_by = 'SELF' where id = ?",
+                java.sql.Timestamp.from(scheduled), id);
+        assertThat(loaded.isPendingDeletion()).isFalse();
+
+        userService.setEnabled(adminId, id, false);
+        em.flush();
+
+        // el UPDATE solo escribe la columna cambiada: la baja de la otra transaccion se conserva
+        assertThat(jdbc.queryForObject("select deletion_scheduled_at from users where id = ?", java.sql.Timestamp.class, id)
+                .toInstant()).isEqualTo(scheduled);
+        assertThat(jdbc.queryForObject("select deletion_requested_by from users where id = ?", String.class, id))
+                .isEqualTo("SELF");
+        assertThat(jdbc.queryForObject("select enabled from users where id = ?", Boolean.class, id)).isFalse();
+    }
+
+    @Test
+    void adminMutationsOnADeletedAccountAre404() throws Exception {
+        String admin = login("admin", "Admin12345!");
+        long id = userId(register("borrada", "borrada@test.com")[0]);
+        em.flush();
+        jdbc.update("update users set deleted_at = CURRENT_TIMESTAMP, enabled = false where id = ?", id);
+        em.clear(); // la fila cambiada por SQL tiene que leerse de la BD
+
+        mvc.perform(bearer(patch("/api/admin/users/" + id + "/enabled"), admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":true}"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("notFound.user"));
+        mvc.perform(bearer(put("/api/admin/users/" + id + "/roles"), admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"roles\":[\"ROLE_DEVELOPER\"]}"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("notFound.user"));
+        mvc.perform(bearer(post("/api/admin/users/" + id + "/verify-email"), admin))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("notFound.user"));
+        // el usuario se comprueba antes que el juego: sin el arreglo saldria notFound.game
+        mvc.perform(bearer(post("/api/admin/users/" + id + "/library/999999"), admin))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("notFound.user"));
+        assertThat(jdbc.queryForObject("select enabled from users where id = ?", Boolean.class, id)).isFalse();
     }
 
     @Test

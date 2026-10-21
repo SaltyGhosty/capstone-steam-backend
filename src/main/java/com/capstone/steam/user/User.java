@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
@@ -20,7 +21,13 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 
+/**
+ * {@code @DynamicUpdate}: cada UPDATE escribe solo las columnas cambiadas. Las mutaciones del admin cargan la fila
+ * sin bloqueo; escribiendo la fila entera, una copia vieja desharía una baja o una anonimización confirmada entre
+ * la carga y el flush.
+ */
 @Entity
+@DynamicUpdate
 @Table(name = "users")
 public class User {
 

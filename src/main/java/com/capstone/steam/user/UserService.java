@@ -81,7 +81,7 @@ public class UserService {
         if (adminId.equals(userId) && !roles.contains(RoleName.ROLE_ADMIN)) {
             throw new BadRequestException("user.cannotRemoveOwnAdmin");
         }
-        User user = findWithRoles(userId);
+        User user = findLive(userId);
         if (user.hasRole(RoleName.ROLE_ADMIN) && !roles.contains(RoleName.ROLE_ADMIN)) {
             adminGuard.requireAnotherAdmin(userId); // no se puede dejar la tienda sin administradores
         }
@@ -98,7 +98,7 @@ public class UserService {
         if (adminId.equals(userId) && !enabled) {
             throw new BadRequestException("user.cannotDisableSelf");
         }
-        User user = findWithRoles(userId);
+        User user = findLive(userId);
         if (!enabled && user.hasRole(RoleName.ROLE_ADMIN)) {
             adminGuard.requireAnotherAdmin(userId);
         }
@@ -118,5 +118,14 @@ public class UserService {
 
     private User findWithRoles(Long userId) {
         return userRepository.findWithRolesById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
+    }
+
+    /** Para las mutaciones del admin: una cuenta eliminada (anonimizada) ya no existe para él. */
+    private User findLive(Long userId) {
+        User user = findWithRoles(userId);
+        if (user.isDeleted()) {
+            throw NotFoundException.of("user", userId);
+        }
+        return user;
     }
 }
