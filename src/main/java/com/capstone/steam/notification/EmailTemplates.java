@@ -76,8 +76,7 @@ final class EmailTemplates {
         }
         String body = eyebrow(t.welcomeEyebrow(), ACCENT)
                 + heading(greeting(t.welcomeHello(), displayName, "!"))
-                + paragraph(t.welcomeBody().formatted(esc(brand.name())))
-                + button(t.welcomeButton(), brand.link("/browse"));
+                + paragraph(t.welcomeBody().formatted(esc(brand.name())));
         return new Email(t.welcomeSubject().formatted(brand.name()), layout(brand, t, t.welcomePreheader(), body));
     }
 
@@ -102,8 +101,7 @@ final class EmailTemplates {
                           <td align="right" style="padding:16px 0 0;font:700 20px/1.2 %s;color:%s;">%s</td>
                         </tr>
                         </table>
-                        """.formatted(rows, FONT, MUTED, t.total(), FONT, TEXT, money(total, t))
-                + button(t.receiptButton(), brand.link("/library"));
+                        """.formatted(rows, FONT, MUTED, t.total(), FONT, TEXT, money(total, t));
         return new Email(t.receiptSubject().formatted(orderId),
                 layout(brand, t, t.receiptPreheader().formatted(orderId, money(total, t)), body));
     }
@@ -121,14 +119,13 @@ final class EmailTemplates {
                         <tr><td style="padding:13px 16px;border:1px solid %s;border-radius:9px;font:600 15px/1.45 %s;color:%s;">%s</td></tr>
                         </table>
                         """.formatted(DANGER, FONT, DANGER, esc(reason))
-                + paragraph(t.failedRetry())
-                + button(t.failedButton(), brand.link("/cart"));
+                + paragraph(t.failedRetry());
         return new Email(t.failedSubject().formatted(orderId),
                 layout(brand, t, t.failedPreheader().formatted(orderId), body));
     }
 
     /** Aviso de oferta de un juego de la wishlist: portada, título y precio antes y ahora. */
-    static Email gameOnSale(Brand brand, String displayName, String title, String slug, String coverUrl,
+    static Email gameOnSale(Brand brand, String displayName, String title, String coverUrl,
             BigDecimal price, BigDecimal finalPrice, int discountPercent, String locale) {
         MailTexts t = MailTexts.of(locale);
         String cover = safeImageUrl(coverUrl);
@@ -149,8 +146,7 @@ final class EmailTemplates {
                         </tr>
                         </table>
                         """.formatted(image, FONT, TEXT, esc(title), FONT, MUTED, money(price, t), FONT, ACCENT,
-                        money(finalPrice, t))
-                + button(t.saleButton(), brand.link("/games/" + slug));
+                        money(finalPrice, t));
         return new Email(t.saleSubject().formatted(title, discountPercent),
                 layout(brand, t, t.salePreheader(), body));
     }

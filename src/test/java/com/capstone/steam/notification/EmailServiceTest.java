@@ -244,7 +244,7 @@ class EmailServiceTest {
     }
 
     @Test
-    void buttonsLinkToTheStore() throws Exception {
+    void receiptHasNoButtonBackToTheStore() throws Exception {
         var service = new EmailService(mailSender, "", "ARCADE", "https://arcade.test/, http://localhost:5173",
                 "smtp-user@gmail.com");
 
@@ -252,7 +252,7 @@ class EmailServiceTest {
                 "es");
 
         String html = (String) sentMessage().getContent();
-        assertThat(html).contains("href=\"https://arcade.test/library\"", "Este juego ya está en tu biblioteca");
+        assertThat(html).doesNotContain("href=\"https://arcade.test/library\"");
         assertThat(html).doesNotContain("localhost");
     }
 
@@ -303,7 +303,7 @@ class EmailServiceTest {
 
         MimeMessage message = sentMessage();
         assertThat(message.getSubject()).isEqualTo("Non siamo riusciti ad addebitare il tuo ordine #3");
-        assertThat((String) message.getContent()).contains("<html lang=\"it\">", "Torna al carrello");
+        assertThat((String) message.getContent()).contains("<html lang=\"it\">", "Non siamo riusciti");
     }
 
     @Test

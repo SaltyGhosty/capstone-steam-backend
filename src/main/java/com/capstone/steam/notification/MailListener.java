@@ -65,6 +65,6 @@ public class MailListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onGameOnSale(GameOnSaleEvent event) {
         event.recipients().forEach(r -> emailService.sendGameOnSale(r.email(), r.displayName(), event.title(),
-                event.slug(), event.coverUrl(), event.price(), event.finalPrice(), event.discountPercent(), r.locale()));
+                event.coverUrl(), event.price(), event.finalPrice(), event.discountPercent(), r.locale()));
     }
 }

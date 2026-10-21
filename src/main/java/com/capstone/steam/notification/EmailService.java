@@ -115,9 +115,9 @@ public class EmailService {
         send(to, EmailTemplates.paymentFailed(brand, displayName, orderId, total, reason, locale));
     }
 
-    public void sendGameOnSale(String to, String displayName, String title, String slug, String coverUrl,
+    public void sendGameOnSale(String to, String displayName, String title, String coverUrl,
             BigDecimal price, BigDecimal finalPrice, int discountPercent, String locale) {
-        send(to, EmailTemplates.gameOnSale(brand, displayName, title, slug, coverUrl, price, finalPrice,
+        send(to, EmailTemplates.gameOnSale(brand, displayName, title, coverUrl, price, finalPrice,
                 discountPercent, locale));
     }
 

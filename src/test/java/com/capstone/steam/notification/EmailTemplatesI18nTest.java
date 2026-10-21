@@ -32,7 +32,7 @@ class EmailTemplatesI18nTest {
 
         assertThat(email.subject()).isEqualTo("Welcome to ARCADE!");
         assertThat(email.html()).contains("<html lang=\"en\">", "Hi, Ana!", "Account created",
-                "Your ARCADE account is ready", "Explore the catalogue",
+                "Your ARCADE account is ready",
                 "This is an automated email, please do not reply.")
                 .doesNotContain("¡Hola", "Explorar el catálogo", "correo automático");
     }
@@ -43,7 +43,7 @@ class EmailTemplatesI18nTest {
 
         assertThat(email.subject()).isEqualTo("Benvenuto su ARCADE!");
         assertThat(email.html()).contains("<html lang=\"it\">", "Ciao, Ana!", "Account creato",
-                "Il tuo account ARCADE è pronto", "Esplora il catalogo",
+                "Il tuo account ARCADE è pronto",
                 "Questa è un'email automatica, non rispondere.")
                 .doesNotContain("¡Hola", "correo automático");
     }
@@ -53,8 +53,9 @@ class EmailTemplatesI18nTest {
         Email email = EmailTemplates.welcome(BRAND, "Ana", "es", null, null);
 
         assertThat(email.subject()).isEqualTo("¡Bienvenido a ARCADE!");
-        assertThat(email.html()).contains("<html lang=\"es\">", "¡Hola, Ana!", "Explorar el cat&aacute;logo", // botones y eyebrow van escapados
-                "Este es un correo automático, no respondas.");
+        assertThat(email.html()).contains("<html lang=\"es\">", "¡Hola, Ana!",
+                "Este es un correo automático, no respondas.")
+                .doesNotContain("Explorar el cat&aacute;logo");
     }
 
     // ------------------------------------------------------------------ bienvenida con verificación
@@ -96,7 +97,26 @@ class EmailTemplatesI18nTest {
         Email email = EmailTemplates.welcome(BRAND, "Ana", "es", null, null);
 
         assertThat(email.subject()).isEqualTo("¡Bienvenido a ARCADE!");
-        assertThat(email.html()).contains("https://arcade.test/browse").doesNotContain("verify-email");
+        assertThat(email.html()).doesNotContain("verify-email", "href=\"https://arcade.test/");
+    }
+
+    /** Solo el correo de verificación lleva botón: los demás no enlazan a páginas de la tienda. */
+    @Test
+    void mailsHaveNoButtonsBackToTheStore() {
+        for (String locale : new String[] {"es", "en", "it"}) {
+            String[] html = {
+                EmailTemplates.welcome(BRAND, "Ana", locale, null, null).html(),
+                EmailTemplates.purchaseReceipt(BRAND, "Ana", 7L, BigDecimal.TEN,
+                        List.of(new OrderPaidEvent.Line("Celeste", null, BigDecimal.TEN)), locale).html(),
+                EmailTemplates.paymentFailed(BRAND, "Ana", 7L, BigDecimal.TEN, "card", locale).html(),
+                EmailTemplates.gameOnSale(BRAND, "Ana", "Celeste", null, BigDecimal.TEN,
+                        BigDecimal.ONE, 90, locale).html(),
+            };
+            for (String h : html) {
+                assertThat(h).doesNotContain("href=\"https://arcade.test/", "/library", "/cart", "/browse",
+                        "/games/");
+            }
+        }
     }
 
     // ------------------------------------------------------------------ recibo
@@ -108,7 +128,7 @@ class EmailTemplatesI18nTest {
         assertThat(email.subject()).isEqualTo("Receipt for your purchase #42");
         assertThat(email.html()).contains("<html lang=\"en\">", "Thanks for your purchase, Ana!",
                 "These games are now in your library:", "Order #42 · Paid".replace("·", "&middot;"),
-                ">Total<", "Go to my library", "€1,234.50", "Order #42 paid: &euro;1,234.50.") // el preheader va escapado
+                ">Total<", "€1,234.50", "Order #42 paid: &euro;1,234.50.") // el preheader va escapado
                 .doesNotContain("Pedido", "biblioteca");
     }
 
@@ -118,7 +138,7 @@ class EmailTemplatesI18nTest {
 
         assertThat(email.subject()).isEqualTo("Ricevuta del tuo acquisto #42");
         assertThat(nbsp(email.html())).contains("<html lang=\"it\">", "Grazie per il tuo acquisto, Ana!",
-                "Questo gioco è ora nella tua libreria:", ">Totale<", "Vai alla mia libreria", "1.234,50 €")
+                "Questo gioco è ora nella tua libreria:", ">Totale<", "1.234,50 €")
                 .doesNotContain("Pedido", "biblioteca");
     }
 
@@ -130,7 +150,7 @@ class EmailTemplatesI18nTest {
 
         assertThat(email.subject()).isEqualTo("We couldn't charge your order #7");
         assertThat(email.html()).contains("<html lang=\"en\">", "Hi, Ana.", "The payment of <strong",
-                "€1,234.50</strong> was declined:", "Back to cart",
+                "€1,234.50</strong> was declined:",
                 "The games are still in your cart: you can try again with another payment method.",
                 "Tarjeta rechazada &lt;x&gt;") // el motivo lo da la pasarela y no se traduce
                 .doesNotContain("Volver al carrito", "<x>");
@@ -142,7 +162,7 @@ class EmailTemplatesI18nTest {
 
         assertThat(email.subject()).isEqualTo("Non siamo riusciti ad addebitare il tuo ordine #7");
         assertThat(nbsp(email.html())).contains("<html lang=\"it\">", "Ciao, Ana.", "Il pagamento di <strong",
-                "1.234,50 €</strong> è stato rifiutato:", "Torna al carrello");
+                "1.234,50 €</strong> è stato rifiutato:");
     }
 
     // ------------------------------------------------------------------ dinero, fallback, seguridad
@@ -162,7 +182,7 @@ class EmailTemplatesI18nTest {
 
         Email email = EmailTemplates.paymentFailed(BRAND, "Ana", 7L, TOTAL, "Rechazada", locale);
         assertThat(email.subject()).isEqualTo("No hemos podido cobrar tu pedido #7");
-        assertThat(email.html()).contains("<html lang=\"es\">", "Volver al carrito");
+        assertThat(email.html()).contains("<html lang=\"es\">", "No hemos podido cobrar");
     }
 
     @Test
@@ -190,23 +210,23 @@ class EmailTemplatesI18nTest {
     // ------------------------------------------------------------------ oferta en la wishlist
 
     @Test
-    void gameOnSaleInItalianLinksToTheGameAndEscapesTheTitle() {
-        Email email = EmailTemplates.gameOnSale(BRAND, "Ana", "Tom & <Jerry>", "tom-jerry",
+    void gameOnSaleInItalianEscapesTheTitle() {
+        Email email = EmailTemplates.gameOnSale(BRAND, "Ana", "Tom & <Jerry>",
                 "https://cdn.test/cover.jpg", new BigDecimal("18.99"), new BigDecimal("4.74"), 75, "it");
 
         assertThat(email.subject()).isEqualTo("Tom & <Jerry> è in offerta: −75%");
         assertThat(email.html()).contains("<html lang=\"it\">", "Tom &amp; &lt;Jerry&gt; è in offerta!",
-                "La tua lista dei desideri &middot; &minus;75%", "https://arcade.test/games/tom-jerry", "4,74",
+                "La tua lista dei desideri &middot; &minus;75%", "4,74",
                 "https://cdn.test/cover.jpg")
                 .doesNotContain("<Jerry>");
     }
 
     @Test
     void gameOnSaleFallsBackToSpanish() {
-        Email email = EmailTemplates.gameOnSale(BRAND, null, "Celeste", "celeste", "javascript:alert(1)",
+        Email email = EmailTemplates.gameOnSale(BRAND, null, "Celeste", "javascript:alert(1)",
                 new BigDecimal("18.99"), new BigDecimal("4.74"), 75, "fr");
 
         assertThat(email.subject()).isEqualTo("Celeste está en oferta: −75%");
-        assertThat(email.html()).contains("Ver el juego").doesNotContain("javascript:");
+        assertThat(email.html()).contains("Celeste").doesNotContain("javascript:");
     }
 }
