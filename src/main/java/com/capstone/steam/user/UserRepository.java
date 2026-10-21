@@ -57,6 +57,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("select u from User u where u.id = :id")
     Optional<User> findByIdForUpdate(Long id);
 
+    /**
+     * Los administradores que cuentan (activos, sin baja programada ni anonimizados), bloqueados por id
+     * ascendente: dos peticiones que quitan admins a la vez se serializan sin interbloqueos.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select u from User u
+             where u.enabled = true and u.deletionScheduledAt is null and u.deletedAt is null
+               and exists (select r.id from u.roles r where r.name = com.capstone.steam.user.RoleName.ROLE_ADMIN)
+             order by u.id""")
+    List<User> lockCountingAdmins();
+
     Optional<User> findByUsernameIgnoreCase(String username);
 
     boolean existsByEmail(String email);

@@ -24,10 +24,12 @@ public class UserService {
     private final RefreshTokenService refreshTokenService;
     private final AccessTokenRevocations accessTokenRevocations;
     private final EmailVerificationService emailVerificationService;
+    private final AdminGuard adminGuard;
 
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
             RefreshTokenService refreshTokenService, AccessTokenRevocations accessTokenRevocations,
-            EmailVerificationService emailVerificationService) {
+            EmailVerificationService emailVerificationService, AdminGuard adminGuard) {
+        this.adminGuard = adminGuard;
         this.emailVerificationService = emailVerificationService;
         this.accessTokenRevocations = accessTokenRevocations;
         this.userRepository = userRepository;
@@ -80,6 +82,9 @@ public class UserService {
             throw new BadRequestException("user.cannotRemoveOwnAdmin");
         }
         User user = findWithRoles(userId);
+        if (user.hasRole(RoleName.ROLE_ADMIN) && !roles.contains(RoleName.ROLE_ADMIN)) {
+            adminGuard.requireAnotherAdmin(userId); // no se puede dejar la tienda sin administradores
+        }
         user.getRoles().clear();
         roles.forEach(name -> user.addRole(roleRepository.findByName(name).orElseThrow()));
         // Los roles viajan en el access token: se cortan sus sesiones para que renueve con los nuevos
@@ -94,6 +99,9 @@ public class UserService {
             throw new BadRequestException("user.cannotDisableSelf");
         }
         User user = findWithRoles(userId);
+        if (!enabled && user.hasRole(RoleName.ROLE_ADMIN)) {
+            adminGuard.requireAnotherAdmin(userId);
+        }
         user.setEnabled(enabled);
         if (!enabled) {
             refreshTokenService.revokeAll(userId);
