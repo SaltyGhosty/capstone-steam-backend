@@ -38,16 +38,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     ProblemDetail handleApi(ApiException ex) {
-        ProblemDetail pd = problem(ex.getStatus(), ex.getLocalizedMessage());
-        pd.setProperty("code", ex.getCode());
-        return pd;
+        return withCode(ex);
     }
 
     /** 403 de una cuenta en pausa: además del código, la fecha (ISO-8601) en que se eliminará. */
     @ExceptionHandler(AccountPendingDeletionException.class)
     ProblemDetail handlePendingDeletion(AccountPendingDeletionException ex) {
-        ProblemDetail pd = problem(ex.getStatus(), ex.getLocalizedMessage());
-        pd.setProperty("code", ex.getCode());
+        ProblemDetail pd = withCode(ex);
         pd.setProperty("deletionScheduledAt", ex.getScheduledAt().toString());
         return pd;
     }
@@ -126,6 +123,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail handleUnexpected(Exception ex) {
         log.error("Error no controlado", ex);
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, Messages.get("error.internal"));
+    }
+
+    private static ProblemDetail withCode(ApiException ex) {
+        ProblemDetail pd = problem(ex.getStatus(), ex.getLocalizedMessage());
+        pd.setProperty("code", ex.getCode());
+        return pd;
     }
 
     private static ProblemDetail problem(HttpStatus status, String detail) {

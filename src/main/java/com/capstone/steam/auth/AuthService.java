@@ -183,17 +183,13 @@ public class AuthService {
 
     /**
      * Desde el 403 del login: con la contraseña correcta, el dueño cancela su baja y entra. Sin baja pendiente
-     * responde igual que el login (no revela más); si la pidió un admin, el mismo 403 del login.
+     * responde igual que el login (no revela más). La decisión (propia, de un admin, anonimizada) la toma
+     * {@code cancelBySelf} sobre la fila bloqueada, no la lectura de {@code authenticate}.
      */
     @Transactional
     public AuthResponse recoverAccount(String login, String password) {
         User user = authenticate(login, password);
-        if (user.isPendingDeletion()) {
-            if (user.getDeletionRequestedBy() == DeletionRequester.ADMIN) {
-                throw pendingDeletion(user);
-            }
-            accountDeletionService.cancelBySelf(user);
-        }
+        accountDeletionService.cancelBySelf(user);
         return issueToken(user);
     }
 

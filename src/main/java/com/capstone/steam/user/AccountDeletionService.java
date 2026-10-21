@@ -8,11 +8,13 @@ import jakarta.persistence.LockModeType;
 
 import org.hibernate.Hibernate;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.capstone.steam.auth.RefreshTokenService;
+import com.capstone.steam.common.exception.AccountPendingDeletionException;
 import com.capstone.steam.common.exception.BadRequestException;
 import com.capstone.steam.common.exception.NotFoundException;
 import com.capstone.steam.notification.event.AccountDeletionCancelledEvent;
@@ -92,14 +94,23 @@ public class AccountDeletionService {
 
     /**
      * El dueño recupera su cuenta (lo usa la recuperación desde el login). Bloquea y relee la fila por su cuenta:
-     * da igual que {@code user} se cargara antes, su estado en memoria no se usa.
+     * da igual que {@code user} se cargara antes, su estado en memoria no se usa. Sobre la fila bloqueada:
+     * anonimizada, falla como una contraseña incorrecta (401); con la baja pedida por un admin, 403 y no se
+     * cancela nada; con la baja propia, se cancela; sin baja, no hace nada.
      */
     @Transactional
     public void cancelBySelf(User user) {
         User locked = lockFresh(user.getId());
-        if (locked.isPendingDeletion()) {
-            cancel(locked);
+        if (locked.isDeleted()) {
+            throw new BadCredentialsException("cuenta eliminada");
         }
+        if (!locked.isPendingDeletion()) {
+            return;
+        }
+        if (locked.getDeletionRequestedBy() == DeletionRequester.ADMIN) {
+            throw new AccountPendingDeletionException("auth.accountDeletionByAdmin", locked.getDeletionScheduledAt());
+        }
+        cancel(locked);
     }
 
     /**

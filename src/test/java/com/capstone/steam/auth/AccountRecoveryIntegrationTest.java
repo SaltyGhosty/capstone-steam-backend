@@ -1,6 +1,7 @@
 package com.capstone.steam.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -15,6 +16,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
@@ -22,8 +25,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.capstone.steam.common.exception.AccountPendingDeletionException;
 import com.capstone.steam.notification.event.AccountDeletionCancelledEvent;
 import com.capstone.steam.support.MutableClock;
+import com.capstone.steam.user.AccountDeletionService;
 import com.capstone.steam.user.User;
 import com.capstone.steam.user.UserRepository;
 import com.jayway.jsonpath.JsonPath;
@@ -41,6 +46,8 @@ class AccountRecoveryIntegrationTest {
     @Autowired private MutableClock clock;
     @Autowired private UserRepository userRepository;
     @Autowired private ApplicationEvents events;
+    @Autowired private AccountDeletionService accountDeletionService;
+    @Autowired private JdbcTemplate jdbc;
 
     @Test
     void loginWhilePausedBySelfIs403WithDate() throws Exception {
@@ -105,7 +112,10 @@ class AccountRecoveryIntegrationTest {
     void recoverWithWrongPasswordIs401() throws Exception {
         pauseBySelf("clave", "clave@test.com");
 
-        mvc.perform(recover("clave", "wrong-password")).andExpect(status().isUnauthorized());
+        mvc.perform(recover("clave", "wrong-password")).andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Usuario o contraseña incorrectos"))
+                .andExpect(jsonPath("$.code").doesNotExist())
+                .andExpect(jsonPath("$.deletionScheduledAt").doesNotExist());
         assertThat(userRepository.findByUsernameIgnoreCase("clave").orElseThrow().isPendingDeletion()).isTrue();
     }
 
@@ -128,7 +138,48 @@ class AccountRecoveryIntegrationTest {
 
         mvc.perform(login("anon", "password123")).andExpect(status().isUnauthorized());
         mvc.perform(login("anon@test.com", "password123")).andExpect(status().isUnauthorized());
-        mvc.perform(recover("anon", "password123")).andExpect(status().isUnauthorized());
+        mvc.perform(recover("anon", "password123")).andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Usuario o contraseña incorrectos"))
+                .andExpect(jsonPath("$.code").doesNotExist());
+    }
+
+    @Test
+    void recoverUnknownLoginGivesTheSameBodyAsLogin() throws Exception {
+        String viaLogin = mvc.perform(login("nadie", "password123")).andExpect(status().isUnauthorized())
+                .andReturn().getResponse().getContentAsString();
+        String viaRecover = mvc.perform(recover("nadie", "password123")).andExpect(status().isUnauthorized())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(JsonPath.<String>read(viaRecover, "$.detail")).isEqualTo("Usuario o contraseña incorrectos");
+        assertThat(JsonPath.<Object>read(viaRecover, "$.title")).isEqualTo(JsonPath.<Object>read(viaLogin, "$.title"));
+        assertThat(JsonPath.<Object>read(viaRecover, "$.detail")).isEqualTo(JsonPath.<Object>read(viaLogin, "$.detail"));
+        assertThat(JsonPath.<Object>read(viaRecover, "$.status")).isEqualTo(401);
+    }
+
+    @Test
+    void cancelBySelfDecidesOnTheLockedRowNotOnTheStaleOne() throws Exception {
+        pauseBySelf("carrera", "carrera@test.com");
+        User stale = userRepository.findByUsernameIgnoreCase("carrera").orElseThrow(); // SELF, como lo leyó authenticate
+        // otro admin cancela y vuelve a programar la baja como ADMIN entre la lectura y el bloqueo
+        jdbc.update("update users set deletion_requested_by = 'ADMIN' where id = ?", stale.getId());
+
+        assertThatThrownBy(() -> accountDeletionService.cancelBySelf(stale))
+                .isInstanceOf(AccountPendingDeletionException.class)
+                .extracting("code").isEqualTo("auth.accountDeletionByAdmin");
+        assertThat(userRepository.findByUsernameIgnoreCase("carrera").orElseThrow().isPendingDeletion()).isTrue();
+        assertThat(events.stream(AccountDeletionCancelledEvent.class).count()).isZero();
+    }
+
+    @Test
+    void cancelBySelfOnAnAnonymizedRowFailsAsBadCredentials() throws Exception {
+        pauseBySelf("purgada", "purgada@test.com");
+        User stale = userRepository.findByUsernameIgnoreCase("purgada").orElseThrow(); // aún pendiente en memoria
+        jdbc.update("update users set deleted_at = ?, deletion_scheduled_at = null, deletion_requested_by = null,"
+                + " enabled = false where id = ?", java.sql.Timestamp.from(clock.now), stale.getId());
+
+        assertThatThrownBy(() -> accountDeletionService.cancelBySelf(stale))
+                .isInstanceOf(BadCredentialsException.class);
+        assertThat(events.stream(AccountDeletionCancelledEvent.class).count()).isZero();
     }
 
     private void pauseBySelf(String username, String email) throws Exception {
