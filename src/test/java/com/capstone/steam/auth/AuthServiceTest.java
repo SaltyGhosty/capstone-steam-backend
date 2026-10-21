@@ -43,6 +43,7 @@ class AuthServiceTest {
     @Mock private ApplicationEventPublisher events;
     @Mock private RefreshTokenService refreshTokenService;
     @Mock private EmailVerificationService verificationService;
+    @Mock private com.capstone.steam.user.AccountDeletionService accountDeletionService;
 
     private AuthService authService;
 
@@ -50,7 +51,7 @@ class AuthServiceTest {
     void setUp() {
         authService = new AuthService(userRepository, roleRepository, passwordEncoder, authenticationManager,
                 jwtService, events, refreshTokenService, verificationService,
-                new EmailVerificationProperties(false, java.time.Duration.ofDays(1), 3));
+                new EmailVerificationProperties(false, java.time.Duration.ofDays(1), 3), accountDeletionService);
     }
 
     @Test

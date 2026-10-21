@@ -43,6 +43,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return pd;
     }
 
+    /** 403 de una cuenta en pausa: además del código, la fecha (ISO-8601) en que se eliminará. */
+    @ExceptionHandler(AccountPendingDeletionException.class)
+    ProblemDetail handlePendingDeletion(AccountPendingDeletionException ex) {
+        ProblemDetail pd = problem(ex.getStatus(), ex.getLocalizedMessage());
+        pd.setProperty("code", ex.getCode());
+        pd.setProperty("deletionScheduledAt", ex.getScheduledAt().toString());
+        return pd;
+    }
+
     /** 429 de un límite por ventana: con la cabecera Retry-After (segundos) para que el cliente sepa cuándo volver. */
     @ExceptionHandler(RateLimitedException.class)
     ResponseEntity<ProblemDetail> handleRateLimited(RateLimitedException ex) {

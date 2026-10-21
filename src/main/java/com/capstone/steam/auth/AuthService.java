@@ -15,6 +15,7 @@ import com.capstone.steam.auth.dto.LoginRequest;
 import com.capstone.steam.auth.dto.RegisterRequest;
 import com.capstone.steam.auth.dto.RegisterResponse;
 import com.capstone.steam.auth.dto.RegistrationResult;
+import com.capstone.steam.common.exception.AccountPendingDeletionException;
 import com.capstone.steam.common.exception.BadRequestException;
 import com.capstone.steam.common.exception.ConflictException;
 import com.capstone.steam.common.exception.ForbiddenException;
@@ -23,6 +24,8 @@ import com.capstone.steam.common.exception.UnauthorizedException;
 import com.capstone.steam.notification.event.UserRegisteredEvent;
 import com.capstone.steam.security.AppUserPrincipal;
 import com.capstone.steam.security.JwtService;
+import com.capstone.steam.user.AccountDeletionService;
+import com.capstone.steam.user.DeletionRequester;
 import com.capstone.steam.user.Role;
 import com.capstone.steam.user.RoleName;
 import com.capstone.steam.user.RoleRepository;
@@ -42,11 +45,13 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final EmailVerificationService verificationService;
     private final EmailVerificationProperties verification;
+    private final AccountDeletionService accountDeletionService;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager, JwtService jwtService, ApplicationEventPublisher events,
             RefreshTokenService refreshTokenService, EmailVerificationService verificationService,
-            EmailVerificationProperties verification) {
+            EmailVerificationProperties verification, AccountDeletionService accountDeletionService) {
+        this.accountDeletionService = accountDeletionService;
         this.verificationService = verificationService;
         this.verification = verification;
         this.userRepository = userRepository;
@@ -169,8 +174,33 @@ public class AuthService {
 
     @Transactional // guarda el refresh token
     public AuthResponse login(LoginRequest request) {
+        User user = authenticate(request.login(), request.password());
+        if (user.isPendingDeletion()) {
+            throw pendingDeletion(user);
+        }
+        return issueToken(user);
+    }
+
+    /**
+     * Desde el 403 del login: con la contraseña correcta, el dueño cancela su baja y entra. Sin baja pendiente
+     * responde igual que el login (no revela más); si la pidió un admin, el mismo 403 del login.
+     */
+    @Transactional
+    public AuthResponse recoverAccount(String login, String password) {
+        User user = authenticate(login, password);
+        if (user.isPendingDeletion()) {
+            if (user.getDeletionRequestedBy() == DeletionRequester.ADMIN) {
+                throw pendingDeletion(user);
+            }
+            accountDeletionService.cancelBySelf(user);
+        }
+        return issueToken(user);
+    }
+
+    /** Contraseña y estado de la cuenta: lo que comparten el login y la recuperación. */
+    private User authenticate(String login, String password) {
         var authentication = authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken.unauthenticated(request.login().trim(), request.password()));
+                UsernamePasswordAuthenticationToken.unauthenticated(login.trim(), password));
         var principal = (AppUserPrincipal) authentication.getPrincipal();
         User user = userRepository.findWithRolesById(principal.getId())
                 .orElseThrow(() -> NotFoundException.of("user", principal.getId()));
@@ -178,7 +208,13 @@ public class AuthService {
         if (!user.isEmailVerified()) {
             throw new ForbiddenException("auth.emailNotVerified");
         }
-        return issueToken(user);
+        return user;
+    }
+
+    private static AccountPendingDeletionException pendingDeletion(User user) {
+        String code = user.getDeletionRequestedBy() == DeletionRequester.ADMIN
+                ? "auth.accountDeletionByAdmin" : "auth.accountPendingDeletion";
+        return new AccountPendingDeletionException(code, user.getDeletionScheduledAt());
     }
 
     /** Canjea el enlace del correo con la contraseña de ese registro: verifica el email e inicia la sesión. */

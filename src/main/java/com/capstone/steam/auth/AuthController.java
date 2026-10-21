@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.capstone.steam.auth.dto.AuthResponse;
 import com.capstone.steam.auth.dto.LoginRequest;
+import com.capstone.steam.auth.dto.RecoverAccountRequest;
 import com.capstone.steam.auth.dto.RefreshRequest;
 import com.capstone.steam.auth.dto.RegisterRequest;
 import com.capstone.steam.auth.dto.RegistrationResult;
@@ -45,6 +46,13 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    /** Cancela la baja programada por el propio dueño y le inicia la sesión. Cuenta con el límite por IP. */
+    @PostMapping("/recover-account")
+    public AuthResponse recoverAccount(@Valid @RequestBody RecoverAccountRequest request, HttpServletRequest http) {
+        ipLimiter.checkAddress(http.getRemoteAddr());
+        return authService.recoverAccount(request.login(), request.password());
     }
 
     /** Canjea el enlace del correo: verifica el email e inicia la sesión. */
