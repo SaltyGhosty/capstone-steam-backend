@@ -16,8 +16,29 @@ RUN ./mvnw -q -B package -DskipTests -Djacoco.skip=true
 FROM eclipse-temurin:25-jre
 WORKDIR /app
 RUN useradd --system --uid 1001 app
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/*.jar build.jar
+# Jar extraído (lib/ aparte): la caché AOT necesita un classpath fijo de ficheros
+RUN java -Djarmode=tools -jar build.jar extract --destination extracted \
+    && mv extracted/*.jar extracted/app.jar && rm build.jar
+WORKDIR /app/extracted
+
+# Arranque rápido en el plan free (0,1 CPU): la JVM de Java 25 guarda en app.aot las clases ya cargadas y
+# enlazadas durante un arranque de entrenamiento. Mismos flags que en ENTRYPOINT.
+# El entrenamiento no toca la BD: sin Flyway, sin metadatos JDBC, y sale en cuanto el contexto está listo.
+ENV JAVA_FLAGS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
+RUN java $JAVA_FLAGS -XX:AOTCacheOutput=app.aot \
+      -Dspring.context.exit=onRefresh -Dspring.profiles.active=prod \
+      -Dspring.flyway.enabled=false -Dspring.jpa.hibernate.ddl-auto=none \
+      -Dspring.jpa.properties.hibernate.boot.allow_jdbc_metadata_access=false \
+      -Dspring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect \
+      -Dspring.datasource.url=jdbc:postgresql://localhost:1/aot \
+      -Dspring.datasource.username=aot -Dspring.datasource.password=aot \
+      -DJWT_SECRET=YW90LXRyYWluaW5nLXNlY3JldC0wMTIzNDU2Nzg5YWJjZGVmMDEyMw== \
+      -jar app.jar \
+    && test -s app.aot
+
 USER app
 ENV SPRING_PROFILES_ACTIVE=prod
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/app.jar"]
+# Si app.aot no sirve (otra JVM), la JVM avisa y arranca igual, solo que más lenta
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_FLAGS -XX:AOTCache=app.aot -jar app.jar"]
