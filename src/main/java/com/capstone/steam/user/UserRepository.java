@@ -1,5 +1,6 @@
 package com.capstone.steam.user;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -84,6 +85,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
              where u.enabled = true and u.deletionScheduledAt is null and u.deletedAt is null and u.id <> :excludeId
                and exists (select r.id from u.roles r where r.name = com.capstone.steam.user.RoleName.ROLE_ADMIN)""")
     long countCountingAdminsExcluding(Long excludeId);
+
+    /** Las cuentas cuyo plazo ya venció y siguen sin anonimizar, por id (la tarea programada las recorre en ese orden). */
+    @Query("""
+            select u.id from User u
+             where u.deletionScheduledAt <= :now and u.deletedAt is null
+             order by u.id""")
+    List<Long> findIdsDueForDeletion(Instant now);
 
     Optional<User> findByUsernameIgnoreCase(String username);
 
