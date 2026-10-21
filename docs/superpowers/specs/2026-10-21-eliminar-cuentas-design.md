@@ -94,7 +94,7 @@ Hoy `CatalogService.getBySlug` solo devuelve juegos PUBLISHED, así que la ficha
 
 | Endpoint | Quién | Comportamiento |
 |---|---|---|
-| `POST /api/users/me/deletion` `{ password }` | Cualquier usuario con sesión | Contraseña mala → 400/401 como en el resto del proyecto (`auth.badCredentials` o equivalente). Último admin → 409 `user.lastAdmin`. Si va bien: en pausa, `requested_by = SELF`, sesiones cortadas, correo, **204**. El frontend cierra la sesión. |
+| `POST /api/users/me/deletion` `{ password }` | Cualquier usuario con sesión | Contraseña mala → 400/401 como en el resto del proyecto (`auth.badCredentials` o equivalente). Último admin → 409 `user.lastAdmin`. Si va bien: en pausa, `requested_by = SELF`, sesiones cortadas, correo, **200** `{ deletionScheduledAt }` (cambiado en el plan: el frontend necesita la fecha). El frontend cierra la sesión. |
 | `POST /api/auth/recover-account` `{ login, password }` | Público (permitAll) | Contraseña buena + baja pendiente pedida por **SELF** → cancela la baja y devuelve `AuthResponse` (entra). Pedida por ADMIN → 403 `auth.accountDeletionByAdmin`. Sin baja pendiente o contraseña mala → mismo error que el login (no revelar más). Con el límite por IP que ya existe en `/api/auth/**`. |
 | `DELETE /api/admin/users/{id}` | ADMIN | Programa la baja con `requested_by = ADMIN`. Sobre sí mismo → 400 `user.cannotDeleteSelf`. Último admin → 409 `user.lastAdmin`. Ya pendiente → idempotente (devuelve el estado). Ya eliminada → 404 o 409 a criterio del builder. Devuelve `UserResponse` actualizado. |
 | `POST /api/admin/users/{id}/deletion/cancel` | ADMIN | Cancela cualquier baja pendiente. Idempotente. Devuelve `UserResponse`. |
