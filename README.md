@@ -8,8 +8,8 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (copertine) · OpenRouter (assistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Test** | Backend: 434 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 168 test in 23 file · CI su GitHub Actions |
-| **API** | Swagger UI su `/swagger-ui.html` · 83 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
+| **Test** | Backend: 480 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 179 test in 25 file · CI su GitHub Actions |
+| **API** | Swagger UI su `/swagger-ui.html` · 96 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
 
@@ -19,7 +19,7 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 3. [Avvio del progetto](#avvio-del-progetto)
 4. [Frontend](#frontend)
 5. [Architettura](#architettura)
-6. [Database (Flyway da V1 a V12)](#database-flyway-da-v1-a-v12)
+6. [Database (Flyway da V1 a V13)](#database-flyway-da-v1-a-v13)
 7. [API](#api)
 8. [Test](#test)
 9. [Deploy](#deploy)
@@ -74,6 +74,14 @@ I pagamenti sono **simulati**: una carta che termina con `0000` viene sempre rif
 - **Limite per IP** di 60 richieste al minuto (gli IPv6 sono raggruppati per prefisso /64; i 429 includono l'intestazione `Retry-After`) su `/register`, `/resend-verification`, `/verify-email` e `/verify-email/preview`. I 5 tentativi di password sono **per registrazione** (utente + password), non per link: un link di reinvio eredita il massimo di errori e gli errori si contano su tutti i link della registrazione, e una registrazione il cui link è stato annullato per 5 errori non viene reinviata (bisogna registrarsi di nuovo).
 - Le email ritentano fino a 3 volte gli errori di connessione all'SMTP (Gmail da Render a volte è lento a connettersi).
 
+**Cancellare l'account.** Un giocatore o uno studio può cancellare il proprio account dalle Impostazioni (serve la password) e un admin può cancellare quello di chiunque dal pannello. Non si cancella la riga: si **anonimizza**.
+- **14 giorni di pausa** (`ACCOUNT_DELETION_GRACE`): l'account non può accedere (403 `auth.accountPendingDeletion` o `auth.accountDeletionByAdmin`, con `deletionScheduledAt`), le sessioni si chiudono subito e il profilo pubblico sparisce dalle ricerche. I giochi di uno studio restano in vendita durante la pausa.
+- Se l'ha chiesta **l'utente**, può recuperare l'account accedendo entro il termine («Recupera il mio account», `POST /api/auth/recover-account`). Se l'ha chiesta **un admin**, solo un admin può annullarla.
+- Scaduto il termine, un'attività programmata (una volta al giorno e anche all'avvio, `ACCOUNT_DELETION_CRON`) anonimizza l'account: nome utente ed email diventano `deleted_<id>`, si perdono password, nome, avatar, recensioni, amicizie, carrello, wishlist e token. Si **conservano** ordini e libreria (obbligo fiscale in Italia, senza dati che identifichino la persona). I giochi pubblicati di uno studio passano a DELISTED e quelli in bozza si eliminano.
+- **Resta sempre almeno un admin attivo**: la regola vale per la cancellazione, per il cambio di ruoli e per la disattivazione, con blocco pessimistico delle righe degli admin e un nuovo conteggio.
+- Chi possiede un gioco ritirato (DELISTED) lo vede ancora nella libreria e può aprirne la scheda (come su Steam), con l'avviso «Non è più in vendita»; lo stesso vale per lo studio e per l'admin. Per gli altri la scheda dà 404. Se lo studio è stato cancellato, compare «Studio eliminato» e il gioco non si può ripubblicare (409 `game.developerDeleted`).
+- Quattro email (es/en/it, solo testo): cancellazione programmata dall'utente, programmata da un admin, annullata e account eliminato.
+
 **Sessione con refresh token.** Il token di accesso dura **15 minuti** e il refresh token **7 giorni**.
 - Il login e la verifica dell'email restituiscono entrambi (la registrazione, solo se la verifica è disattivata). `POST /api/auth/refresh` scambia il refresh con una nuova coppia (**rotazione**: il precedente viene revocato) e `POST /api/auth/logout` chiude la sessione.
 - Nel database viene salvato solo lo SHA-256 del refresh token. Se ne arriva uno già usato (possibile furto), si revoca **tutta la sua famiglia**, cioè tutti i token concatenati a partire dallo stesso login.
@@ -98,7 +106,7 @@ I pagamenti sono **simulati**: una carta che termina con `0000` viene sempre rif
 | Spring Security + JWT stateless | [SecurityConfig](src/main/java/com/capstone/steam/security/SecurityConfig.java), [JwtService](src/main/java/com/capstone/steam/security/JwtService.java) (HS256, jjwt 0.13) e [JwtAuthFilter](src/main/java/com/capstone/steam/security/JwtAuthFilter.java) |
 | **Criteria API** per i filtri del catalogo | [GameCriteriaRepository](src/main/java/com/capstone/steam/game/search/GameCriteriaRepository.java): 9 filtri opzionali e 6 ordinamenti, con una subquery per i generi e paginazione nel database |
 | **UPDATE atomici scritti a mano** | [GameRepository](src/main/java/com/capstone/steam/game/GameRepository.java) (`incrementSalesCount`, `applyReviewDelta`, `bulkDiscountForDeveloper`), [OrderRepository](src/main/java/com/capstone/steam/order/OrderRepository.java) (`markPaid`, `closePending`) e [LibraryRepository](src/main/java/com/capstone/steam/library/LibraryRepository.java) (`addPlaytime`) |
-| Flyway da V1 a V4 (e da V5 a V12) | [db/migration](src/main/resources/db/migration) (vedi [sotto](#database-flyway-da-v1-a-v12)) |
+| Flyway da V1 a V4 (e da V5 a V13) | [db/migration](src/main/resources/db/migration) (vedi [sotto](#database-flyway-da-v1-a-v13)) |
 | Spring Mail + Gmail SMTP | [EmailService](src/main/java/com/capstone/steam/notification/EmailService.java), [EmailTemplates](src/main/java/com/capstone/steam/notification/EmailTemplates.java) e [MailTexts](src/main/java/com/capstone/steam/notification/MailTexts.java) (testi in es, en e it) |
 | Spring Events **AFTER_COMMIT** + `@Async` con **pool dedicato** | [MailListener](src/main/java/com/capstone/steam/notification/MailListener.java) e [AsyncConfig](src/main/java/com/capstone/steam/config/AsyncConfig.java) (`mailExecutor`, thread `mail-*`) |
 | JUnit 5 + Mockito + H2 | [src/test](src/test/java/com/capstone/steam): test unitari, di repository, di integrazione HTTP e di concorrenza |
@@ -138,6 +146,8 @@ cp .env.example .env    # e compila i valori
 | `EMAIL_VERIFICATION_REQUIRED` | Opzionale | Predefinito `true`: creare un account invia un'email con un link e non si può accedere finché non lo si clicca. Con `false` gli account nascono verificati e la registrazione restituisce la sessione (lo usano solo i test) |
 | `AUTH_IP_LIMIT_PER_MINUTE` | Opzionale | Richieste al minuto per IP a registrazione, reinvio e verifica dell'email (predefinito `60`; poi 429 `auth.tooManyRequests` con `Retry-After`). In produzione (`prod`) l'IP reale proviene da `X-Forwarded-For` (`server.forward-headers-strategy: native`) |
 | `EMAIL_VERIFICATION_TTL` | Opzionale | Validità del link di verifica, in formato ISO-8601 (predefinita `P1D`, 24 ore) |
+| `ACCOUNT_DELETION_GRACE` | Opzionale | Pausa prima di anonimizzare un account di cui è stata chiesta la cancellazione, in formato ISO-8601 (predefinita `P14D`, 14 giorni) |
+| `ACCOUNT_DELETION_CRON` | Opzionale | Espressione cron (6 campi) dell'attività giornaliera che anonimizza le cancellazioni scadute (predefinita `0 15 4 * * *`, ogni giorno alle 04:15). Parte anche all'avvio, perché su Render free il server dorme e il cron potrebbe non scattare |
 | `FRONTEND_URL` | Opzionale | URL del negozio per il link di verifica e il logo delle email (le altre email non hanno pulsanti). Se manca, si usa la prima origine di `CORS_ALLOWED_ORIGINS` |
 | `SERVER_PORT` | Opzionale | Predefinita `PORT` (la imposta Render) oppure 8080 (`.env.example` usa 8081) |
 | `PAYMENT_FAILURE_RATE` | Opzionale | Probabilità di rifiuto casuale nelle demo (da 0.0 a 1.0, predefinita 0) |
@@ -158,7 +168,7 @@ Flyway crea lo schema all'avvio e Hibernate lo convalida (`ddl-auto=validate`). 
 ### 4. Provare
 Con l'app avviata, **Swagger UI** è su `http://localhost:8081/swagger-ui.html`: il pulsante *Authorize* accetta l'`accessToken` del login.
 
-Puoi anche importare [`postman/Capstone-Steam.postman_collection.json`](postman/Capstone-Steam.postman_collection.json) ed eseguirla con il **Collection Runner**. È un flusso completo: registrazione, refresh e logout, pubblicazione di un gioco, acquisto, recensione, amici e profilo, stato del caricamento delle copertine e assistente (accetta 200 o 503 a seconda che ci sia o meno la chiave di OpenRouter). I token e gli id si salvano da soli. Per la cartella *Admin*, inserisci la tua `ADMIN_PASSWORD` nella variabile `adminPassword`.
+Puoi anche importare [`postman/Capstone-Steam.postman_collection.json`](postman/Capstone-Steam.postman_collection.json) ed eseguirla con il **Collection Runner**. È un flusso completo: registrazione, refresh e logout, pubblicazione di un gioco, acquisto, recensione, amici e profilo, stato del caricamento delle copertine, assistente (accetta 200 o 503 a seconda che ci sia o meno la chiave di OpenRouter) e, con un account di prova creato dalla collezione, tutta la cancellazione dell'account (richiesta, accesso in pausa, recupero, cancellazione e annullamento da parte dell'admin). I token e gli id si salvano da soli. Per la cartella *Admin*, inserisci la tua `ADMIN_PASSWORD` nella variabile `adminPassword`.
 
 ## Frontend
 
@@ -215,7 +225,7 @@ La risposta HTTP non attende l'SMTP. Se la transazione fa rollback, non viene in
 
 **La lingua delle email** deriva da `users.locale`. I testi di ciascuna lingua sono nel record `MailTexts` (una costante per lingua), così il compilatore impone che nessuna resti senza traduzione. I tre eventi portano il `locale`, letto dall'utente dentro la transazione. Se manca o non viene riconosciuto, l'email esce in spagnolo.
 
-## Database (Flyway da V1 a V12)
+## Database (Flyway da V1 a V13)
 
 | Migrazione | Contenuto |
 |---|---|
@@ -230,10 +240,11 @@ La risposta HTTP non attende l'SMTP. Se la transazione fa rollback, non viene in
 | **V9** `friendships` | `users.profile_public` (falso per impostazione predefinita) e la tabella `friendships`: una riga per coppia in qualunque direzione (`UNIQUE(user_low_id, user_high_id)`), con stato `PENDING` o `ACCEPTED` |
 | **V10** `refresh_tokens` | `refresh_tokens`: SHA-256 del token (mai il token), famiglia, scadenza, data di revoca e sostituto |
 | **V11** `friendships_pair_check` | `CHECK ck_friendships_pair`: la coppia `(user_low_id, user_high_id)` deve corrispondere a richiedente e destinatario |
+| **V13** `account_deletion` | `users.deletion_scheduled_at` (quando l'account verrà anonimizzato), `deletion_requested_by` (`SELF` o `ADMIN`, con `CHECK`) e `deleted_at` (account già anonimizzato), più un indice su `deletion_scheduled_at` per l'attività programmata. Gli account esistenti restano senza cancellazione in sospeso |
 | **V12.1** `username_lower_unique` | Indice univoco su `lower(username)`: il nome utente è univoco senza distinguere maiuscole e minuscole anche nel database. PostgreSQL usa un indice per espressione; H2 (test) una colonna generata `username_lower` con un `UNIQUE`, perché H2 non supporta gli indici per espressione |
 | **V12** `email_verification` | `users.email_verified` (gli account già esistenti restano verificati) e la tabella `email_verification_tokens`: SHA-256 del link (mai il token), scadenza, data di utilizzo, i dati della registrazione che lo ha generato (utente, password cifrata, nome, lingua e tipo di account) e il contatore delle password errate |
 
-La traccia del corso richiede V1 a V4; V5 a V12 sono state aggiunte in seguito (lingua delle email, traduzioni, Steam, recensioni in stile Steam, amici, refresh token, integrità della coppia di amici e verifica dell'email). V1 a V3 e V5 a V12 sono SQL portabile; V4 e V12.1 hanno una variante per motore. V4 ha due versioni ([postgresql](src/main/resources/db/migration/postgresql) e [h2](src/main/resources/db/migration/h2)), perché H2 non supporta gli indici a trigrammi né quelli parziali. Flyway sceglie quella adatta con `locations: …/common, …/{vendor}`.
+La traccia del corso richiede V1 a V4; V5 a V13 sono state aggiunte in seguito (lingua delle email, traduzioni, Steam, recensioni in stile Steam, amici, refresh token, integrità della coppia di amici e verifica dell'email). V1 a V3 e V5 a V12 sono SQL portabile; V4 e V12.1 hanno una variante per motore. V4 ha due versioni ([postgresql](src/main/resources/db/migration/postgresql) e [h2](src/main/resources/db/migration/h2)), perché H2 non supporta gli indici a trigrammi né quelli parziali. Flyway sceglie quella adatta con `locations: …/common, …/{vendor}`.
 
 Le regole di integrità sono garantite anche dal database, non solo dal codice Java: `CHECK` (prezzo ≥ 0, sconto da 0 a 100, `positive_count <= review_count`, lingua e stati validi), `UNIQUE` e chiavi esterne con `ON DELETE` pensato caso per caso.
 
@@ -247,10 +258,12 @@ L'autenticazione è `Authorization: Bearer <accessToken>`. Il token si ottiene a
 | POST | `/api/auth/verify-email/preview` | pubblico | `{token}` → `{username}` se il link è ancora valido (non lo consuma); 400 se è usato, scaduto o inesistente |
 | POST | `/api/auth/verify-email` | pubblico | `{token, password}` (la password di quella registrazione) → verifica l'email e restituisce `accessToken` e `refreshToken`. 400 se il link non vale (`auth.verificationInvalid`) o la password non è quella della registrazione (`auth.verificationPasswordInvalid`, 5 errori annullano il link); 409 se il nome utente del link è stato preso da un altro account |
 | POST | `/api/auth/resend-verification` | pubblico | `{email}` → sempre 204 (non rivela se l'account esiste). 429 oltre le 3 email all'ora per indirizzo (registrazione inclusa) |
-| POST | `/api/auth/login` | pubblico | Login con username **o** email → `accessToken` e `refreshToken`. 403 con `code: auth.emailNotVerified` se la password è corretta ma manca la verifica dell'email |
+| POST | `/api/auth/login` | pubblico | Login con username **o** email → `accessToken` e `refreshToken`. 403 con `code: auth.emailNotVerified` se la password è corretta ma manca la verifica dell'email. Con la cancellazione in sospeso e la password corretta risponde 403 `auth.accountPendingDeletion` (l'ha chiesta l'utente: si può recuperare) o `auth.accountDeletionByAdmin`, entrambi con `deletionScheduledAt` |
+| POST | `/api/auth/recover-account` | pubblico | `{login, password}` → annulla la cancellazione e restituisce una sessione (`AuthResponse`), solo se l'ha chiesta l'utente stesso. 403 `auth.accountDeletionByAdmin` se l'ha chiesta un admin; 401 come il login se la password è errata o non c'è nessuna cancellazione |
 | POST | `/api/auth/refresh` | pubblico | `{refreshToken}` → nuova coppia (rotazione). 401 se è scaduto, revocato o già usato (in tal caso si revoca la sua famiglia) |
 | POST | `/api/auth/logout` | pubblico | `{refreshToken}` → 204; revoca la sessione (idempotente) |
 | GET / PATCH | `/api/users/me` | utente | Vedere e modificare il profilo (inclusi `locale`, la lingua delle email, e `profilePublic`) |
+| POST | `/api/users/me/deletion` | utente | `{password}` → 200 `{deletionScheduledAt}`: mette in pausa il proprio account per 14 giorni e chiude le sessioni; poi viene anonimizzato. 400 `user.deletionWrongPassword` se la password è errata; 409 `user.lastAdmin` se è l'ultimo admin attivo |
 | GET | `/api/users/search?q=` | utente | Cerca giocatori per nome (da 2 a 50 caratteri) |
 | GET | `/api/users/{username}/profile` | utente | Profilo di un giocatore; libreria e amici solo se è pubblico, amico o il proprio |
 | GET | `/api/friends` · `/api/friends/requests` | utente | I miei amici · richieste ricevute (`incoming`) e inviate (`outgoing`) |
@@ -259,7 +272,7 @@ L'autenticazione è `Authorization: Bearer <accessToken>`. Il token si ottiene a
 | DELETE | `/api/friends/requests/{id}` · `/api/friends/{username}` | utente | Annullare una richiesta inviata · eliminare un amico (204) |
 | GET | `/api/genres` | pubblico | Generi |
 | GET | `/api/games` | pubblico | Catalogo con filtri (vedi sotto) |
-| GET | `/api/games/{slug}` | pubblico | Scheda del gioco |
+| GET | `/api/games/{slug}` | pubblico | Scheda del gioco. Se è DELISTED la vedono solo chi lo possiede, il suo studio e l'admin (gli altri ricevono 404) |
 | GET | `/api/games/{slug}/reviews` | pubblico | Recensioni paginate; `?language=es\|en\|it` è facoltativo (senza, compaiono tutte) |
 | GET / POST | `/api/developer/games` | developer | I miei giochi / creare (DRAFT) |
 | GET / PUT / DELETE | `/api/developer/games/{id}` | developer (proprietario) | Vedere, modificare (con `version` → 409 se non aggiornata) ed eliminare (solo bozze senza vendite) |
@@ -283,6 +296,8 @@ L'autenticazione è `Authorization: Bearer <accessToken>`. Il token si ottiene a
 | GET | `/api/admin/users` | admin | Utenti paginati; `?q=` filtra per utente o email (senza distinguere maiuscole e minuscole) |
 | PUT | `/api/admin/users/{id}/roles` | admin | Cambiare i ruoli |
 | PATCH | `/api/admin/users/{id}/enabled` | admin | Attivare o disattivare un account |
+| DELETE | `/api/admin/users/{id}` | admin | Programma la cancellazione dell'account (stessi 14 giorni, ma solo un admin può annullarla) → 200 `UserResponse` con `deletionScheduledAt` e `deletionRequestedBy`. 400 `user.cannotDeleteSelf` su se stesso; 409 `user.lastAdmin` se resterebbe senza admin attivi |
+| POST | `/api/admin/users/{id}/deletion/cancel` | admin | Annulla qualsiasi cancellazione in sospeso (idempotente) → 200 `UserResponse` |
 | POST | `/api/admin/users/{id}/verify-email` | admin | Dare per verificata l'email dell'account, applicando i dati del suo ultimo link (idempotente) |
 | POST | `/api/admin/users/{userId}/library/{gameId}` | admin | Regalare un gioco |
 | POST / PUT / DELETE | `/api/admin/genres[/{id}]` | admin | CRUD dei generi |
@@ -314,7 +329,7 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 ## Test
 
 ```bash
-./mvnw test      # 434 test (H2 in memoria, non serve PostgreSQL)
+./mvnw test      # 480 test (H2 in memoria, non serve PostgreSQL)
 ./mvnw verify    # + report di copertura in target/site/jacoco/index.html (fallisce se scende sotto l'80 % di righe)
 ```
 
@@ -329,7 +344,7 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 
 I test usano H2 in modalità PostgreSQL **con le stesse migrazioni Flyway** della produzione; non c'è `ddl-auto=create`.
 
-**Frontend** (`cd frontend && npm test`): 168 test in 23 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
+**Frontend** (`cd frontend && npm test`): 179 test in 25 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
 
 **CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) esegue `./mvnw verify` e i test e la build del frontend a ogni push su `main`.
 

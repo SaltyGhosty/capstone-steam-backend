@@ -94,16 +94,18 @@ Minigiochi propri (senza sprite, musica né nomi dei giochi reali) ispirati a qu
 
 ## Test
 
-`npm test`: 168 test in 23 file.
+`npm test`: 179 test in 25 file.
 
 | File | Cosa verifica |
 |---|---|
 | `api/client.test.ts` | Token nelle intestazioni, query dei filtri, `FormData` senza `Content-Type`, ProblemDetail → `ApiError` con errori per campo, 402 accettato, 401 → chiusura della sessione e il rinnovo con refresh token (un solo refresh condiviso, chiusura della sessione se fallisce con 400 o 401, un 5xx non la cancella, un 401 di `/auth/login` non fa refresh né ripete una richiesta senza token) |
 | `lib/format.test.ts` | Prezzi in €, tempo di gioco, copertine orizzontali e iniziali |
-| `pages/Auth.test.tsx` | Login corretto (token salvato e reindirizzamento), credenziali errate ed errori di validazione della registrazione |
+| `pages/Auth.test.tsx` | Login corretto (token salvato e reindirizzamento), credenziali errate ed errori di validazione della registrazione; account in pausa (403) con «Recupera il mio account» o, se l'ha chiesta un admin, senza pulsante |
 | `pages/EmailVerification.test.tsx` | Registrazione → `/check-email`, reinvio, `/verify-email` (anteprima, password, password errata, link non valido, errori diversi da 400, `StrictMode`, studio verso `/developer` e senza token) |
 | `pages/Checkout.test.tsx` | Carrello → ordine → pagamento approvato; pagamento rifiutato (402) con il suo motivo; validazione della carta; carrello senza sessione → login |
-| `pages/Settings.test.tsx` | Mostra la lingua delle email dell'utente e la invia al salvataggio |
+| `pages/Settings.test.tsx` | Mostra la lingua delle email dell'utente e la invia al salvataggio; «Elimina il mio account» con password, data prevista e chiusura della sessione |
+| `pages/Admin.test.tsx` | Elimina un utente (non nella propria riga), distintivo «Eliminazione il…» e annullamento della cancellazione |
+| `pages/Collection.test.tsx` | La libreria mostra lo studio, o «Studio eliminato» |
 | `pages/GameDetail.test.tsx` | Etichetta e % di recensioni positive, filtro per lingua e «Tutte le lingue», voto 👍/👎 con lingua e senza punteggio, l'elenco si aggiorna alla modifica, modificare conserva la lingua della recensione e cambiare lingua riporta alla pagina 0 |
 | `pages/Friends.test.tsx` | Cercare con 2 caratteri e inviare la richiesta, accettare, eliminare un amico, scartare una risposta di ricerca tardiva e non riempire i risultati se il termine scende sotto i 2 caratteri |
 | `pages/Profile.test.tsx` | Profilo privato (avviso, senza libreria) e visibile (giochi con ore giocate) |
