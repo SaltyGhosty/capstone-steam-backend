@@ -138,7 +138,7 @@ cp .env.example .env    # y rellena los valores
 | `EMAIL_VERIFICATION_REQUIRED` | Opcional | Por defecto `true`: crear una cuenta manda un correo con un enlace y no se puede iniciar sesión hasta pulsarlo. Con `false` las cuentas nacen verificadas y el registro devuelve la sesión (solo lo usan los tests) |
 | `AUTH_IP_LIMIT_PER_MINUTE` | Opcional | Peticiones por minuto y IP a registro, reenvío y verificación del email (por defecto `60`; 429 `auth.tooManyRequests` con `Retry-After` después). En producción (`prod`) la IP real sale de `X-Forwarded-For` (`server.forward-headers-strategy: native`) |
 | `EMAIL_VERIFICATION_TTL` | Opcional | Validez del enlace de verificación, en formato ISO-8601 (por defecto `P1D`, 24 horas) |
-| `FRONTEND_URL` | Opcional | URL de la tienda para los botones de los correos. Si falta, se usa el primer origen de `CORS_ALLOWED_ORIGINS` |
+| `FRONTEND_URL` | Opcional | URL de la tienda para el enlace de verificación y el logo de los correos (los demás correos no llevan botones). Si falta, se usa el primer origen de `CORS_ALLOWED_ORIGINS` |
 | `SERVER_PORT` | Opcional | Por defecto `PORT` (lo fija Render) o 8080 (`.env.example` usa 8081) |
 | `PAYMENT_FAILURE_RATE` | Opcional | Probabilidad de rechazo aleatorio en las demos (0.0 a 1.0, por defecto 0) |
 | `STEAM_SYNC_ENABLED` | Opcional | Sincroniza precio y descuento con la API pública de Steam al arrancar y cada 6 h (por defecto `true`); el admin también puede lanzarlo a mano |
@@ -344,7 +344,7 @@ El repositorio incluye todo lo necesario; solo faltan las cuentas.
 
 Render solo permite **una PostgreSQL gratuita por cuenta**, y caduca a los 30 días. Como alternativa para el frontend sigue valiendo **Vercel**: *Root Directory* = `frontend` (el [`vercel.json`](frontend/vercel.json) ya configura el build y las rutas), `VITE_API_URL` con la URL de la API y esa URL de Vercel en `CORS_ALLOWED_ORIGINS`.
 
-En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda unos 3 minutos en despertarlo.
+En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda unos 3 minutos en despertarlo. Para acortarlo, el `Dockerfile` genera al construir la imagen una **caché AOT de Java 25** (`app.aot`, con un arranque de entrenamiento que no toca la BD) y arranca con `-XX:+UseSerialGC -XX:TieredStopAtLevel=1`; en local el arranque bajó de ~5,5 s a ~2,5 s.
 
 ### Alternativa: alojarlo en tu propio PC
 
