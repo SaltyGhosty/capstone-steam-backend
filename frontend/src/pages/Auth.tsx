@@ -6,6 +6,7 @@ import AuthShell from '@/components/AuthShell';
 import { FieldError } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
 import { useI18n } from '@/i18n';
+import { formatDate } from '@/lib/format';
 import { ResendVerification } from './EmailVerification';
 
 function useRedirectTarget() {
@@ -14,7 +15,7 @@ function useRedirectTarget() {
 }
 
 export function Login() {
-  const { user, login, notify } = useStore();
+  const { user, login, recoverAccount, notify } = useStore();
   const { t } = useI18n();
   const navigate = useNavigate();
   const target = useRedirectTarget();
@@ -22,15 +23,32 @@ export function Login() {
   const [error, setError] = useState('');
   // La cuenta existe pero falta pulsar el enlace del correo: se ofrece reenviarlo
   const [unverified, setUnverified] = useState(false);
+  // La cuenta está en pausa por una baja pendiente: SELF puede recuperarla, ADMIN no
+  const [paused, setPaused] = useState<{ byAdmin: boolean; date: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (user) return <Navigate to={target} replace />;
+
+  const recover = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await recoverAccount(form.login.trim(), form.password);
+      notify(t('auth.welcomeBack'));
+      navigate(target, { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('auth.loginFailed'));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError('');
     setUnverified(false);
+    setPaused(null);
     try {
       await login(form.login.trim(), form.password);
       notify(t('auth.welcomeBack'));
@@ -38,6 +56,9 @@ export function Login() {
     } catch (err) {
       if (err instanceof ApiError && err.code === 'auth.emailNotVerified') {
         setUnverified(true);
+      } else if (err instanceof ApiError && (err.code === 'auth.accountPendingDeletion' || err.code === 'auth.accountDeletionByAdmin')) {
+        const date = (err.body as { deletionScheduledAt?: string } | null)?.deletionScheduledAt;
+        setPaused({ byAdmin: err.code === 'auth.accountDeletionByAdmin', date: formatDate(date) });
       } else {
         setError(err instanceof ApiError ? err.message : t('auth.loginFailed'));
       }
@@ -61,6 +82,18 @@ export function Login() {
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="primary full" disabled={busy}>{busy ? t('auth.entering') : t('auth.enter')}</button>
       </form>
+      {paused && (
+        <>
+          <p className="form-error" role="alert">
+            {t(paused.byAdmin ? 'auth.accountDeletionByAdmin' : 'auth.accountPendingDeletion', { date: paused.date })}
+          </p>
+          {!paused.byAdmin && (
+            <button type="button" className="secondary full" disabled={busy} onClick={recover}>
+              {busy ? t('auth.recovering') : t('auth.recoverAccount')}
+            </button>
+          )}
+        </>
+      )}
       {unverified && (
         <>
           <p className="form-error" role="alert">{t('verify.notVerified')}</p>

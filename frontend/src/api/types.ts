@@ -36,6 +36,9 @@ export interface User {
   profilePublic: boolean;
   /** false hasta que el dueño pulsa el enlace del correo (sin verificar no puede iniciar sesión). */
   emailVerified: boolean;
+  /** Fecha en que se anonimizará la cuenta si está en pausa; null si no hay baja pendiente. */
+  deletionScheduledAt: string | null;
+  deletionRequestedBy: 'SELF' | 'ADMIN' | null;
 }
 
 export interface RegisterRequest {

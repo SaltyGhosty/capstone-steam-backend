@@ -17,6 +17,8 @@ interface StoreValue {
   login: (login: string, password: string) => Promise<void>;
   /** verificationRequired: la cuenta existe pero no hay sesión hasta verificar el email. */
   register: (data: RegisterRequest) => Promise<{ verificationRequired: boolean; email: string }>;
+  /** Cancela la baja pendiente de la cuenta e inicia la sesión. */
+  recoverAccount: (login: string, password: string) => Promise<void>;
   /** Canjea el enlace del correo e inicia la sesión. */
   verifyEmail: (token: string, password: string) => Promise<User>;
   logout: () => void;
@@ -118,6 +120,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [startSession],
   );
 
+  const recoverAccount = useCallback(
+    async (loginValue: string, password: string) => {
+      const res = await authApi.recoverAccount(loginValue, password);
+      await startSession(res.accessToken, res.refreshToken, res.user);
+    },
+    [startSession],
+  );
+
   const register = useCallback<StoreValue['register']>(
     async (data) => {
       const res = await authApi.register(data);
@@ -211,12 +221,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<StoreValue>(
     () => ({
-      user, booting, hasRole, login, register, verifyEmail, logout, setUser,
+      user, booting, hasRole, login, recoverAccount, register, verifyEmail, logout, setUser,
       cart, refreshCart, addToCart, removeFromCart,
       wishlistIds, toggleWishlist,
       toast, notify, notifyError, requireLogin,
     }),
-    [user, booting, hasRole, login, register, verifyEmail, logout, cart, refreshCart, addToCart, removeFromCart,
+    [user, booting, hasRole, login, recoverAccount, register, verifyEmail, logout, cart, refreshCart, addToCart, removeFromCart,
       wishlistIds, toggleWishlist, toast, notify, notifyError, requireLogin],
   );
 

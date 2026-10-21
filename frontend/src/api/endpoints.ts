@@ -24,6 +24,9 @@ export const authApi = {
   /** Siempre 204, exista o no la cuenta. */
   resendVerification: (email: string) =>
     api<void>('/api/auth/resend-verification', { method: 'POST', body: { email } }),
+  /** Cancela la baja pendiente (pedida por el dueño) y abre la sesión como el login. */
+  recoverAccount: (login: string, password: string) =>
+    api<AuthResponse>('/api/auth/recover-account', { method: 'POST', body: { login, password } }),
   /** Revoca el refresh token en el servidor (204). */
   logout: (refreshToken: string) =>
     api<void>('/api/auth/logout', { method: 'POST', body: { refreshToken }, keepalive: true }),
@@ -33,6 +36,9 @@ export const userApi = {
   me: () => api<User>('/api/users/me'),
   update: (body: UpdateProfileRequest) =>
     api<User>('/api/users/me', { method: 'PATCH', body }),
+  /** Pone la cuenta en pausa 14 días; el servidor corta las sesiones. */
+  requestDeletion: (password: string) =>
+    api<{ deletionScheduledAt: string }>('/api/users/me/deletion', { method: 'POST', body: { password } }),
   search: (q: string) => api<SearchHit[]>('/api/users/search', { query: { q } }),
   profile: (username: string) => api<PublicProfile>(`/api/users/${encodeURIComponent(username)}/profile`),
 };

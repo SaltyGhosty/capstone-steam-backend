@@ -1,7 +1,7 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { setToken } from '@/api/client';
+import { getToken, setToken } from '@/api/client';
 import { RequireAuth } from '@/components/ui';
 import { mockFetch, page } from '@/test/http';
 import { demoUser, renderRoutes } from '@/test/render';
@@ -54,5 +54,57 @@ describe('ajustes', () => {
     await waitFor(() => expect(fetchMock.mock.calls.some(isPatch)).toBe(true));
     const patch = fetchMock.mock.calls.find(isPatch)!;
     expect(JSON.parse(String(patch[1]!.body))).toMatchObject({ profilePublic: true });
+  });
+
+  it('pide la contraseña y cierra la sesión con la fecha', async () => {
+    const fetchMock = mockFetch({
+      'GET /api/users/me': { body: user },
+      'GET /api/cart': { body: { items: [], itemCount: 0, total: 0 } },
+      'GET /api/wishlist': { body: page([]) },
+      'POST /api/users/me/deletion': { body: { deletionScheduledAt: '2026-11-05T04:15:00Z' } },
+      'POST /api/auth/logout': { status: 204 },
+    });
+    renderRoutes({ '/settings': <RequireAuth><Settings /></RequireAuth> }, '/settings');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Eliminar mi cuenta' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByText(/tus juegos siguen a la venta/i)).not.toBeInTheDocument();
+    await userEvent.type(within(dialog).getByLabelText('Tu contraseña para confirmar'), 'password123');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Eliminar mi cuenta' }));
+
+    expect(await screen.findByText(/Tu cuenta se eliminará el .*2026/)).toBeInTheDocument();
+    const call = fetchMock.mock.calls.find(([url]) => String(url) === '/api/users/me/deletion')!;
+    expect(JSON.parse(String(call[1]!.body))).toEqual({ password: 'password123' });
+    await userEvent.click(screen.getByRole('button', { name: 'Entendido' }));
+    expect(getToken()).toBeNull();
+  });
+
+  it('muestra el error de último admin', async () => {
+    mockFetch({
+      'GET /api/users/me': { body: user },
+      'GET /api/cart': { body: { items: [], itemCount: 0, total: 0 } },
+      'GET /api/wishlist': { body: page([]) },
+      'POST /api/users/me/deletion': { status: 409, body: { detail: 'Eres el último administrador', code: 'user.lastAdmin' } },
+    });
+    renderRoutes({ '/settings': <RequireAuth><Settings /></RequireAuth> }, '/settings');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Eliminar mi cuenta' }));
+    const dialog = screen.getByRole('dialog');
+    await userEvent.type(within(dialog).getByLabelText('Tu contraseña para confirmar'), 'password123');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Eliminar mi cuenta' }));
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Eres el último administrador');
+  });
+
+  it('un estudio ve el aviso sobre sus juegos', async () => {
+    mockFetch({
+      'GET /api/users/me': { body: { ...user, roles: ['ROLE_USER', 'ROLE_DEVELOPER'] } },
+      'GET /api/cart': { body: { items: [], itemCount: 0, total: 0 } },
+      'GET /api/wishlist': { body: page([]) },
+    });
+    renderRoutes({ '/settings': <RequireAuth><Settings /></RequireAuth> }, '/settings');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Eliminar mi cuenta' }));
+    expect(within(screen.getByRole('dialog')).getByText(/Tus juegos siguen a la venta/)).toBeInTheDocument();
   });
 });

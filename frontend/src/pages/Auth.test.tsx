@@ -139,3 +139,45 @@ describe('verificación de email en login y registro', () => {
     expect(getRefreshToken()).toBe('refresh-demo');
   });
 });
+
+describe('login con la cuenta en pausa', () => {
+  const pending = (code: string, detail: string) => ({
+    status: 403,
+    body: { detail, code, deletionScheduledAt: '2026-11-05T04:15:00Z' },
+  });
+
+  it('cuenta en pausa ofrece Recuperar mi cuenta y entra', async () => {
+    const fetchMock = mockFetch({
+      'POST /api/auth/login': pending('auth.accountPendingDeletion', 'Cuenta en pausa'),
+      'POST /api/auth/recover-account': { body: { accessToken: 'jwt-demo', tokenType: 'Bearer', expiresIn: 900, refreshToken: 'refresh-demo', user: demoUser } },
+      'GET /api/cart': { body: emptyCart },
+      'GET /api/wishlist': { body: page([]) },
+    });
+    const { path } = renderRoutes({ '/login': <Login />, '/': <p>Inicio</p> }, '/login');
+
+    await userEvent.type(screen.getByLabelText('Usuario o email'), 'demo_player');
+    await userEvent.type(screen.getByLabelText('Contraseña'), 'password123');
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByText(/Tu cuenta se eliminará el .*2026/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Recuperar mi cuenta' }));
+
+    await waitFor(() => expect(path()).toBe('/'));
+    expect(getToken()).toBe('jwt-demo');
+    const recover = fetchMock.mock.calls.find(([url]) => String(url) === '/api/auth/recover-account')!;
+    expect(JSON.parse(String(recover[1]!.body))).toEqual({ login: 'demo_player', password: 'password123' });
+  });
+
+  it('baja del admin no ofrece recuperar', async () => {
+    mockFetch({ 'POST /api/auth/login': pending('auth.accountDeletionByAdmin', 'Baja del admin') });
+    renderRoutes({ '/login': <Login /> }, '/login');
+
+    await userEvent.type(screen.getByLabelText('Usuario o email'), 'demo_player');
+    await userEvent.type(screen.getByLabelText('Contraseña'), 'password123');
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByText(/Un administrador ha programado la eliminación de tu cuenta para el .*2026/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Recuperar mi cuenta' })).not.toBeInTheDocument();
+    expect(getToken()).toBeNull();
+  });
+});

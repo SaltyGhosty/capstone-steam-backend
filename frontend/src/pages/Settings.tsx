@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { ApiError } from '@/api/client';
 import { userApi } from '@/api/endpoints';
 import type { Locale } from '@/api/types';
@@ -18,6 +18,13 @@ export default function Settings() {
   const [profilePublic, setProfilePublic] = useState(user?.profilePublic ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  // Baja de la cuenta: diálogo con contraseña; al terminar muestra la fecha y cierra la sesión
+  const [deleting, setDeleting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deletionDate, setDeletionDate] = useState<string | null>(null);
+  const deleteTitleId = useId();
 
   if (!user) return null;
 
@@ -40,6 +47,27 @@ export default function Settings() {
       notifyError(err);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const closeDelete = () => {
+    setDeleting(false);
+    setDeletePassword('');
+    setDeleteError('');
+  };
+
+  const confirmDelete = async (e: FormEvent) => {
+    e.preventDefault();
+    setDeleteBusy(true);
+    setDeleteError('');
+    try {
+      const res = await userApi.requestDeletion(deletePassword);
+      setDeletionDate(formatDate(res.deletionScheduledAt));
+    } catch (err) {
+      // El mensaje del backend ya viene traducido (contraseña mala, último admin…)
+      setDeleteError(err instanceof ApiError ? err.message : t('common.somethingWrong'));
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -88,6 +116,42 @@ export default function Settings() {
           </div>
         </form>
       </div>
+      <section className="panel form danger-zone">
+        <h3>{t('settings.deleteSection')}</h3>
+        <p>{t('settings.deleteIntro')}</p>
+        <div className="form-actions">
+          <button type="button" className="secondary danger" onClick={() => setDeleting(true)}>{t('settings.deleteOpen')}</button>
+        </div>
+      </section>
+      {deleting && (
+        <div className="demo-backdrop">
+          <div className="demo-dialog" role="dialog" aria-modal="true" aria-labelledby={deleteTitleId}>
+            <h2 id={deleteTitleId}>{t('settings.deleteSection')}</h2>
+            {deletionDate ? (
+              <>
+                <p>{t('settings.deleteDone', { date: deletionDate })}</p>
+                <div className="form-actions">
+                  <button type="button" className="primary small" onClick={logout}>{t('settings.deleteDoneButton')}</button>
+                </div>
+              </>
+            ) : (
+              <form className="form" onSubmit={confirmDelete}>
+                <p>{t('settings.deleteIntro')}</p>
+                {user.roles.includes('ROLE_DEVELOPER') && <p>{t('settings.deleteStudio')}</p>}
+                <label className="field">
+                  <span>{t('settings.deletePassword')}</span>
+                  <input type="password" autoComplete="current-password" required autoFocus value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} />
+                </label>
+                {deleteError && <p className="form-error" role="alert">{deleteError}</p>}
+                <div className="form-actions">
+                  <button type="button" className="secondary" onClick={closeDelete}>{t('common.cancel')}</button>
+                  <button className="primary small danger-button" disabled={deleteBusy}>{t('settings.deleteConfirm')}</button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
