@@ -14,6 +14,7 @@ import com.capstone.steam.common.exception.BadRequestException;
 import com.capstone.steam.common.exception.ConflictException;
 import com.capstone.steam.common.exception.ForbiddenException;
 import com.capstone.steam.common.exception.NotFoundException;
+import com.capstone.steam.common.util.LikePatterns;
 import com.capstone.steam.friend.dto.FriendRequestResponse;
 import com.capstone.steam.friend.dto.FriendRequestsResponse;
 import com.capstone.steam.friend.dto.FriendResponse;
@@ -61,19 +62,13 @@ public class FriendService {
         if (term.length() > MAX_QUERY_LENGTH) {
             throw new BadRequestException("friend.queryTooLong");
         }
-        List<User> found = userRepository.searchPlayers(likePattern(term), viewerId,
+        List<User> found = userRepository.searchPlayers(LikePatterns.contains(term), viewerId,
                 PageRequest.of(0, MAX_SEARCH_RESULTS));
         Map<Long, Friendship> byOther = relationshipsOf(viewerId);
         return found.stream().map(user -> {
             Friendship friendship = byOther.get(user.getId());
             return new SearchHit(UserCard.from(user), relation(viewerId, friendship), pendingId(friendship));
         }).toList();
-    }
-
-    /** Escapa % y _ con «!» para que el texto del usuario nunca actúe como comodín. */
-    private static String likePattern(String term) {
-        String escaped = term.replace("!", "!!").replace("%", "!%").replace("_", "!_");
-        return "%" + escaped + "%";
     }
 
     // ------------------------------ Amigos y solicitudes ------------------------------

@@ -46,12 +46,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** Listado del panel: sin las cuentas ya anonimizadas. */
     org.springframework.data.domain.Page<User> findByDeletedAtIsNull(Pageable pageable);
 
+    /** {@code pattern} viene de {@code LikePatterns.contains}. */
     @Query("""
             select u from User u
              where u.deletedAt is null
-               and (lower(u.username) like lower(concat('%', :term, '%'))
-                    or lower(u.email) like lower(concat('%', :term, '%')))""")
-    org.springframework.data.domain.Page<User> searchNotDeleted(String term, Pageable pageable);
+               and (lower(u.username) like lower(:pattern) escape '!'
+                    or lower(u.email) like lower(:pattern) escape '!')""")
+    org.springframework.data.domain.Page<User> searchNotDeleted(String pattern, Pageable pageable);
 
     /** Ids por email y por usuario, sin cargar la fila: así se pueden bloquear en orden de id (sin interbloqueos). */
     @Query("select u.id from User u where u.email = :email")

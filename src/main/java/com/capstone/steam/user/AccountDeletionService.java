@@ -3,6 +3,10 @@ package com.capstone.steam.user;
 import java.time.Clock;
 import java.time.Instant;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+
+import org.hibernate.Hibernate;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -28,11 +32,12 @@ public class AccountDeletionService {
     private final ApplicationEventPublisher events;
     private final AccountDeletionProperties properties;
     private final Clock clock;
+    private final EntityManager entityManager;
 
     public AccountDeletionService(UserRepository userRepository, AdminGuard adminGuard,
             PasswordEncoder passwordEncoder, RefreshTokenService refreshTokenService,
             AccessTokenRevocations accessTokenRevocations, ApplicationEventPublisher events,
-            AccountDeletionProperties properties, Clock clock) {
+            AccountDeletionProperties properties, Clock clock, EntityManager entityManager) {
         this.userRepository = userRepository;
         this.adminGuard = adminGuard;
         this.passwordEncoder = passwordEncoder;
@@ -41,16 +46,17 @@ public class AccountDeletionService {
         this.events = events;
         this.properties = properties;
         this.clock = clock;
+        this.entityManager = entityManager;
     }
 
     /** El dueño pide su baja con su contraseña. Devuelve cuándo se eliminará la cuenta. */
     @Transactional
     public Instant requestOwn(Long userId, String password) {
         User user = userRepository.findWithRolesById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
-        if (password == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
+        User locked = lockAndGuard(user);
+        if (password == null || !passwordEncoder.matches(password, locked.getPasswordHash())) {
             throw new BadRequestException("user.deletionWrongPassword");
         }
-        User locked = lockAndGuard(user);
         if (!locked.isPendingDeletion()) { // si ya estaba pendiente, se conserva la fecha original
             schedule(locked, DeletionRequester.SELF);
         }
@@ -74,7 +80,7 @@ public class AccountDeletionService {
     /** Un admin cancela cualquier baja pendiente. Idempotente. */
     @Transactional
     public UserResponse cancelByAdmin(Long userId) {
-        User user = userRepository.findByIdForUpdate(userId).orElseThrow(() -> NotFoundException.of("user", userId));
+        User user = lockFresh(userId);
         if (user.isDeleted()) {
             throw NotFoundException.of("user", userId);
         }
@@ -84,11 +90,13 @@ public class AccountDeletionService {
         return UserResponse.from(user);
     }
 
-    /** El dueño recupera su cuenta (lo usa la recuperación desde el login). */
+    /**
+     * El dueño recupera su cuenta (lo usa la recuperación desde el login). Bloquea y relee la fila por su cuenta:
+     * da igual que {@code user} se cargara antes, su estado en memoria no se usa.
+     */
     @Transactional
     public void cancelBySelf(User user) {
-        User locked = userRepository.findByIdForUpdate(user.getId())
-                .orElseThrow(() -> NotFoundException.of("user", user.getId()));
+        User locked = lockFresh(user.getId());
         if (locked.isPendingDeletion()) {
             cancel(locked);
         }
@@ -102,12 +110,22 @@ public class AccountDeletionService {
         if (user.hasRole(RoleName.ROLE_ADMIN)) {
             adminGuard.requireAnotherAdmin(user.getId());
         }
-        User locked = userRepository.findByIdForUpdate(user.getId())
-                .orElseThrow(() -> NotFoundException.of("user", user.getId()));
+        User locked = lockFresh(user.getId());
         if (locked.isDeleted()) {
             throw NotFoundException.of("user", user.getId());
         }
         return locked;
+    }
+
+    /**
+     * Bloquea la fila y la relee de la BD. {@code findByIdForUpdate} dentro de la misma sesión devolvería la
+     * entidad ya cargada sin refrescarla, y el estado (pendiente, eliminada) sería el de antes del bloqueo.
+     */
+    private User lockFresh(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
+        entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
+        Hibernate.initialize(user.getRoles()); // el refresh deja los roles sin cargar y la respuesta los lee
+        return user;
     }
 
     private void schedule(User user, DeletionRequester by) {

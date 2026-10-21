@@ -12,6 +12,7 @@ import com.capstone.steam.auth.RefreshTokenService;
 import com.capstone.steam.common.dto.PageResponse;
 import com.capstone.steam.common.exception.BadRequestException;
 import com.capstone.steam.common.exception.NotFoundException;
+import com.capstone.steam.common.util.LikePatterns;
 import com.capstone.steam.security.AccessTokenRevocations;
 import com.capstone.steam.user.dto.UpdateProfileRequest;
 import com.capstone.steam.user.dto.UserResponse;
@@ -68,7 +69,7 @@ public class UserService {
         // para que la paginación la haga la BD y no Hibernate en memoria.
         String term = q == null ? "" : q.trim();
         if (!term.isEmpty()) { // filtro opcional por usuario o email (lo usa el seed para encontrar una cuenta)
-            return PageResponse.of(userRepository.searchNotDeleted(term, pageable), UserResponse::from);
+            return PageResponse.of(userRepository.searchNotDeleted(LikePatterns.contains(term), pageable), UserResponse::from);
         }
         return PageResponse.of(userRepository.findByDeletedAtIsNull(pageable), UserResponse::from);
     }

@@ -1,9 +1,11 @@
 package com.capstone.steam.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -11,17 +13,24 @@ import java.time.Duration;
 import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
+import jakarta.persistence.EntityManager;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.capstone.steam.common.exception.ConflictException;
+import com.capstone.steam.notification.event.AccountDeletionScheduledEvent;
 import com.capstone.steam.support.MutableClock;
 import com.jayway.jsonpath.JsonPath;
 
@@ -31,11 +40,16 @@ import com.jayway.jsonpath.JsonPath;
 @ActiveProfiles("test")
 @Transactional
 @Import(MutableClock.Config.class)
+@RecordApplicationEvents
 class AccountDeletionIntegrationTest {
 
     @Autowired private MockMvc mvc;
     @Autowired private MutableClock clock;
     @Autowired private UserRepository userRepository;
+    @Autowired private AccountDeletionService service;
+    @Autowired private ApplicationEvents events;
+    @Autowired private JdbcTemplate jdbc;
+    @Autowired private EntityManager em;
 
     @Test
     void ownDeletionWithWrongPasswordIs400AndChangesNothing() throws Exception {
@@ -83,16 +97,27 @@ class AccountDeletionIntegrationTest {
     @Test
     void adminSchedulesAndCancelsDeletion() throws Exception {
         String admin = login("admin", "Admin12345!");
-        int id = userId(register("victim", "victim@test.com")[0]);
+        String[] victim = register("victim", "victim@test.com");
+        int id = userId(victim[0]);
 
-        mvc.perform(bearer(delete("/api/admin/users/" + id), admin))
+        String first = mvc.perform(bearer(delete("/api/admin/users/" + id), admin))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.deletionRequestedBy").value("ADMIN"))
-                .andExpect(jsonPath("$.deletionScheduledAt").exists());
-        // repetirlo no cambia nada (idempotente)
-        mvc.perform(bearer(delete("/api/admin/users/" + id), admin))
+                .andExpect(jsonPath("$.deletionScheduledAt").exists())
+                .andReturn().getResponse().getContentAsString();
+        mvc.perform(bearer(get("/api/users/me"), victim[0])).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"%s\"}".formatted(victim[1])))
+                .andExpect(status().isUnauthorized());
+        // repetirlo no cambia nada (idempotente): ni la fecha ni quien la pidio
+        clock.now = clock.now.plus(Duration.ofDays(1));
+        String second = mvc.perform(bearer(delete("/api/admin/users/" + id), admin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.deletionRequestedBy").value("ADMIN"));
+                .andExpect(jsonPath("$.deletionRequestedBy").value("ADMIN"))
+                .andReturn().getResponse().getContentAsString();
+        // la BD guarda microsegundos: se compara a milisegundos
+        assertThat(Instant.parse(JsonPath.read(second, "$.deletionScheduledAt")).truncatedTo(java.time.temporal.ChronoUnit.MILLIS))
+                .isEqualTo(Instant.parse(JsonPath.read(first, "$.deletionScheduledAt")).truncatedTo(java.time.temporal.ChronoUnit.MILLIS));
 
         mvc.perform(bearer(post("/api/admin/users/" + id + "/deletion/cancel"), admin))
                 .andExpect(status().isOk())
@@ -100,6 +125,44 @@ class AccountDeletionIntegrationTest {
                 .andExpect(jsonPath("$.deletionScheduledAt").doesNotExist());
         mvc.perform(bearer(post("/api/admin/users/" + id + "/deletion/cancel"), admin))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void adminCanScheduleAnotherAdminButNotTheLastCountingOne() throws Exception {
+        String admin = login("admin", "Admin12345!");
+        int adminId = userId(admin);
+        int otherId = userId(register("admin2", "admin2@test.com")[0]);
+        mvc.perform(bearer(put("/api/admin/users/" + otherId + "/roles"), admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"roles\":[\"ROLE_USER\",\"ROLE_ADMIN\"]}"))
+                .andExpect(status().isOk());
+
+        // con un segundo admin que cuenta, se puede programar al otro
+        mvc.perform(bearer(delete("/api/admin/users/" + otherId), admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.deletionRequestedBy").value("ADMIN"));
+
+        // ahora "admin" es el unico que cuenta: quien no sea el mismo no puede programarlo
+        assertThatThrownBy(() -> service.scheduleByAdmin((long) otherId, (long) adminId))
+                .isInstanceOf(ConflictException.class)
+                .extracting(e -> ((ConflictException) e).getCode()).isEqualTo("user.lastAdmin");
+    }
+
+    @Test
+    void stateIsReReadUnderTheLockSoAConcurrentScheduleIsNotDuplicated() throws Exception {
+        long adminId = userId(login("admin", "Admin12345!"));
+        long id = userId(register("racer", "racer@test.com")[0]);
+        User loaded = userRepository.findWithRolesById(id).orElseThrow(); // queda en la sesion, aun sin baja
+        em.flush();
+        // "otra peticion" programa la baja de SELF despues de que esta cargara la entidad
+        Instant original = Instant.parse("2026-12-01T00:00:00Z");
+        jdbc.update("update users set deletion_scheduled_at = ?, deletion_requested_by = 'SELF' where id = ?",
+                java.sql.Timestamp.from(original), id);
+        assertThat(loaded.isPendingDeletion()).isFalse(); // la copia en memoria esta desfasada
+
+        service.scheduleByAdmin(adminId, id);
+
+        assertThat(events.stream(AccountDeletionScheduledEvent.class).count()).isZero();
+        assertThat(loaded.getDeletionRequestedBy()).isEqualTo(DeletionRequester.SELF);
+        assertThat(loaded.getDeletionScheduledAt()).isEqualTo(original);
     }
 
     @Test
