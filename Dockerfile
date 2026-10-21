@@ -26,8 +26,10 @@ WORKDIR /app/extracted
 # enlazadas durante un arranque de entrenamiento. Mismos flags que en ENTRYPOINT.
 # El heap va fijo (384 MB = 75 % de los 512 MB del plan free): con MaxRAMPercentage, la máquina de build
 # (con mucha RAM) entrenaba con un heap enorme sin punteros comprimidos y la caché no servía en el contenedor.
+# -Xms128m: con el heap inicial por defecto (1/64 de 512 MB = 8 MB) la JVM no puede cargar los objetos
+# archivados de la caché y no arranca.
 # El entrenamiento no toca la BD: sin Flyway, sin metadatos JDBC, y sale en cuanto el contexto está listo.
-ENV JAVA_FLAGS="-Xmx384m -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
+ENV JAVA_FLAGS="-Xms128m -Xmx384m -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
 RUN java $JAVA_FLAGS -XX:AOTCacheOutput=app.aot \
       -Dspring.context.exit=onRefresh -Dspring.profiles.active=prod \
       -Dspring.flyway.enabled=false -Dspring.jpa.hibernate.ddl-auto=none \
