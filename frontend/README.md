@@ -1,11 +1,11 @@
-# ARCADE: frontend de Capstone Steam
+# ARCADE: frontend di Capstone Steam
 
-Tienda de videojuegos en React 19 + Vite 8 + Tailwind CSS v4 + React Router 7. Parte del diseño de Figma Make *Video-Game-Website* y consume la API Spring Boot de este mismo repositorio.
+Negozio di videogiochi in React 19 + Vite 8 + Tailwind CSS v4 + React Router 7. Parte dal design di Figma Make *Video-Game-Website* e consuma l'API Spring Boot di questo stesso repository.
 
-## Puesta en marcha
+## Avvio del progetto
 
-1. Arranca el backend en el puerto 8081. Consulta el [README principal](../README.md).
-2. Instala las dependencias y arranca el frontend:
+1. Avvia il backend sulla porta 8081. Consulta il [README principale](../README.md).
+2. Installa le dipendenze e avvia il frontend:
 
    ```bash
    cd frontend
@@ -13,110 +13,110 @@ Tienda de videojuegos en React 19 + Vite 8 + Tailwind CSS v4 + React Router 7. P
    npm run dev        # http://localhost:5173
    ```
 
-   En desarrollo, las peticiones a `/api` pasan por el proxy de Vite y llegan a `http://localhost:8081`. Para usar otra URL: `API_TARGET=http://localhost:8080 npm run dev`.
+   In sviluppo, le richieste a `/api` passano dal proxy di Vite e arrivano a `http://localhost:8081`. Per usare un altro URL: `API_TARGET=http://localhost:8080 npm run dev`.
 
-3. `npm test` ejecuta los tests (Vitest + Testing Library, sin backend: `fetch` está simulado).
-4. `npm run build` comprueba los tipos con `tsc` y genera `dist/`. Si el frontend se sirve desde otro dominio, define `VITE_API_URL` (ver `.env.example`) y añade ese origen a `CORS_ALLOWED_ORIGINS` en el backend.
+3. `npm test` esegue i test (Vitest + Testing Library, senza backend: `fetch` è simulato).
+4. `npm run build` controlla i tipi con `tsc` e genera `dist/`. Se il frontend viene servito da un altro dominio, definisci `VITE_API_URL` (vedi `.env.example`) e aggiungi quell'origine a `CORS_ALLOWED_ORIGINS` nel backend.
 
-**Usuarios demo** (tras `node scripts/seed-demo.mjs` en la raíz del repositorio; contraseña `password123`):
+**Utenti demo** (dopo `node scripts/seed-demo.mjs` nella radice del repository; password `password123`):
 
-| Usuario | Rol | Qué tiene |
+| Utente | Ruolo | Cosa ha |
 |---|---|---|
-| `demo_player` | Jugador | Juegos con horas jugadas, wishlist, un juego en el carrito y un pago rechazado |
-| `rev_es_01`… `rev_en_01`… `rev_it_01`… | Jugador | 60 reseñadores (20 por idioma) que compraron y reseñaron en su idioma |
-| `team_cherry` | Developer | Hollow Knight publicado y *Silksong* como borrador |
-| `admin` | Administrador | Contraseña: el `ADMIN_PASSWORD` del `.env` del backend |
+| `demo_player` | Giocatore | Giochi con ore giocate, wishlist, un gioco nel carrello e un pagamento rifiutato |
+| `rev_es_01`… `rev_en_01`… `rev_it_01`… | Giocatore | 60 recensori (20 per lingua) che hanno acquistato e recensito nella propria lingua |
+| `team_cherry` | Developer | Hollow Knight pubblicato e *Silksong* come bozza |
+| `admin` | Amministratore | Password: l'`ADMIN_PASSWORD` del `.env` del backend |
 
-**Pago simulado:** una tarjeta que termina en `0000` siempre se rechaza.
+**Pagamento simulato:** una carta che termina con `0000` viene sempre rifiutata.
 
-Las portadas de la demo son las de Steam: `cardImage()` y `wideImage()` (en `lib/format.ts`) eligen la cápsula apaisada para las tarjetas y la imagen panorámica para el hero. Los juegos con una portada subida a Cloudinary usan esa URL tal cual.
+Le copertine della demo sono quelle di Steam: `cardImage()` e `wideImage()` (in `lib/format.ts`) scelgono la capsula orizzontale per le schede e l'immagine panoramica per l'hero. I giochi con una copertina caricata su Cloudinary usano quell'URL così com'è.
 
-**Funciones opcionales:** el frontend no lleva claves. La subida de portadas (`CoverUpload`) se oculta sola si `GET /api/uploads/covers/status` responde `enabled: false`, y el chat del asistente enseña «El asistente no está disponible ahora» si el backend responde 503 (sin `OPENROUTER_API_KEY`). Ver las variables en el [README principal](../README.md#2-configuración).
+**Funzioni opzionali:** il frontend non contiene chiavi. Il caricamento delle copertine (`CoverUpload`) si nasconde da solo se `GET /api/uploads/covers/status` risponde `enabled: false`, e la chat dell'assistente mostra «L’assistente non è disponibile in questo momento» se il backend risponde 503 (senza `OPENROUTER_API_KEY`). Vedi le variabili nel [README principale](../README.md#2-configurazione).
 
-## Estructura
+## Struttura
 
 ```
 src/
-├── api/          client.ts (fetch + JWT + renovación con refresh token + ProblemDetail), endpoints.ts (una función por endpoint), types.ts (DTOs)
-├── context/      StoreContext: sesión, carrito, ids de la wishlist y avisos (toast)
-├── components/   Layout (barra lateral + barra superior del diseño), GameCard, ReviewScoreBadge (etiqueta y % de reseñas), AssistantChat (chat del asistente), CoverUpload (subir portada), UserAvatar, Icon, ui (estados, precio, RequireAuth)
-├── demos/        DemoPlayer, registry (por slug), loop (bucle y teclado) y un minijuego por carpeta
-├── lib/          format (€, fechas es-ES, tiempo jugado), useAsync
-├── test/         setup de Vitest, doble de fetch y render con router + StoreProvider
-├── pages/        Discover, Browse, GameDetail, Cart, Orders, Collection (biblioteca y wishlist), Friends, Profile, Auth, Settings, Developer, Admin
-├── index.css     CSS original del diseño de Figma Make
-└── app.css       estilos de las páginas nuevas, con la misma paleta
+├── api/          client.ts (fetch + JWT + rinnovo con refresh token + ProblemDetail), endpoints.ts (una funzione per endpoint), types.ts (DTO)
+├── context/      StoreContext: sessione, carrello, id della wishlist e avvisi (toast)
+├── components/   Layout (barra laterale + barra superiore del design), GameCard, ReviewScoreBadge (etichetta e % di recensioni), AssistantChat (chat dell'assistente), CoverUpload (caricamento copertina), UserAvatar, Icon, ui (stati, prezzo, RequireAuth)
+├── demos/        DemoPlayer, registry (per slug), loop (ciclo e tastiera) e un minigioco per cartella
+├── lib/          format (€, date es-ES, tempo di gioco), useAsync
+├── test/         setup di Vitest, mock di fetch e render con router + StoreProvider
+├── pages/        Discover, Browse, GameDetail, Cart, Orders, Collection (libreria e wishlist), Friends, Profile, Auth, Settings, Developer, Admin
+├── index.css     CSS originale del design di Figma Make
+└── app.css       stili delle pagine nuove, con la stessa palette
 ```
 
-## Páginas
+## Pagine
 
-| Ruta | Acceso | Qué hace |
+| Rotta | Accesso | Cosa fa |
 |---|---|---|
-| `/` | Público | Hero con los mejor valorados (por % de reseñas positivas), más vendidos, ofertas y novedades |
-| `/browse` | Público | Catálogo con los filtros de la Criteria API (texto, géneros, precio, % mínimo de reseñas positivas, ofertas, orden y paginación); los filtros se guardan en la URL |
-| `/games/:slug` | Público | Ficha del juego con los botones según `/library/status`, la etiqueta y el % de reseñas positivas y la lista de reseñas 👍/👎 (crear, editar y borrar), filtrada por el idioma de la interfaz con un control «Todos los idiomas» |
-| `/demos` | Público | Demos jugables de cuatro juegos del catálogo (ver «Demos») |
-| `/login`, `/register` | Público | Registro como jugador o developer. Crear la cuenta no inicia sesión: lleva a `/check-email`. Un login con el email sin verificar ofrece «Reenviar correo» |
-| `/check-email?email=` | Público | «Revisa tu correo»: avisa de que el enlace va de camino, con «Reenviar correo» y «¿Email equivocado?» |
-| `/verify-email?token=` | Público | El enlace del correo: pregunta de qué cuenta es (vista previa, que no lo gasta), muestra «Confirma la cuenta «usuario»» y pide la contraseña de ese registro; con ella verifica el email, inicia la sesión y lleva a `/` (o a `/developer` si es un estudio). Una contraseña errónea se puede reintentar (5 fallos anulan el enlace); un enlace usado o caducado ofrece pedir otro. Quita el token de la URL |
-| `/cart` | Usuario | Carrito; «Continuar al pago» crea el pedido PENDING |
-| `/orders`, `/orders/:id` | Usuario | Historial y pago (200 → PAID, 402 → FAILED) |
-| `/library`, `/wishlist` | Usuario | Colecciones del usuario; «Jugar» simula una sesión de 30 a 90 minutos (`POST /library/{id}/play`) |
-| `/friends` | Jugador | Buscador (a partir de 2 caracteres), solicitudes recibidas y enviadas y lista de amigos. Se oculta a developers y admins |
-| `/users/:username` | Usuario | Perfil de un jugador: nombre, avatar y botón de amistad según la relación. La biblioteca con horas jugadas y los amigos solo salen si el perfil es público, si sois amigos o si es el tuyo |
-| `/settings` | Usuario | Perfil (`PATCH /users/me`), interruptor «Perfil público» e idioma de los correos (es, en, it) |
-| `/developer` | DEVELOPER | Sus juegos: publicar, retirar y aplicar un descuento masivo |
-| `/developer/games/:id` | DEVELOPER | Formulario del juego (`new` para uno nuevo): crear o editar con `version` para el bloqueo optimista, descripción en es/en/it, importar desde Steam por AppID y subir la portada como archivo (JPEG, PNG o WebP de hasta 5 MB, si el servidor tiene Cloudinary) |
-| `/admin` | ADMIN | Moderación de juegos (también puede subir portadas), roles y activación de usuarios, regalar juegos y CRUD de géneros |
+| `/` | Pubblico | Hero con i più apprezzati (per % di recensioni positive), più venduti, offerte e novità |
+| `/browse` | Pubblico | Catalogo con i filtri della Criteria API (testo, generi, prezzo, % minima di recensioni positive, offerte, ordinamento e paginazione); i filtri si salvano nell'URL |
+| `/games/:slug` | Pubblico | Scheda del gioco con i pulsanti in base a `/library/status`, l'etichetta e la % di recensioni positive e l'elenco di recensioni 👍/👎 (creare, modificare ed eliminare), filtrato per la lingua dell'interfaccia con un controllo «Tutte le lingue» |
+| `/demos` | Pubblico | Demo giocabili di quattro giochi del catalogo (vedi «Demo») |
+| `/login`, `/register` | Pubblico | Registrazione come giocatore o developer. Creare l'account non avvia la sessione: porta a `/check-email`. Un login con l'email non verificata offre «Reinvia email» |
+| `/check-email?email=` | Pubblico | «Controlla la tua posta»: avvisa che il link è in arrivo, con «Reinvia email» e «Email sbagliata? Crea di nuovo l’account» |
+| `/verify-email?token=` | Pubblico | Il link dell'email: chiede di quale account si tratta (anteprima, che non lo consuma), mostra «Conferma l’account «utente»» e chiede la password di quella registrazione; con essa verifica l'email, avvia la sessione e porta a `/` (o a `/developer` se è uno studio). Una password errata si può ritentare (5 errori annullano il link); un link usato o scaduto permette di richiederne un altro. Rimuove il token dall'URL |
+| `/cart` | Utente | Carrello; «Procedi al pagamento» crea l'ordine PENDING |
+| `/orders`, `/orders/:id` | Utente | Storico e pagamento (200 → PAID, 402 → FAILED) |
+| `/library`, `/wishlist` | Utente | Collezioni dell'utente; «Gioca» simula una sessione da 30 a 90 minuti (`POST /library/{id}/play`) |
+| `/friends` | Giocatore | Ricerca (da 2 caratteri), richieste ricevute e inviate ed elenco degli amici. Nascosta a developer e admin |
+| `/users/:username` | Utente | Profilo di un giocatore: nome, avatar e pulsante di amicizia in base alla relazione. La libreria con le ore giocate e gli amici compaiono solo se il profilo è pubblico, se siete amici o se è il tuo |
+| `/settings` | Utente | Profilo (`PATCH /users/me`), interruttore «Profilo pubblico» e lingua delle email (es, en, it) |
+| `/developer` | DEVELOPER | I suoi giochi: pubblicare, ritirare e applicare uno sconto in blocco |
+| `/developer/games/:id` | DEVELOPER | Modulo del gioco (`new` per uno nuovo): creare o modificare con `version` per il lock ottimistico, descrizione in es/en/it, importare da Steam tramite AppID e caricare la copertina come file (JPEG, PNG o WebP fino a 5 MB, se il server ha Cloudinary) |
+| `/admin` | ADMIN | Moderazione dei giochi (può anche caricare copertine), ruoli e attivazione degli utenti, regalare giochi e CRUD dei generi |
 
-## Demos
+## Demo
 
-Minijuegos propios (sin sprites, música ni nombres de los juegos reales) inspirados en cuatro juegos del catálogo. Se abren desde `/demos` y desde el botón «Probar demo» de la ficha del juego (`GameDetail`), y los dos usan el mismo reproductor (`demos/DemoPlayer.tsx`). Cualquiera puede jugar, también sin sesión. **No hay backend ni se guarda nada**: ni puntuaciones, ni `localStorage`. Al terminar la pantalla final ofrece «Añadir al carrito» (o «Ya lo tienes» / «En el carrito», según `/library/status`).
+Minigiochi propri (senza sprite, musica né nomi dei giochi reali) ispirati a quattro giochi del catalogo. Si aprono da `/demos` e dal pulsante «Prova la demo» della scheda del gioco (`GameDetail`), ed entrambi usano lo stesso player (`demos/DemoPlayer.tsx`). Chiunque può giocare, anche senza sessione. **Non c'è backend e non si salva nulla**: né punteggi, né `localStorage`. Al termine la schermata finale propone «Aggiungi al carrello» (oppure «Ce l’hai già» / «Nel carrello · Vai al pagamento», in base a `/library/status`).
 
-| Slug | Juego | Controles | Fin |
+| Slug | Gioco | Controlli | Fine |
 |---|---|---|---|
-| `celeste` | Plataformas: tres pantallas hasta la cumbre | ← → mover · Espacio saltar · X impulso en el aire | Llegar a la cumbre (tiempo y caídas) |
-| `vampire-survivors` | Supervivencia: el ataque es automático | Flechas o WASD | Aguantar 60 s o perder las 6 vidas |
-| `rocket-league` | Fútbol 2D contra un coche rival | ↑ acelerar · ↓ frenar · ← → girar · Espacio turbo | Partido de 60 s |
-| `balatro` | Cartas: póquer por puntos (objetivo 300) | Ratón, teclado o toque | Superar el objetivo o quedarse sin manos (5 manos, 2 descartes) |
+| `celeste` | Platform: tre schermate fino alla vetta | ← → muoversi · Spazio saltare · X spinta in aria | Raggiungere la vetta (tempo e cadute) |
+| `vampire-survivors` | Sopravvivenza: l'attacco è automatico | Frecce o WASD | Resistere 60 s o perdere tutte le 6 vite |
+| `rocket-league` | Calcio 2D contro un'auto avversaria | ↑ accelerare · ↓ frenare · ← → sterzare · Spazio turbo | Partita di 60 s |
+| `balatro` | Carte: poker a punti (obiettivo 300) | Mouse, tastiera o tocco | Superare l'obiettivo o restare senza mani (5 mani, 2 scarti) |
 
-- Una demo solo aparece si `GET /api/games/{slug}` responde (juego publicado). El registro por slug está en `demos/registry.ts`; cada minijuego se carga con `React.lazy` al abrirlo.
-- Cada minijuego separa la lógica pura (`logic.ts`: estado + `step(dt, input)`, probada con Vitest) del dibujo en `<canvas>` (`*Demo.tsx`). Balatro usa botones del DOM.
-- `demos/loop.ts`: bucle con `requestAnimationFrame` que se cancela al pausar o desmontar, `dt` limitado a 0,05 s y lectura del teclado (flechas, WASD, Espacio, X) sin scroll ni atajos globales.
-- Se pausa solo al perder el foco la ventana o la pestaña y sigue pausado hasta pulsar «Continuar». Esc cierra.
-- En móvil (`pointer: coarse`) Balatro se juega con toques y las otras tres muestran «Demo disponible en ordenador».
+- Una demo compare solo se `GET /api/games/{slug}` risponde (gioco pubblicato). La registrazione per slug è in `demos/registry.ts`; ogni minigioco viene caricato con `React.lazy` all'apertura.
+- Ogni minigioco separa la logica pura (`logic.ts`: stato + `step(dt, input)`, testata con Vitest) dal disegno su `<canvas>` (`*Demo.tsx`). Balatro usa pulsanti del DOM.
+- `demos/loop.ts`: ciclo con `requestAnimationFrame` che viene annullato alla pausa o allo smontaggio, `dt` limitato a 0,05 s e lettura della tastiera (frecce, WASD, Spazio, X) senza scroll né scorciatoie globali.
+- Va in pausa da sola quando la finestra o la scheda perde il focus e resta in pausa finché non si preme «Continua». Esc chiude.
+- Su mobile (`pointer: coarse`) Balatro si gioca con i tocchi e le altre tre mostrano «Demo disponibile su computer: serve la tastiera».
 
-**Idioma de la interfaz:** español, inglés o italiano, con las banderas de la cabecera (`LanguageSwitcher`), también sin sesión. Se recuerda en `localStorage` (`arcade.lang`); la primera vez se usa el idioma del navegador, o español si no es uno de los tres. Los textos están en `src/i18n/messages.ts` y la API recibe el mismo idioma en `Accept-Language`.
+**Lingua dell'interfaccia:** spagnolo, inglese o italiano, con le bandiere nell'intestazione (`LanguageSwitcher`), anche senza sessione. Viene ricordata in `localStorage` (`arcade.lang`); la prima volta si usa la lingua del browser, o lo spagnolo se non è una delle tre. I testi sono in `src/i18n/messages.ts` e l'API riceve la stessa lingua in `Accept-Language`.
 
-**Asistente.** Con sesión, un botón flotante abre el chat (`AssistantChat`): texto más hasta 4 tarjetas de juegos que abren su ficha. La conversación vive en memoria y se pierde al recargar; se mandan como mucho los últimos 10 mensajes. Un 503 muestra «El asistente no está disponible ahora» y un 429, el aviso del límite (20 mensajes por hora).
+**Assistente.** Con la sessione, un pulsante flottante apre la chat (`AssistantChat`): testo più fino a 4 schede di giochi che aprono la loro scheda. La conversazione vive in memoria e si perde al ricaricamento; si inviano al massimo gli ultimi 10 messaggi. Un 503 mostra «L’assistente non è disponibile in questo momento» e un 429, l'avviso del limite (20 messaggi all'ora).
 
-**Sesión.** El token de acceso (15 min) y el refresh token (7 días) se guardan en `localStorage` (`arcade.refresh` es la clave del segundo). Si la API responde 401 con un token guardado, `api/client.ts` pide **un solo** refresh (varias peticiones simultáneas comparten el mismo), guarda los dos tokens nuevos y repite la petición. Si el backend rechaza el refresh (400 o 401), borra los dos tokens, cierra la sesión y abre el login; un fallo temporal (5xx, 429 o red) no la borra. Guardar el refresh en `localStorage` deja una limitación conocida frente a XSS (ver el [README principal](../README.md#limitaciones-conocidas)).
+**Sessione.** Il token di accesso (15 min) e il refresh token (7 giorni) si salvano in `localStorage` (`arcade.refresh` è la chiave del secondo). Se l'API risponde 401 con un token salvato, `api/client.ts` chiede **un solo** refresh (più richieste simultanee condividono lo stesso), salva i due nuovi token e ripete la richiesta. Se il backend rifiuta il refresh (400 o 401), elimina i due token, chiude la sessione e apre il login; un errore temporaneo (5xx, 429 o rete) non la cancella. Salvare il refresh in `localStorage` lascia una limitazione nota rispetto a XSS (vedi il [README principale](../README.md#limitazioni-note)).
 
-## Tests
+## Test
 
-`npm test`: 165 tests en 23 archivos.
+`npm test`: 165 test in 23 file.
 
-| Archivo | Qué comprueba |
+| File | Cosa verifica |
 |---|---|
-| `api/client.test.ts` | Token en las cabeceras, query de los filtros, `FormData` sin `Content-Type`, ProblemDetail → `ApiError` con errores por campo, 402 aceptado, 401 → cierre de sesión y la renovación con refresh token (un solo refresh compartido, cierre de sesión si falla con 400 o 401, un 5xx no la borra, un 401 de `/auth/login` no refresca ni se repite una petición sin token) |
-| `lib/format.test.ts` | Precios en €, tiempo jugado, portadas apaisadas e iniciales |
-| `pages/Auth.test.tsx` | Login correcto (token guardado y redirección), credenciales incorrectas y errores de validación del registro |
-| `pages/EmailVerification.test.tsx` | Registro → `/check-email`, reenviar, `/verify-email` (vista previa, contraseña, contraseña errónea, enlace inválido, fallos que no son 400, `StrictMode`, estudio a `/developer` y sin token) |
-| `pages/Checkout.test.tsx` | Carrito → pedido → pago aprobado; pago rechazado (402) con su motivo; validación de la tarjeta; carrito sin sesión → login |
-| `pages/Settings.test.tsx` | Muestra el idioma de los correos del usuario y lo envía al guardar |
-| `pages/GameDetail.test.tsx` | Etiqueta y % de reseñas positivas, filtro por idioma y «Todos los idiomas», voto 👍/👎 con idioma y sin puntuación, la lista se refresca al editar, editar conserva el idioma de la reseña y cambiar de idioma vuelve a la página 0 |
-| `pages/Friends.test.tsx` | Buscar con 2 caracteres y enviar la solicitud, aceptar, eliminar un amigo, descartar una respuesta de búsqueda tardía y no rellenar resultados si el término baja de 2 caracteres |
-| `pages/Profile.test.tsx` | Perfil privado (aviso, sin biblioteca) y visible (juegos con horas jugadas) |
-| `pages/Developer.test.tsx` | Subir portada: `FormData` con el campo `file`, archivo con `type` vacío, más de 5 MB sin llamar al servidor, sin Cloudinary no hay botón y un juego nuevo pide guardarse antes |
-| `components/AssistantChat.test.tsx` | Sin sesión no hay botón, envío y respuesta con tarjeta, máximo 10 mensajes previos, 503 y 429, y cerrar con Esc |
-| `components/Layout.test.tsx` | Un jugador ve «Amigos» y «Mi perfil»; un developer y un admin no |
-| `context/StoreContext.test.tsx` | Un fallo de red al validar la sesión no la borra; un 401 sí |
-| `lib/locale.test.ts` | `detectLocale`: dos primeras letras del idioma del navegador; español si no está soportado |
-| `demos/DemoPlayer.test.tsx`, `demos/loop.test.tsx` | `clampDt`, diálogo y cierre con Esc, pausa al perder el foco (y sigue en pausa al volver), teclas de juego sin scroll ni atajos globales, pantalla final con «Añadir al carrito» o «Ya lo tienes», aviso de móvil, bucle sin `requestAnimationFrame` huérfano |
-| `demos/*/logic.test.ts`, `demos/balatro/BalatroDemo.test.tsx` | Lógica pura de los cuatro minijuegos (salto y impulso, oleadas y daño, gol, rebotes y turbo, jugadas y puntuación del póquer) y la interfaz de cartas |
-| `pages/Demos.test.tsx` | Una tarjeta por demo publicada; una demo cuyo juego da 404 no aparece ni rompe la página |
-| `i18n/i18n.test.tsx` | Los tres idiomas tienen las mismas claves, variables y plurales, las banderas cambian el idioma sin sesión y lo recuerdan, géneros traducidos y `Accept-Language` en las peticiones |
+| `api/client.test.ts` | Token nelle intestazioni, query dei filtri, `FormData` senza `Content-Type`, ProblemDetail → `ApiError` con errori per campo, 402 accettato, 401 → chiusura della sessione e il rinnovo con refresh token (un solo refresh condiviso, chiusura della sessione se fallisce con 400 o 401, un 5xx non la cancella, un 401 di `/auth/login` non fa refresh né ripete una richiesta senza token) |
+| `lib/format.test.ts` | Prezzi in €, tempo di gioco, copertine orizzontali e iniziali |
+| `pages/Auth.test.tsx` | Login corretto (token salvato e reindirizzamento), credenziali errate ed errori di validazione della registrazione |
+| `pages/EmailVerification.test.tsx` | Registrazione → `/check-email`, reinvio, `/verify-email` (anteprima, password, password errata, link non valido, errori diversi da 400, `StrictMode`, studio verso `/developer` e senza token) |
+| `pages/Checkout.test.tsx` | Carrello → ordine → pagamento approvato; pagamento rifiutato (402) con il suo motivo; validazione della carta; carrello senza sessione → login |
+| `pages/Settings.test.tsx` | Mostra la lingua delle email dell'utente e la invia al salvataggio |
+| `pages/GameDetail.test.tsx` | Etichetta e % di recensioni positive, filtro per lingua e «Tutte le lingue», voto 👍/👎 con lingua e senza punteggio, l'elenco si aggiorna alla modifica, modificare conserva la lingua della recensione e cambiare lingua riporta alla pagina 0 |
+| `pages/Friends.test.tsx` | Cercare con 2 caratteri e inviare la richiesta, accettare, eliminare un amico, scartare una risposta di ricerca tardiva e non riempire i risultati se il termine scende sotto i 2 caratteri |
+| `pages/Profile.test.tsx` | Profilo privato (avviso, senza libreria) e visibile (giochi con ore giocate) |
+| `pages/Developer.test.tsx` | Caricare la copertina: `FormData` con il campo `file`, file con `type` vuoto, più di 5 MB senza chiamare il server, senza Cloudinary non c'è il pulsante e un gioco nuovo chiede di essere salvato prima |
+| `components/AssistantChat.test.tsx` | Senza sessione non c'è il pulsante, invio e risposta con scheda, massimo 10 messaggi precedenti, 503 e 429, e chiusura con Esc |
+| `components/Layout.test.tsx` | Un giocatore vede «Amici» e «Il mio profilo»; un developer e un admin no |
+| `context/StoreContext.test.tsx` | Un errore di rete nella convalida della sessione non la cancella; un 401 sì |
+| `lib/locale.test.ts` | `detectLocale`: le prime due lettere della lingua del browser; spagnolo se non è supportata |
+| `demos/DemoPlayer.test.tsx`, `demos/loop.test.tsx` | `clampDt`, dialogo e chiusura con Esc, pausa alla perdita del focus (e resta in pausa al ritorno), tasti di gioco senza scroll né scorciatoie globali, schermata finale con «Aggiungi al carrello» o «Ce l’hai già», avviso per mobile, ciclo senza `requestAnimationFrame` orfano |
+| `demos/*/logic.test.ts`, `demos/balatro/BalatroDemo.test.tsx` | Logica pura dei quattro minigiochi (salto e spinta, ondate e danno, gol, rimbalzi e turbo, giocate e punteggio del poker) e l'interfaccia delle carte |
+| `pages/Demos.test.tsx` | Una scheda per ogni demo pubblicata; una demo il cui gioco dà 404 non compare né rompe la pagina |
+| `i18n/i18n.test.tsx` | Le tre lingue hanno le stesse chiavi, variabili e plurali, le bandiere cambiano la lingua senza sessione e la ricordano, generi tradotti e `Accept-Language` nelle richieste |
 
-## Despliegue
+## Deploy
 
-`vercel.json` deja listo el despliegue en Vercel (*Root Directory* = `frontend`). Define `VITE_API_URL` con la URL pública del backend y añade la URL de Vercel a `CORS_ALLOWED_ORIGINS` en el backend. Los pasos completos están en el [README principal](../README.md#despliegue).
+`vercel.json` prepara il deploy su Vercel (*Root Directory* = `frontend`). Definisci `VITE_API_URL` con l'URL pubblico del backend e aggiungi l'URL di Vercel a `CORS_ALLOWED_ORIGINS` nel backend. I passaggi completi sono nel [README principale](../README.md#deploy).
