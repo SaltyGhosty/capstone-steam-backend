@@ -88,6 +88,19 @@ class AuthIntegrationTest {
     }
 
     @Test
+    void namesReservedForDeletedAccountsCannotBeRegistered() throws Exception {
+        // deleted_<id> y @deleted.invalid son los de las cuentas anonimizadas: ocuparlos antes rompería la baja
+        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"username":"Deleted_42","email":"okupa@test.com","password":"password123"}"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.username").value("está reservado"));
+        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"username":"okupa","email":"deleted_42@Deleted.Invalid","password":"password123"}"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.email").value("está reservado"));
+    }
+
+    @Test
     void registerStoresRequestedLocaleOrDefaultsToEs() throws Exception {
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                 {"username":"gordon","email":"gordon@test.com","password":"password123","locale":"en"}"""))

@@ -212,6 +212,7 @@ public class User {
 
     /**
      * Deja la fila sin datos personales. Los nombres siguen cumpliendo NOT NULL y UNIQUE y liberan los originales.
+     * Queda verificada: los {@code deleted_<id>} están reservados y la limpieza de cuentas sin verificar no los toca.
      * Los roles se conservan y el borrado de lo que cuelga del usuario es cosa del servicio.
      */
     public void anonymize(String unusablePasswordHash, Instant now) {
@@ -221,6 +222,7 @@ public class User {
         this.displayName = null;
         this.avatarUrl = null;
         this.enabled = false;
+        this.emailVerified = true;
         this.profilePublic = false;
         this.deletedAt = now;
         cancelDeletion();

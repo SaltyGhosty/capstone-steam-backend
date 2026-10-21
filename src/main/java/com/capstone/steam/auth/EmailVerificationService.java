@@ -224,11 +224,11 @@ public class EmailVerificationService {
     /**
      * ¿Se puede borrar esta cuenta sin verificar para liberar su usuario? Solo si se creó hace más de lo que
      * dura un enlace (se mide desde la creación, no desde el último enlace: reenviar no retiene el nombre),
-     * no tiene más roles que USER y DEVELOPER y no tiene datos.
+     * no tiene más roles que USER y DEVELOPER y no tiene datos. Una cuenta anonimizada nunca.
      */
     @Transactional(readOnly = true)
     public boolean isReclaimable(User user) {
-        if (user.isEmailVerified() || user.getCreatedAt() == null
+        if (user.isEmailVerified() || user.isDeleted() || user.getCreatedAt() == null
                 || user.getCreatedAt().plus(properties.ttl()).isAfter(clock.instant())) {
             return false;
         }

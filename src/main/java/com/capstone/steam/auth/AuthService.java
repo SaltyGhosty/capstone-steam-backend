@@ -75,7 +75,7 @@ public class AuthService {
     /**
      * Nadie puede quedarse con un email o un usuario que no ha demostrado suyo:
      * <ul>
-     *   <li>Una cuenta verificada nunca se toca (409).</li>
+     *   <li>Una cuenta verificada o anonimizada nunca se toca (409).</li>
      *   <li>Con el email de una cuenta <b>sin verificar</b> no se toca la fila: solo se emite otro enlace con los datos
      *       de esta petición (límite de correos por email). Al verificar se aplican los datos del enlace pulsado.</li>
      *   <li>Un usuario ocupado por otra cuenta sin verificar se libera solo si esa cuenta es vieja y no tiene datos.</li>
@@ -103,10 +103,11 @@ public class AuthService {
             }
         }
 
-        if (byEmail != null && byEmail.isEmailVerified()) {
+        // una fila anonimizada cuenta como verificada aunque no lo esté: sus deleted_<id> están reservados
+        if (byEmail != null && (byEmail.isEmailVerified() || byEmail.isDeleted())) {
             throw new ConflictException("auth.emailTaken");
         }
-        if (byUsername != null && byUsername.isEmailVerified()) {
+        if (byUsername != null && (byUsername.isEmailVerified() || byUsername.isDeleted())) {
             throw new ConflictException("auth.usernameTaken");
         }
         boolean takesOverUsername = byUsername != null && (byEmail == null || !byUsername.getId().equals(byEmail.getId()));
