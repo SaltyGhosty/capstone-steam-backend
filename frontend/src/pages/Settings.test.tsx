@@ -96,6 +96,54 @@ describe('ajustes', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Eres el último administrador');
   });
 
+  it('el diálogo atrapa el foco, Escape lo cierra y el foco vuelve al botón que lo abrió', async () => {
+    mockFetch({
+      'GET /api/users/me': { body: user },
+      'GET /api/cart': { body: { items: [], itemCount: 0, total: 0 } },
+      'GET /api/wishlist': { body: page([]) },
+    });
+    renderRoutes({ '/settings': <RequireAuth><Settings /></RequireAuth> }, '/settings');
+
+    const opener = await screen.findByRole('button', { name: 'Eliminar mi cuenta' });
+    await userEvent.click(opener);
+    const dialog = screen.getByRole('dialog');
+    const password = within(dialog).getByLabelText('Tu contraseña para confirmar');
+    expect(password).toHaveFocus();
+    // Tab da la vuelta dentro del diálogo, en los dos sentidos
+    await userEvent.tab(); // Cancelar
+    await userEvent.tab(); // Eliminar mi cuenta
+    await userEvent.tab();
+    expect(password).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(within(dialog).getByRole('button', { name: 'Eliminar mi cuenta' })).toHaveFocus();
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
+  });
+
+  it('con la baja ya pedida, Escape no cierra: solo «Entendido»', async () => {
+    mockFetch({
+      'GET /api/users/me': { body: user },
+      'GET /api/cart': { body: { items: [], itemCount: 0, total: 0 } },
+      'GET /api/wishlist': { body: page([]) },
+      'POST /api/users/me/deletion': { body: { deletionScheduledAt: '2026-11-05T04:15:00Z' } },
+      'POST /api/auth/logout': { status: 204 },
+    });
+    renderRoutes({ '/settings': <RequireAuth><Settings /></RequireAuth> }, '/settings');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Eliminar mi cuenta' }));
+    const dialog = screen.getByRole('dialog');
+    await userEvent.type(within(dialog).getByLabelText('Tu contraseña para confirmar'), 'password123');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Eliminar mi cuenta' }));
+    const understood = await within(dialog).findByRole('button', { name: 'Entendido' });
+    expect(understood).toHaveFocus();
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(getToken()).toBe('jwt-demo');
+  });
+
   it('un estudio ve el aviso sobre sus juegos', async () => {
     mockFetch({
       'GET /api/users/me': { body: { ...user, roles: ['ROLE_USER', 'ROLE_DEVELOPER'] } },

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { libraryApi } from '@/api/endpoints';
 import type { GameDetail, GameSummary } from '@/api/types';
@@ -6,13 +6,12 @@ import Icon from '@/components/Icon';
 import { Loading } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
 import { useI18n } from '@/i18n';
+import { trapTab } from '@/lib/dialog';
 import { useAsync } from '@/lib/useAsync';
 import { DemoErrorBoundary } from './DemoErrorBoundary';
 import { useGameKeyGuard } from './loop';
 import { demoFor } from './registry';
 import type { DemoResult } from './types';
-
-const FOCUSABLE = 'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function isTouchDevice(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
@@ -74,18 +73,6 @@ export function DemoPlayer({ game, onClose }: { game: GameSummary | GameDetail; 
       if (from instanceof HTMLElement && from.isConnected) from.focus();
     };
   }, []);
-
-  // Tab da la vuelta dentro del diálogo
-  const trapTab = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== 'Tab') return;
-    const items = [...e.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE)];
-    if (items.length === 0) { e.preventDefault(); return; }
-    const first = items[0];
-    const last = items[items.length - 1];
-    const active = document.activeElement;
-    if (e.shiftKey && (active === first || active === e.currentTarget)) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
-  };
 
   // Se consulta al abrir (no al terminar) para que la pantalla final sepa ya qué ofrecer
   const ownership = useAsync(
