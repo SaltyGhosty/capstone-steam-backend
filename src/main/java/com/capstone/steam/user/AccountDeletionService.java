@@ -51,14 +51,18 @@ public class AccountDeletionService {
         this.entityManager = entityManager;
     }
 
-    /** El dueño pide su baja con su contraseña. Devuelve cuándo se eliminará la cuenta. */
+    /**
+     * El dueño pide su baja con su contraseña. Devuelve cuándo se eliminará la cuenta. La contraseña se comprueba
+     * antes de bloquear: bcrypt no retiene a los admins bloqueados, y un error de contraseña da 400 aunque sea el
+     * último admin. El estado se vuelve a mirar sobre la fila bloqueada.
+     */
     @Transactional
     public Instant requestOwn(Long userId, String password) {
         User user = userRepository.findWithRolesById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
-        User locked = lockAndGuard(user);
-        if (password == null || !passwordEncoder.matches(password, locked.getPasswordHash())) {
+        if (password == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new BadRequestException("user.deletionWrongPassword");
         }
+        User locked = lockAndGuard(user);
         if (!locked.isPendingDeletion()) { // si ya estaba pendiente, se conserva la fecha original
             schedule(locked, DeletionRequester.SELF);
         }

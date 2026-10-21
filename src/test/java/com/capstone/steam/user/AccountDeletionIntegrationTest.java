@@ -97,6 +97,17 @@ class AccountDeletionIntegrationTest {
     }
 
     @Test
+    void wrongPasswordOfTheLastAdminIs400NotConflict() throws Exception {
+        String admin = login("admin", "Admin12345!");
+
+        // la contraseña se comprueba antes de bloquear a los admins: un error de contraseña no revela nada más
+        mvc.perform(bearer(post("/api/users/me/deletion"), admin).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"nope-nope\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("user.deletionWrongPassword"));
+    }
+
+    @Test
     void adminSchedulesAndCancelsDeletion() throws Exception {
         String admin = login("admin", "Admin12345!");
         String[] victim = register("victim", "victim@test.com");
