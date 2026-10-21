@@ -1,6 +1,7 @@
 package com.capstone.steam.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -506,6 +507,24 @@ class EmailVerificationIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?", Integer.class, id)).isZero();
         login("ana", "password123").andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.detail").value("La cuenta está desactivada"));
+    }
+
+    @Test
+    void verifyingAnAccountPendingDeletionVerifiesItButGivesNoSession() throws Exception {
+        long id = id(register("ana", "ana@test.com").andExpect(status().isCreated()));
+        String link = lastToken();
+        // el admin programa la baja de la cuenta sin verificar: el enlace del correo sigue siendo válido
+        mvc.perform(delete("/api/admin/users/" + id).header(HttpHeaders.AUTHORIZATION, "Bearer " + admin()))
+                .andExpect(status().isOk());
+
+        verify(link).andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("auth.accountDeletionByAdmin"))
+                .andExpect(jsonPath("$.deletionScheduledAt").exists())
+                .andExpect(jsonPath("$.accessToken").doesNotExist());
+
+        em.flush();
+        assertThat(jdbc.queryForObject("SELECT email_verified FROM users WHERE id = ?", Boolean.class, id)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?", Integer.class, id)).isZero();
     }
 
     @Test

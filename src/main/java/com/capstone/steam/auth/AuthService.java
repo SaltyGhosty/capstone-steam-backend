@@ -214,12 +214,16 @@ public class AuthService {
     }
 
     /** Canjea el enlace del correo con la contraseña de ese registro: verifica el email e inicia la sesión. */
-    // una cuenta desactivada queda verificada igualmente, y la contraseña errónea tiene que contar (400 sin rollback)
+    // una cuenta desactivada o en pausa queda verificada igualmente, y la contraseña errónea tiene que contar
+    // (400 sin rollback)
     @Transactional(noRollbackFor = {ForbiddenException.class, BadRequestException.class})
     public AuthResponse verifyEmail(String rawToken, String password) {
         User user = verificationService.verify(rawToken, password);
         if (!user.isEnabled()) {
             throw new ForbiddenException("error.disabled"); // verificada, pero sin sesión
+        }
+        if (user.isPendingDeletion()) {
+            throw pendingDeletion(user); // el mismo 403 que el login: el enlace no abre sesión durante la pausa
         }
         return issueToken(user);
     }
