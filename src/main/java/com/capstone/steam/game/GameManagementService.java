@@ -1,5 +1,7 @@
 package com.capstone.steam.game;
 
+import java.util.Set;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,10 @@ import com.capstone.steam.user.UserRepository;
 @Service
 @Transactional
 public class GameManagementService {
+
+    /** Campos por los que se pueden ordenar los listados de admin y de estudio ({@code ?sort=}). */
+    public static final Set<String> SORTABLE = Set.of(
+            "id", "title", "price", "discountPercent", "releaseDate", "status", "salesCount", "createdAt", "updatedAt");
 
     private final GameRepository gameRepository;
     private final UserRepository userRepository;

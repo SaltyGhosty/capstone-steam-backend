@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
@@ -79,6 +80,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             return pd;
         }
         return problem(HttpStatus.CONFLICT, Messages.get("error.dataConflict"));
+    }
+
+    /** Un {@code sort} con un campo que la entidad no tiene: error del cliente, no del servidor. */
+    @ExceptionHandler(PropertyReferenceException.class)
+    ProblemDetail handleBadSortProperty(PropertyReferenceException ex) {
+        return problem(HttpStatus.BAD_REQUEST, Messages.get("error.invalidFields"));
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)

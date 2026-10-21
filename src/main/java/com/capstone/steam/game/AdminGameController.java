@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.capstone.steam.common.dto.PageResponse;
+import com.capstone.steam.common.util.SortWhitelist;
 import com.capstone.steam.game.dto.GameDetailResponse;
 import com.capstone.steam.game.dto.StatusRequest;
 
@@ -31,7 +32,7 @@ public class AdminGameController {
     @GetMapping
     public PageResponse<GameDetailResponse> list(@RequestParam(required = false) GameStatus status,
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
-        return gameService.listAll(status, pageable);
+        return gameService.listAll(status, SortWhitelist.require(pageable, GameManagementService.SORTABLE));
     }
 
     @PatchMapping("/{id}/status")

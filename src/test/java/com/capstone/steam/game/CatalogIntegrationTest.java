@@ -192,6 +192,19 @@ class CatalogIntegrationTest {
     }
 
     @Test
+    void managementListsOnlyAcceptKnownSortFields() throws Exception {
+        for (String bad : new String[] {"passwordHash", "title;DROP TABLE users", "(select 1)", "1;delete from games"}) {
+            mvc.perform(auth(get("/api/admin/games").param("sort", bad), adminToken))
+                    .andExpect(status().isBadRequest());
+            mvc.perform(auth(get("/api/developer/games").param("sort", bad), devToken))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(auth(get("/api/admin/games").param("sort", "title,asc"), adminToken)).andExpect(status().isOk());
+        mvc.perform(auth(get("/api/developer/games").param("sort", "salesCount,desc"), devToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void invalidSearchParamsReturn400() throws Exception {
         mvc.perform(get("/api/games").param("sort", "cheapest")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/games").param("minPrice", "20").param("maxPrice", "10")).andExpect(status().isBadRequest());

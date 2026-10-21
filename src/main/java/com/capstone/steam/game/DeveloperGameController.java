@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.capstone.steam.common.dto.PageResponse;
+import com.capstone.steam.common.util.SortWhitelist;
 import com.capstone.steam.game.dto.BulkUpdateResponse;
 import com.capstone.steam.game.dto.DiscountRequest;
 import com.capstone.steam.game.dto.GameDetailResponse;
@@ -38,7 +39,7 @@ public class DeveloperGameController {
     @GetMapping
     public PageResponse<GameDetailResponse> listOwn(@AuthenticationPrincipal AppUserPrincipal dev,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return gameService.listOwn(dev.getId(), pageable);
+        return gameService.listOwn(dev.getId(), SortWhitelist.require(pageable, GameManagementService.SORTABLE));
     }
 
     @GetMapping("/{id}")
