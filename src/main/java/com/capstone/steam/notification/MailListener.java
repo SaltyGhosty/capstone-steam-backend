@@ -7,6 +7,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.capstone.steam.common.i18n.Messages;
 import com.capstone.steam.config.AsyncConfig;
+import com.capstone.steam.notification.event.AccountDeletedEvent;
+import com.capstone.steam.notification.event.AccountDeletionCancelledEvent;
+import com.capstone.steam.notification.event.AccountDeletionScheduledEvent;
 import com.capstone.steam.notification.event.GameOnSaleEvent;
 import com.capstone.steam.notification.event.OrderPaidEvent;
 import com.capstone.steam.notification.event.PaymentFailedEvent;
@@ -66,5 +69,25 @@ public class MailListener {
     public void onGameOnSale(GameOnSaleEvent event) {
         event.recipients().forEach(r -> emailService.sendGameOnSale(r.email(), r.displayName(), event.title(),
                 event.coverUrl(), event.price(), event.finalPrice(), event.discountPercent(), r.locale()));
+    }
+
+    @Async(AsyncConfig.MAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onAccountDeletionScheduled(AccountDeletionScheduledEvent event) {
+        emailService.sendDeletionScheduled(event.email(), event.displayName(), event.locale(), event.scheduledAt(),
+                event.requestedBy());
+    }
+
+    @Async(AsyncConfig.MAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onAccountDeletionCancelled(AccountDeletionCancelledEvent event) {
+        emailService.sendDeletionCancelled(event.email(), event.displayName(), event.locale());
+    }
+
+    /** Va al email que la cuenta tenía antes de anonimizarse (el evento lo lleva). */
+    @Async(AsyncConfig.MAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onAccountDeleted(AccountDeletedEvent event) {
+        emailService.sendAccountDeleted(event.email(), event.displayName(), event.locale());
     }
 }

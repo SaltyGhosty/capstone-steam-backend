@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import com.capstone.steam.notification.EmailTemplates.Brand;
 import com.capstone.steam.notification.EmailTemplates.Email;
 import com.capstone.steam.notification.event.OrderPaidEvent;
+import com.capstone.steam.user.DeletionRequester;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -119,6 +121,19 @@ public class EmailService {
             BigDecimal price, BigDecimal finalPrice, int discountPercent, String locale) {
         send(to, EmailTemplates.gameOnSale(brand, displayName, title, coverUrl, price, finalPrice,
                 discountPercent, locale));
+    }
+
+    public void sendDeletionScheduled(String to, String displayName, String locale, Instant scheduledAt,
+            DeletionRequester requestedBy) {
+        send(to, EmailTemplates.deletionScheduled(brand, displayName, locale, scheduledAt, requestedBy));
+    }
+
+    public void sendDeletionCancelled(String to, String displayName, String locale) {
+        send(to, EmailTemplates.deletionCancelled(brand, displayName, locale));
+    }
+
+    public void sendAccountDeleted(String to, String displayName, String locale) {
+        send(to, EmailTemplates.accountDeleted(brand, displayName, locale));
     }
 
     private void send(String to, Email email) {

@@ -3,6 +3,7 @@ package com.capstone.steam.notification;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.capstone.steam.notification.EmailTemplates.Brand;
 import com.capstone.steam.notification.EmailTemplates.Email;
 import com.capstone.steam.notification.event.OrderPaidEvent;
+import com.capstone.steam.user.DeletionRequester;
 
 /** Correos en el idioma del destinatario: es, en, it; cualquier otro valor cae en español. */
 class EmailTemplatesI18nTest {
@@ -205,6 +207,94 @@ class EmailTemplatesI18nTest {
     /** Los formatos de moneda de es/it usan espacio duro antes de «€»; se normaliza para comparar. */
     private static String nbsp(String text) {
         return text.replace(' ', ' ').replace(' ', ' ');
+    }
+
+    // ------------------------------------------------------------------ baja de la cuenta
+
+    /** 2026-11-21 23:30 UTC ya es 22 de noviembre en Roma (UTC+1): la fecha se da en esa zona. */
+    private static final Instant SCHEDULED_AT = Instant.parse("2026-11-21T23:30:00Z");
+
+    @Test
+    void deletionScheduledBySelfOffersRecoveryInThreeLanguages() {
+        Email es = EmailTemplates.deletionScheduled(BRAND, "Ana", "es", SCHEDULED_AT, DeletionRequester.SELF);
+        Email en = EmailTemplates.deletionScheduled(BRAND, "Ana", "en", SCHEDULED_AT, DeletionRequester.SELF);
+        Email it = EmailTemplates.deletionScheduled(BRAND, "Ana", "it", SCHEDULED_AT, DeletionRequester.SELF);
+
+        assertThat(es.html()).contains("<html lang=\"es\">", "Tu cuenta se eliminará el 22 de noviembre de 2026.",
+                "Si cambias de idea, inicia sesión antes de esa fecha y pulsa Recuperar mi cuenta.");
+        assertThat(en.html()).contains("<html lang=\"en\">", "Your account will be deleted on 22 November 2026.",
+                "If you change your mind, sign in before that date and press Recover my account.");
+        assertThat(it.html()).contains("<html lang=\"it\">", "Il tuo account verrà eliminato il 22 novembre 2026.",
+                "Se cambi idea, accedi prima di quella data e premi Recupera il mio account.");
+        assertThat(es.subject()).isNotBlank().isNotEqualTo(en.subject());
+        assertThat(en.subject()).isNotEqualTo(it.subject());
+    }
+
+    @Test
+    void deletionScheduledByAdminAsksToReplyInThreeLanguages() {
+        Email es = EmailTemplates.deletionScheduled(BRAND, "Ana", "es", SCHEDULED_AT, DeletionRequester.ADMIN);
+        Email en = EmailTemplates.deletionScheduled(BRAND, "Ana", "en", SCHEDULED_AT, DeletionRequester.ADMIN);
+        Email it = EmailTemplates.deletionScheduled(BRAND, "Ana", "it", SCHEDULED_AT, DeletionRequester.ADMIN);
+
+        assertThat(es.html()).contains("Un administrador ha programado la eliminación de tu cuenta para el 22 de "
+                + "noviembre de 2026. Si crees que es un error, contesta a este correo.")
+                .doesNotContain("Recuperar mi cuenta");
+        assertThat(en.html()).contains("An administrator has scheduled the deletion of your account for 22 "
+                + "November 2026. If you think this is a mistake, reply to this email.");
+        assertThat(it.html()).contains("Un amministratore ha programmato l’eliminazione del tuo account per il 22 "
+                + "novembre 2026. Se pensi che sia un errore, rispondi a questa email.");
+    }
+
+    @Test
+    void deletionCancelledAndDeletedInThreeLanguages() {
+        assertThat(EmailTemplates.deletionCancelled(BRAND, "Ana", "es").html())
+                .contains("Tu cuenta vuelve a estar activa.");
+        assertThat(EmailTemplates.deletionCancelled(BRAND, "Ana", "en").html())
+                .contains("Your account is active again.");
+        assertThat(EmailTemplates.deletionCancelled(BRAND, "Ana", "it").html())
+                .contains("Il tuo account è di nuovo attivo.");
+        assertThat(EmailTemplates.accountDeleted(BRAND, "Ana", "es").html()).contains(
+                "Tu cuenta y tus datos personales se han eliminado. Conservamos los pedidos por obligación legal, "
+                        + "sin datos que te identifiquen.");
+        assertThat(EmailTemplates.accountDeleted(BRAND, "Ana", "en").html()).contains(
+                "Your account and personal data have been deleted. We keep orders as required by law, without any "
+                        + "data that identifies you.");
+        assertThat(EmailTemplates.accountDeleted(BRAND, "Ana", "it").html()).contains(
+                "Il tuo account e i tuoi dati personali sono stati eliminati. Conserviamo gli ordini per obbligo "
+                        + "di legge, senza dati che ti identifichino.");
+    }
+
+    @Test
+    void deletionMailsInThreeLanguagesWithoutStoreButtons() {
+        for (String locale : new String[] {"es", "en", "it"}) {
+            String[] html = {
+                EmailTemplates.deletionScheduled(BRAND, "Ana", locale, SCHEDULED_AT, DeletionRequester.SELF).html(),
+                EmailTemplates.deletionScheduled(BRAND, "Ana", locale, SCHEDULED_AT, DeletionRequester.ADMIN).html(),
+                EmailTemplates.deletionCancelled(BRAND, "Ana", locale).html(),
+                EmailTemplates.accountDeleted(BRAND, "Ana", locale).html(),
+            };
+            for (String h : html) {
+                assertThat(h).contains("<html lang=\"" + locale + "\">")
+                        .doesNotContain("/library", "/cart", "/browse", "/games/", "/verify-email");
+                // el único enlace es el logotipo de la marca
+                assertThat(h.split("<a ", -1)).hasSize(2);
+                assertThat(h).contains("<a href=\"https://arcade.test\"");
+            }
+        }
+    }
+
+    @Test
+    void deletionMailsWithoutDisplayNameGreetWithoutIt() {
+        assertThat(EmailTemplates.deletionCancelled(BRAND, null, "es").html()).contains("Hola.").doesNotContain("null");
+        assertThat(EmailTemplates.accountDeleted(BRAND, " ", "en").html()).contains("Hi.").doesNotContain("null");
+        assertThat(EmailTemplates.deletionScheduled(BRAND, null, "it", SCHEDULED_AT, DeletionRequester.SELF).html())
+                .contains("Ciao.").doesNotContain("null");
+    }
+
+    @Test
+    void deletionMailsEscapeTheDisplayName() {
+        assertThat(EmailTemplates.accountDeleted(BRAND, "<b>X</b>", "es").html())
+                .contains("&lt;b&gt;X&lt;/b&gt;").doesNotContain("<b>X</b>");
     }
 
     // ------------------------------------------------------------------ oferta en la wishlist
