@@ -212,9 +212,9 @@ public class FriendService {
 
     // ------------------------------ Utilidades ------------------------------
 
-    /** Cuenta de jugador: activa, con el email verificado y sin rol DEVELOPER ni ADMIN. */
+    /** Cuenta de jugador: activa, sin baja pendiente ni anonimizada, con el email verificado y sin rol DEVELOPER ni ADMIN. */
     static boolean isPlayer(User user) {
-        return user.isEnabled() && user.isEmailVerified() && !user.hasRole(RoleName.ROLE_DEVELOPER) && !user.hasRole(RoleName.ROLE_ADMIN);
+        return user.isEnabled() && !user.isPendingDeletion() && !user.isDeleted() && user.isEmailVerified() && !user.hasRole(RoleName.ROLE_DEVELOPER) && !user.hasRole(RoleName.ROLE_ADMIN);
     }
 
     /** Todas las relaciones (amigos y solicitudes) de un usuario, por el id del otro. */

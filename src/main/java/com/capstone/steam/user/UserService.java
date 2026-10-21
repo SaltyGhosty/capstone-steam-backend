@@ -68,10 +68,9 @@ public class UserService {
         // para que la paginación la haga la BD y no Hibernate en memoria.
         String term = q == null ? "" : q.trim();
         if (!term.isEmpty()) { // filtro opcional por usuario o email (lo usa el seed para encontrar una cuenta)
-            return PageResponse.of(userRepository
-                    .findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(term, term, pageable), UserResponse::from);
+            return PageResponse.of(userRepository.searchNotDeleted(term, pageable), UserResponse::from);
         }
-        return PageResponse.of(userRepository.findAll(pageable), UserResponse::from);
+        return PageResponse.of(userRepository.findByDeletedAtIsNull(pageable), UserResponse::from);
     }
 
     @Transactional

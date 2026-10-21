@@ -32,6 +32,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
             select u from User u
              where u.enabled = true and u.emailVerified = true and u.id <> :excludeId
+               and u.deletionScheduledAt is null and u.deletedAt is null
                and (lower(u.username) like lower(:pattern) escape '!'
                     or lower(u.displayName) like lower(:pattern) escape '!')
                and not exists (select r.id from u.roles r
@@ -42,8 +43,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
-    org.springframework.data.domain.Page<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-            String username, String email, Pageable pageable);
+    /** Listado del panel: sin las cuentas ya anonimizadas. */
+    org.springframework.data.domain.Page<User> findByDeletedAtIsNull(Pageable pageable);
+
+    @Query("""
+            select u from User u
+             where u.deletedAt is null
+               and (lower(u.username) like lower(concat('%', :term, '%'))
+                    or lower(u.email) like lower(concat('%', :term, '%')))""")
+    org.springframework.data.domain.Page<User> searchNotDeleted(String term, Pageable pageable);
 
     /** Ids por email y por usuario, sin cargar la fila: así se pueden bloquear en orden de id (sin interbloqueos). */
     @Query("select u.id from User u where u.email = :email")
