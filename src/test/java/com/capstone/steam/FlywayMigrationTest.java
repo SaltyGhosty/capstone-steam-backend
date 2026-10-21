@@ -13,7 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Verifica que las migraciones V1-V12 se aplican sobre H2 y que las
+ * Verifica que las migraciones V1-V13 se aplican sobre H2 y que las
  * restricciones clave del esquema funcionan.
  */
 @SpringBootTest
@@ -28,10 +28,18 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV12_1() {
+    void appliesAllMigrationsUpToV13() {
         var applied = flyway.info().applied();
-        assertThat(applied).hasSize(13);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("12.1");
+        assertThat(applied).hasSize(14);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("13");
+    }
+
+    @Test
+    void v13AddsAccountDeletionColumns() {
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE deletion_scheduled_at IS NOT NULL "
+                + "OR deletion_requested_by IS NOT NULL OR deleted_at IS NOT NULL", Integer.class)).isZero();
+        assertThatThrownBy(() -> jdbc.update("UPDATE users SET deletion_requested_by = 'OTHER'"))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test

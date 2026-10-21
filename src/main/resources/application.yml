@@ -73,6 +73,10 @@ app:
       required: ${EMAIL_VERIFICATION_REQUIRED:true}
       ttl: ${EMAIL_VERIFICATION_TTL:P1D}
       resend-per-hour: 3
+  account:
+    # Margen entre pedir la baja de la cuenta y anonimizarla; la tarea que lo hace corre una vez al día
+    deletion-grace: ${ACCOUNT_DELETION_GRACE:P14D}
+    deletion-cron: ${ACCOUNT_DELETION_CRON:0 15 4 * * *}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   payments:
