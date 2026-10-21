@@ -1,305 +1,305 @@
 # Capstone Steam
 
-Tienda de videojuegos inspirada en Steam: una API REST en Spring Boot y un frontend en React ([`frontend/`](frontend/)) hecho a partir de un diseño de Figma Make. Tiene catálogo con búsqueda avanzada, panel para desarrolladores, carrito, lista de deseos, biblioteca, reseñas estilo Steam (👍/👎), amigos y perfil, un asistente que recomienda juegos y compras con pago simulado. Los correos de confirmación se envían de forma asíncrona.
+Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un frontend in React ([`frontend/`](frontend/)) realizzato a partire da un design di Figma Make. Offre catalogo con ricerca avanzata, pannello per sviluppatori, carrello, wishlist, libreria, recensioni in stile Steam (👍/👎), amici e profilo, un assistente che consiglia giochi e acquisti con pagamento simulato. Le email di conferma vengono inviate in modo asincrono.
 
-Es el proyecto final (capstone) del curso Full Stack de **Epicode**.
+È il progetto finale (capstone) del corso Full Stack di **Epicode**.
 
 | | |
 |---|---|
-| **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (portadas) · OpenRouter (asistente) · JUnit 5 + Mockito + H2 · Maven |
+| **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (copertine) · OpenRouter (assistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Tests** | Backend: 432 tests, con JaCoCo exigiendo al menos el 80 % de líneas · Frontend: 165 tests en 23 archivos · CI en GitHub Actions |
-| **API** | Swagger UI en `/swagger-ui.html` · 74 peticiones en [la colección de Postman](postman/Capstone-Steam.postman_collection.json) |
+| **Test** | Backend: 432 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 165 test in 23 file · CI su GitHub Actions |
+| **API** | Swagger UI su `/swagger-ui.html` · 74 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
 
-## Índice
-1. [Funcionalidades](#funcionalidades)
-2. [Requisitos técnicos y dónde se cumplen](#requisitos-técnicos-y-dónde-se-cumplen)
-3. [Puesta en marcha](#puesta-en-marcha)
+## Indice
+1. [Funzionalità](#funzionalità)
+2. [Requisiti tecnici e dove sono soddisfatti](#requisiti-tecnici-e-dove-sono-soddisfatti)
+3. [Avvio del progetto](#avvio-del-progetto)
 4. [Frontend](#frontend)
-5. [Arquitectura](#arquitectura)
-6. [Base de datos (Flyway V1 a V12)](#base-de-datos-flyway-v1-a-v12)
+5. [Architettura](#architettura)
+6. [Database (Flyway da V1 a V12)](#database-flyway-da-v1-a-v12)
 7. [API](#api)
-8. [Tests](#tests)
-9. [Despliegue](#despliegue)
-10. [Decisiones técnicas](#decisiones-técnicas)
+8. [Test](#test)
+9. [Deploy](#deploy)
+10. [Decisioni tecniche](#decisioni-tecniche)
 
 ---
 
-## Funcionalidades
+## Funzionalità
 
-**Tres roles.** Nadie puede registrarse como ADMIN: el primero se crea al arrancar y los siguientes los nombra un admin.
+**Tre ruoli.** Nessuno può registrarsi come ADMIN: il primo viene creato all'avvio e i successivi li nomina un admin.
 
-| Rol | Puede… |
+| Ruolo | Può… |
 |---|---|
-| **Jugador** (`ROLE_USER`) | Buscar en el catálogo, gestionar su wishlist y su carrito, comprar, ver su biblioteca, reseñar los juegos que tiene (👍/👎), hacerse amigo de otros jugadores y pedir recomendaciones al asistente |
-| **Developer** (`ROLE_DEVELOPER`) | Todo lo anterior, más crear, editar, publicar y retirar **sus** juegos (con la portada pegada como URL o subida como archivo) y aplicar descuentos masivos |
-| **Admin** (`ROLE_ADMIN`) | Moderar el catálogo (retirar juegos), gestionar los géneros y los usuarios (roles y activación), regalar juegos y borrar reseñas |
+| **Giocatore** (`ROLE_USER`) | Cercare nel catalogo, gestire wishlist e carrello, acquistare, vedere la propria libreria, recensire i giochi che possiede (👍/👎), stringere amicizia con altri giocatori e chiedere consigli all'assistente |
+| **Developer** (`ROLE_DEVELOPER`) | Tutto quanto sopra, più creare, modificare, pubblicare e ritirare **i propri** giochi (con la copertina incollata come URL o caricata come file) e applicare sconti in blocco |
+| **Admin** (`ROLE_ADMIN`) | Moderare il catalogo (ritirare giochi), gestire i generi e gli utenti (ruoli e attivazione), regalare giochi ed eliminare recensioni |
 
-**Flujo de compra:**
+**Flusso di acquisto:**
 
-1. Se añaden juegos al carrito.
-2. `POST /api/orders` crea un pedido **PENDING** con los precios congelados en ese momento.
+1. Si aggiungono giochi al carrello.
+2. `POST /api/orders` crea un ordine **PENDING** con i prezzi congelati in quel momento.
 3. `POST /api/orders/{id}/pay`:
-   - Si el pago se aprueba: el pedido pasa a **PAID**, los juegos entran en la biblioteca, suben las ventas, se limpian el carrito y la wishlist y se envía un correo de recibo con la portada y el precio pagado de cada juego, más el total.
-   - Si se rechaza: el pedido pasa a **FAILED** (HTTP 402) y se envía un correo de aviso.
+   - Se il pagamento viene approvato: l'ordine passa a **PAID**, i giochi entrano nella libreria, le vendite aumentano, carrello e wishlist vengono svuotati e viene inviata un'email di ricevuta con la copertina e il prezzo pagato di ciascun gioco, più il totale.
+   - Se viene rifiutato: l'ordine passa a **FAILED** (HTTP 402) e viene inviata un'email di avviso.
 
-Los pagos son **simulados**: una tarjeta terminada en `0000` siempre se rechaza, y así se puede demostrar el caso de error.
+I pagamenti sono **simulati**: una carta che termina con `0000` viene sempre rifiutata, così si può mostrare il caso di errore.
 
-**Correos en el idioma del usuario.** Los tres correos (bienvenida, recibo y pago rechazado) salen en español, inglés o italiano, según el idioma guardado en el perfil (`locale`).
-- Al registrarse, el frontend envía el idioma del navegador (si no es `es`, `en` ni `it`, usa `es`).
-- En *Ajustes → Perfil público*, el selector «Idioma de los correos» permite cambiarlo.
-- Los importes siguen en euros, con el formato de cada idioma.
-- La interfaz web también está en los tres idiomas: se elige con las banderas de la cabecera y se recuerda en el navegador.
+**Email nella lingua dell'utente.** Le tre email (benvenuto, ricevuta e pagamento rifiutato) arrivano in spagnolo, inglese o italiano, in base alla lingua salvata nel profilo (`locale`).
+- Alla registrazione, il frontend invia la lingua del browser (se non è `es`, `en` né `it`, usa `es`).
+- In *Impostazioni → Profilo pubblico*, il selettore «Lingua delle email» permette di cambiarla.
+- Gli importi restano in euro, con il formato di ciascuna lingua.
+- Anche l'interfaccia web è nelle tre lingue: si sceglie con le bandiere nell'intestazione e viene ricordata nel browser.
 
-**Reseñas estilo Steam.** Una reseña es 👍 Recomendado o 👎 No recomendado, más un texto opcional; ya no hay estrellas.
-- Cada reseña guarda su idioma (`es`, `en` o `it`): el de la interfaz al escribirla o, si no llega, el idioma del autor.
-- El juego muestra el **porcentaje de reseñas positivas** (redondeado hacia abajo) y una etiqueta con las reglas de Steam (`reviewScore`): «Muy positivas», «Mayormente positivas», «Variadas»… Con menos de 10 reseñas no hay etiqueta (`NONE`) y solo se cuenta el número. Las etiquetas «Extremadamente…» exigen 500 reseñas, así que no salen en la demo.
-- La puntuación cuenta las reseñas de todos los idiomas, como Steam. La lista de la ficha se filtra por el idioma de la interfaz, con un control «Todos los idiomas» (`GET /api/games/{slug}/reviews?language=`).
-- El catálogo filtra con `minPositivePercent` y ordena «mejor valorados» por ese porcentaje; los juegos con menos de 10 reseñas no pasan el filtro y van al final.
+**Recensioni in stile Steam.** Una recensione è 👍 Consigliato o 👎 Non consigliato, più un testo facoltativo; le stelle non ci sono più.
+- Ogni recensione salva la propria lingua (`es`, `en` o `it`): quella dell'interfaccia al momento della scrittura oppure, se non arriva, la lingua dell'autore.
+- Il gioco mostra la **percentuale di recensioni positive** (arrotondata per difetto) e un'etichetta con le regole di Steam (`reviewScore`): «Molto positive», «Perlopiù positive», «Nella media»… Con meno di 10 recensioni non c'è etichetta (`NONE`) e si conta solo il numero. Le etichette «Estremamente…» richiedono 500 recensioni, quindi nella demo non compaiono.
+- Il punteggio conta le recensioni di tutte le lingue, come Steam. L'elenco nella scheda viene filtrato per la lingua dell'interfaccia, con un controllo «Tutte le lingue» (`GET /api/games/{slug}/reviews?language=`).
+- Il catalogo filtra con `minPositivePercent` e ordina i «più apprezzati» in base a quella percentuale; i giochi con meno di 10 recensioni non superano il filtro e finiscono in fondo.
 
-**Amigos y perfil.** Solo participan las cuentas de **jugador** (sin rol DEVELOPER ni ADMIN) y activas.
-- Se busca por nombre (2 a 50 caracteres), se envía una solicitud y el otro la acepta o la rechaza. Se puede cancelar una solicitud enviada y borrar un amigo. Si A pide a B y B ya había pedido a A, se aceptan las dos.
-- El perfil (`/users/:username`) enseña siempre el nombre, el avatar y la fecha de alta. La biblioteca (con horas jugadas) y la lista de amigos solo se ven si el perfil es **público**, si quien mira es **amigo** o si es el propio dueño. El perfil es privado por defecto (`profilePublic`, en *Ajustes*). Nunca se ven el email, los pedidos, el carrito ni la wishlist. La regla se aplica en el backend.
+**Amici e profilo.** Partecipano solo gli account di **giocatore** (senza ruolo DEVELOPER né ADMIN) e attivi.
+- Si cerca per nome (da 2 a 50 caratteri), si invia una richiesta e l'altro la accetta o la rifiuta. Si può annullare una richiesta inviata ed eliminare un amico. Se A chiede a B e B aveva già chiesto ad A, vengono accettate entrambe.
+- Il profilo (`/users/:username`) mostra sempre nome, avatar e data di iscrizione. La libreria (con le ore giocate) e l'elenco degli amici sono visibili solo se il profilo è **pubblico**, se chi guarda è **amico** o se è il proprietario stesso. Il profilo è privato per impostazione predefinita (`profilePublic`, in *Impostazioni*). Non si vedono mai email, ordini, carrello né wishlist. La regola viene applicata nel backend.
 
-**Verificación de email.** Crear la cuenta no inicia sesión: llega **un solo correo** («¡Bienvenido a ARCADE! Confirma tu email», en el idioma elegido) con un enlace a `/verify-email?token=…`.
-- Al pulsarlo la cuenta queda verificada y entra ya con su sesión. Sin verificar, el login responde **403** `auth.emailNotVerified` (siempre que la contraseña sea correcta; con una mala sigue siendo 401, así no se revela qué cuentas existen).
-- El enlace es de **un solo uso** y caduca a las 24 h. En la base de datos solo se guarda su SHA-256 y el token en claro nunca se escribe en el log con el correo activo (sin `MAIL_USERNAME`, en desarrollo, el enlace sale en el log para poder probarlo).
-- **Cada enlace lleva los datos de su registro** (usuario, contraseña cifrada, nombre, idioma y tipo de cuenta) y **pide la contraseña de ese registro**. La página `/verify-email` pregunta de qué cuenta es el enlace (`POST /api/auth/verify-email/preview`, que no lo gasta), muestra «Confirma la cuenta «usuario»» y pide la contraseña; con ella se aplican los datos del enlace a la cuenta y los demás enlaces dejan de valer. Así nadie puede quedarse con una cuenta registrando antes su email, ni siquiera con el mismo usuario: sin la contraseña del registro, su enlace no vale. Una contraseña errónea no gasta el enlace (400 `auth.verificationPasswordInvalid`), pero a los 5 fallos el enlace se anula.
-- «Reenviar correo» (`POST /api/auth/resend-verification`) responde siempre 204, exista o no la cuenta. Registro y reenvío comparten un máximo de **3 correos por hora y email** (429 después; el registro solo gasta cupo cuando se acepta). El reenvío manda un correo por **cada registro pendiente** de ese email (hasta 3, cada uno nombrando su cuenta) y gasta una sola unidad del límite.
-- Registrarse con el email de una cuenta **sin verificar** responde 201 como un registro nuevo pero **no toca la cuenta**: solo emite otro enlace con los datos de esa petición. Un usuario ocupado por una cuenta sin verificar se libera si esa cuenta tiene más de 24 h, no tiene datos (pedidos, biblioteca, reseñas, juegos, amistades ni sesiones) y no tiene más roles que USER/DEVELOPER; si no, 409. Si al verificar el usuario del enlace lo ha cogido otra cuenta, 409 y el enlace queda sin usar. Una cuenta verificada nunca se toca.
-- Una cuenta desactivada por un admin que verifica su email queda verificada pero recibe 403 y no se le emite sesión. El registro y la verificación leen la fila del usuario con bloqueo pesimista.
-- Un admin puede verificar una cuenta a mano (`POST /api/admin/users/{id}/verify-email`): lo usan el seed y Postman. Si el email tiene varios registros pedidos distintos (cuentan también los enlaces anulados o caducados) responde 409 `auth.verificationAmbiguous` y no verifica nada; con uno solo aplica ese.
-- **Límite por IP** de 60 peticiones por minuto (las IPv6 se agrupan por su prefijo /64; los 429 llevan la cabecera `Retry-After`) en `/register`, `/resend-verification`, `/verify-email` y `/verify-email/preview`. Los 5 intentos de contraseña son **por registro** (usuario + contraseña), no por enlace: un enlace de reenvío hereda el máximo de fallos y los fallos se cuentan en todos los enlaces del registro, y un registro cuyo enlace se anuló por 5 fallos no se reenvía (hay que registrarse de nuevo).
-- Los correos reintentan hasta 3 veces los fallos de conexión con el SMTP (Gmail desde Render a veces tarda en conectar).
+**Verifica dell'email.** Creare l'account non avvia la sessione: arriva **una sola email** («Benvenuto su ARCADE! Conferma la tua email», nella lingua scelta) con un link a `/verify-email?token=…`.
+- Cliccandolo l'account risulta verificato e accede subito con la sua sessione. Senza verifica, il login risponde **403** `auth.emailNotVerified` (purché la password sia corretta; con una password errata resta 401, così non si rivela quali account esistono).
+- Il link è **monouso** e scade dopo 24 h. Nel database viene salvato solo il suo SHA-256 e il token in chiaro non viene mai scritto nel log con l'invio email attivo (senza `MAIL_USERNAME`, in sviluppo, il link compare nel log per poterlo provare).
+- **Ogni link porta i dati della propria registrazione** (utente, password cifrata, nome, lingua e tipo di account) e **chiede la password di quella registrazione**. La pagina `/verify-email` chiede di quale account è il link (`POST /api/auth/verify-email/preview`, che non lo consuma), mostra «Conferma l'account «utente»» e chiede la password; con essa i dati del link vengono applicati all'account e gli altri link smettono di valere. Così nessuno può appropriarsi di un account registrando prima la sua email, nemmeno con lo stesso utente: senza la password della registrazione, il suo link non vale. Una password errata non consuma il link (400 `auth.verificationPasswordInvalid`), ma dopo 5 errori il link viene annullato.
+- «Reinvia email» (`POST /api/auth/resend-verification`) risponde sempre 204, che l'account esista o no. Registrazione e reinvio condividono un massimo di **3 email all'ora per indirizzo** (poi 429; la registrazione consuma quota solo quando viene accettata). Il reinvio manda un'email per **ogni registrazione in sospeso** di quell'indirizzo (fino a 3, ciascuna con il nome del proprio account) e consuma una sola unità del limite.
+- Registrarsi con l'email di un account **non verificato** risponde 201 come una nuova registrazione ma **non tocca l'account**: emette soltanto un altro link con i dati di quella richiesta. Un nome utente occupato da un account non verificato viene liberato se quell'account ha più di 24 h, non ha dati (ordini, libreria, recensioni, giochi, amicizie né sessioni) e non ha ruoli diversi da USER/DEVELOPER; altrimenti 409. Se al momento della verifica il nome utente del link è stato preso da un altro account, 409 e il link resta inutilizzato. Un account verificato non viene mai toccato.
+- Un account disattivato da un admin che verifica la propria email risulta verificato ma riceve 403 e non gli viene emessa alcuna sessione. Registrazione e verifica leggono la riga dell'utente con lock pessimistico.
+- Un admin può verificare un account a mano (`POST /api/admin/users/{id}/verify-email`): lo usano il seed e Postman. Se l'email ha più registrazioni richieste distinte (contano anche i link annullati o scaduti) risponde 409 `auth.verificationAmbiguous` e non verifica nulla; con una sola applica quella.
+- **Limite per IP** di 60 richieste al minuto (gli IPv6 sono raggruppati per prefisso /64; i 429 includono l'intestazione `Retry-After`) su `/register`, `/resend-verification`, `/verify-email` e `/verify-email/preview`. I 5 tentativi di password sono **per registrazione** (utente + password), non per link: un link di reinvio eredita il massimo di errori e gli errori si contano su tutti i link della registrazione, e una registrazione il cui link è stato annullato per 5 errori non viene reinviata (bisogna registrarsi di nuovo).
+- Le email ritentano fino a 3 volte gli errori di connessione all'SMTP (Gmail da Render a volte è lento a connettersi).
 
-**Sesión con refresh token.** El token de acceso dura **15 minutos** y el refresh token **7 días**.
-- El login y la verificación del email devuelven los dos (el registro, solo si la verificación está desactivada). `POST /api/auth/refresh` canjea el refresh por un par nuevo (**rotación**: el anterior queda revocado) y `POST /api/auth/logout` cierra la sesión.
-- En la base de datos solo se guarda el SHA-256 del refresh token. Si llega uno ya usado (posible robo), se revoca **toda su familia**, es decir, todos los tokens encadenados desde el mismo login.
-- Desactivar a un usuario o cambiarle los roles revoca sus refresh tokens.
-- El frontend renueva la sesión solo ante un 401 (una única vez, y varias peticiones simultáneas comparten el mismo refresh).
+**Sessione con refresh token.** Il token di accesso dura **15 minuti** e il refresh token **7 giorni**.
+- Il login e la verifica dell'email restituiscono entrambi (la registrazione, solo se la verifica è disattivata). `POST /api/auth/refresh` scambia il refresh con una nuova coppia (**rotazione**: il precedente viene revocato) e `POST /api/auth/logout` chiude la sessione.
+- Nel database viene salvato solo lo SHA-256 del refresh token. Se ne arriva uno già usato (possibile furto), si revoca **tutta la sua famiglia**, cioè tutti i token concatenati a partire dallo stesso login.
+- Disattivare un utente o cambiargli i ruoli revoca i suoi refresh token.
+- Il frontend rinnova la sessione solo in caso di 401 (una sola volta, e più richieste simultanee condividono lo stesso refresh).
 
-**Portadas en Cloudinary.** El developer dueño del juego y el admin pueden **subir** la portada como archivo (`POST /api/developer/games/{id}/cover` y `POST /api/admin/games/{id}/cover`, multipart con el campo `file`).
-- Solo JPEG, PNG o WebP, reconocidos por los bytes del archivo (no por la extensión) y de hasta 5 MB.
-- Se sube a Cloudinary y se guarda la `secure_url` (https) en `coverUrl`. Pegar una URL sigue funcionando.
-- Sin `CLOUDINARY_URL` la subida se **desactiva sola**: `GET /api/uploads/covers/status` responde `{"enabled": false}`, el frontend oculta el botón y el resto de la app funciona igual.
+**Copertine su Cloudinary.** Il developer proprietario del gioco e l'admin possono **caricare** la copertina come file (`POST /api/developer/games/{id}/cover` e `POST /api/admin/games/{id}/cover`, multipart con il campo `file`).
+- Solo JPEG, PNG o WebP, riconosciuti dai byte del file (non dall'estensione) e fino a 5 MB.
+- Viene caricata su Cloudinary e si salva la `secure_url` (https) in `coverUrl`. Incollare un URL continua a funzionare.
+- Senza `CLOUDINARY_URL` il caricamento si **disattiva da solo**: `GET /api/uploads/covers/status` risponde `{"enabled": false}`, il frontend nasconde il pulsante e il resto dell'app funziona uguale.
 
-**Asistente de recomendaciones.** Un botón flotante abre un chat: el jugador escribe adjetivos («oscuro, difícil, con buena historia») y el asistente contesta con un texto corto y hasta 4 tarjetas de juegos **del catálogo**.
-- `POST /api/recommendations/chat` (con sesión) llama a [OpenRouter](https://openrouter.ai) desde el backend: la clave nunca llega al navegador. Los ids que invente el modelo y no existan o no estén publicados se descartan.
-- Límite de 20 mensajes por hora y usuario, en memoria. Mensajes de hasta 500 caracteres y un máximo de 10 por petición.
-- Sin `OPENROUTER_API_KEY` (o sin red o sin cupo) responde **503** con un ProblemDetail y el chat muestra «El asistente no está disponible ahora». La tienda no se rompe.
-- El modelo por defecto es uno `:free` de OpenRouter. Estos modelos piden **activar una opción de privacidad** en la cuenta de OpenRouter (la que permite usar los modelos gratuitos); sin ella, el asistente también responderá 503.
+**Assistente di consigli.** Un pulsante flottante apre una chat: il giocatore scrive degli aggettivi («cupo, difficile, con una bella storia») e l'assistente risponde con un breve testo e fino a 4 schede di giochi **del catalogo**.
+- `POST /api/recommendations/chat` (con sessione) chiama [OpenRouter](https://openrouter.ai) dal backend: la chiave non arriva mai al browser. Gli id inventati dal modello che non esistono o non sono pubblicati vengono scartati.
+- Limite di 20 messaggi all'ora per utente, in memoria. Messaggi fino a 500 caratteri e un massimo di 10 per richiesta.
+- Senza `OPENROUTER_API_KEY` (o senza rete o senza quota) risponde **503** con un ProblemDetail e la chat mostra «L’assistente non è disponibile in questo momento». Il negozio non si rompe.
+- Il modello predefinito è uno `:free` di OpenRouter. Questi modelli richiedono di **attivare un'opzione di privacy** nell'account OpenRouter (quella che consente di usare i modelli gratuiti); senza di essa, anche l'assistente risponderà 503.
 
-## Requisitos técnicos y dónde se cumplen
+## Requisiti tecnici e dove sono soddisfatti
 
-| Requisito | Implementación |
+| Requisito | Implementazione |
 |---|---|
-| Spring Security + JWT stateless | [SecurityConfig](src/main/java/com/capstone/steam/security/SecurityConfig.java), [JwtService](src/main/java/com/capstone/steam/security/JwtService.java) (HS256, jjwt 0.13) y [JwtAuthFilter](src/main/java/com/capstone/steam/security/JwtAuthFilter.java) |
-| **Criteria API** para los filtros del catálogo | [GameCriteriaRepository](src/main/java/com/capstone/steam/game/search/GameCriteriaRepository.java): 9 filtros opcionales y 6 órdenes, con un subquery para los géneros y paginación en la base de datos |
-| **UPDATE atómicos escritos a mano** | [GameRepository](src/main/java/com/capstone/steam/game/GameRepository.java) (`incrementSalesCount`, `applyReviewDelta`, `bulkDiscountForDeveloper`), [OrderRepository](src/main/java/com/capstone/steam/order/OrderRepository.java) (`markPaid`, `closePending`) y [LibraryRepository](src/main/java/com/capstone/steam/library/LibraryRepository.java) (`addPlaytime`) |
-| Flyway V1 a V4 (y V5 a V12) | [db/migration](src/main/resources/db/migration) (ver [abajo](#base-de-datos-flyway-v1-a-v12)) |
-| Spring Mail + Gmail SMTP | [EmailService](src/main/java/com/capstone/steam/notification/EmailService.java), [EmailTemplates](src/main/java/com/capstone/steam/notification/EmailTemplates.java) y [MailTexts](src/main/java/com/capstone/steam/notification/MailTexts.java) (textos en es, en e it) |
-| Spring Events **AFTER_COMMIT** + `@Async` con **pool propio** | [MailListener](src/main/java/com/capstone/steam/notification/MailListener.java) y [AsyncConfig](src/main/java/com/capstone/steam/config/AsyncConfig.java) (`mailExecutor`, hilos `mail-*`) |
-| JUnit 5 + Mockito + H2 | [src/test](src/test/java/com/capstone/steam): tests unitarios, de repositorio, de integración HTTP y de concurrencia |
-| PostgreSQL + Docker Compose | [docker-compose.yml](docker-compose.yml) (o un PostgreSQL local) |
-| Frontend | [frontend/](frontend/): React consumiendo toda la API ([detalles](frontend/README.md)) |
+| Spring Security + JWT stateless | [SecurityConfig](src/main/java/com/capstone/steam/security/SecurityConfig.java), [JwtService](src/main/java/com/capstone/steam/security/JwtService.java) (HS256, jjwt 0.13) e [JwtAuthFilter](src/main/java/com/capstone/steam/security/JwtAuthFilter.java) |
+| **Criteria API** per i filtri del catalogo | [GameCriteriaRepository](src/main/java/com/capstone/steam/game/search/GameCriteriaRepository.java): 9 filtri opzionali e 6 ordinamenti, con una subquery per i generi e paginazione nel database |
+| **UPDATE atomici scritti a mano** | [GameRepository](src/main/java/com/capstone/steam/game/GameRepository.java) (`incrementSalesCount`, `applyReviewDelta`, `bulkDiscountForDeveloper`), [OrderRepository](src/main/java/com/capstone/steam/order/OrderRepository.java) (`markPaid`, `closePending`) e [LibraryRepository](src/main/java/com/capstone/steam/library/LibraryRepository.java) (`addPlaytime`) |
+| Flyway da V1 a V4 (e da V5 a V12) | [db/migration](src/main/resources/db/migration) (vedi [sotto](#database-flyway-da-v1-a-v12)) |
+| Spring Mail + Gmail SMTP | [EmailService](src/main/java/com/capstone/steam/notification/EmailService.java), [EmailTemplates](src/main/java/com/capstone/steam/notification/EmailTemplates.java) e [MailTexts](src/main/java/com/capstone/steam/notification/MailTexts.java) (testi in es, en e it) |
+| Spring Events **AFTER_COMMIT** + `@Async` con **pool dedicato** | [MailListener](src/main/java/com/capstone/steam/notification/MailListener.java) e [AsyncConfig](src/main/java/com/capstone/steam/config/AsyncConfig.java) (`mailExecutor`, thread `mail-*`) |
+| JUnit 5 + Mockito + H2 | [src/test](src/test/java/com/capstone/steam): test unitari, di repository, di integrazione HTTP e di concorrenza |
+| PostgreSQL + Docker Compose | [docker-compose.yml](docker-compose.yml) (o un PostgreSQL locale) |
+| Frontend | [frontend/](frontend/): React che consuma tutta l'API ([dettagli](frontend/README.md)) |
 
-## Puesta en marcha
+## Avvio del progetto
 
-### Requisitos
-- **JDK 25.** Si tienes otro JDK por defecto, apunta `JAVA_HOME` al 25 antes de usar `mvnw`.
-- **PostgreSQL 15 o superior**, local o con Docker. No hace falta instalar Maven: se usa `mvnw`.
+### Requisiti
+- **JDK 25.** Se hai un altro JDK come predefinito, punta `JAVA_HOME` al 25 prima di usare `mvnw`.
+- **PostgreSQL 15 o superiore**, locale o con Docker. Non serve installare Maven: si usa `mvnw`.
 
-### 1. Base de datos
+### 1. Database
 ```bash
-# Opción A: PostgreSQL local
+# Opzione A: PostgreSQL locale
 psql -U postgres -c "CREATE DATABASE capstone_steam;"
 
-# Opción B: Docker (expone el puerto 5433 para no chocar con un Postgres local)
+# Opzione B: Docker (espone la porta 5433 per non andare in conflitto con un Postgres locale)
 docker compose up -d
 ```
 
-### 2. Configuración
+### 2. Configurazione
 ```bash
-cp .env.example .env    # y rellena los valores
+cp .env.example .env    # e compila i valori
 ```
 
-| Variable | Obligatoria | Descripción |
+| Variabile | Obbligatoria | Descrizione |
 |---|---|---|
-| `DB_URL`, `DB_USER`, `DB_PASSWORD` | ✅ | Conexión a PostgreSQL (con Docker: `jdbc:postgresql://localhost:5433/capstone_steam`) |
-| `JWT_SECRET` | ✅ | Clave en Base64 de al menos 32 bytes. La app no arranca sin ella |
-| `JWT_EXPIRATION` | Opcional | Duración del token de acceso, en formato ISO-8601 (por defecto `PT15M`, 15 minutos) |
-| `JWT_REFRESH_EXPIRATION` | Opcional | Duración del refresh token (por defecto `P7D`, 7 días) |
-| `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Recomendada | Si `ADMIN_PASSWORD` tiene valor, se crea el admin inicial al arrancar |
-| `MAIL_USERNAME`, `MAIL_APP_PASSWORD` | Opcional | Cuenta de Gmail y [contraseña de aplicación](https://myaccount.google.com/apppasswords). Si están vacías, los correos solo se registran en el log |
-| `MAIL_FROM_NAME` | Opcional | Nombre con el que llegan los correos y marca que aparece en ellos (por defecto `ARCADE`) |
-| `MAIL_TIMEOUT` | Opcional | Milisegundos de espera de conexión, lectura y escritura con el SMTP (por defecto `15000`). Los fallos de conexión se reintentan hasta 3 veces (pausas de 2 s y 6 s) |
-| `EMAIL_VERIFICATION_REQUIRED` | Opcional | Por defecto `true`: crear una cuenta manda un correo con un enlace y no se puede iniciar sesión hasta pulsarlo. Con `false` las cuentas nacen verificadas y el registro devuelve la sesión (solo lo usan los tests) |
-| `AUTH_IP_LIMIT_PER_MINUTE` | Opcional | Peticiones por minuto y IP a registro, reenvío y verificación del email (por defecto `60`; 429 `auth.tooManyRequests` con `Retry-After` después). En producción (`prod`) la IP real sale de `X-Forwarded-For` (`server.forward-headers-strategy: native`) |
-| `EMAIL_VERIFICATION_TTL` | Opcional | Validez del enlace de verificación, en formato ISO-8601 (por defecto `P1D`, 24 horas) |
-| `FRONTEND_URL` | Opcional | URL de la tienda para el enlace de verificación y el logo de los correos (los demás correos no llevan botones). Si falta, se usa el primer origen de `CORS_ALLOWED_ORIGINS` |
-| `SERVER_PORT` | Opcional | Por defecto `PORT` (lo fija Render) o 8080 (`.env.example` usa 8081) |
-| `PAYMENT_FAILURE_RATE` | Opcional | Probabilidad de rechazo aleatorio en las demos (0.0 a 1.0, por defecto 0) |
-| `STEAM_SYNC_ENABLED` | Opcional | Sincroniza precio y descuento con la API pública de Steam al arrancar y cada 6 h (por defecto `true`); el admin también puede lanzarlo a mano |
-| `STEAM_SYNC_CRON` | Opcional | Frecuencia de la sincronización con Steam (cron de Spring, por defecto `0 0 */6 * * *`) |
-| `CORS_ALLOWED_ORIGINS` | Opcional | URL del frontend (por defecto `http://localhost:5173`) |
-| `CLOUDINARY_URL` | Opcional | `cloudinary://<api_key>:<api_secret>@<cloud_name>`, de una cuenta gratuita de Cloudinary. Si está vacía, la subida de portadas se desactiva sola (se pueden seguir pegando URLs)  La API key necesita permiso de subida (acción *create*); una clave con permisos limitados da 403 |
-| `OPENROUTER_API_KEY` | Opcional | Clave de [openrouter.ai/keys](https://openrouter.ai/keys). Si está vacía, el asistente se desactiva solo y responde 503 sin hacer ninguna llamada de red |
-| `OPENROUTER_MODEL` | Opcional | Modelo del asistente: uno o varios separados por comas, que OpenRouter prueba en orden si uno está saturado (por defecto `minimax/minimax-m3.1-flash:free,google/gemma-4-31b-it:free`). Los modelos `:free` exigen activar una opción de privacidad en la cuenta de OpenRouter |
-| `app.openrouter.global-per-hour` / `cooldown` | En `application.yml` | Tope de mensajes por hora entre todos los usuarios (200) y la pausa tras un 429 de OpenRouter (5 min), para no agotar el cupo gratuito |
+| `DB_URL`, `DB_USER`, `DB_PASSWORD` | ✅ | Connessione a PostgreSQL (con Docker: `jdbc:postgresql://localhost:5433/capstone_steam`) |
+| `JWT_SECRET` | ✅ | Chiave in Base64 di almeno 32 byte. L'app non parte senza |
+| `JWT_EXPIRATION` | Opzionale | Durata del token di accesso, in formato ISO-8601 (predefinita `PT15M`, 15 minuti) |
+| `JWT_REFRESH_EXPIRATION` | Opzionale | Durata del refresh token (predefinita `P7D`, 7 giorni) |
+| `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Consigliata | Se `ADMIN_PASSWORD` ha un valore, l'admin iniziale viene creato all'avvio |
+| `MAIL_USERNAME`, `MAIL_APP_PASSWORD` | Opzionale | Account Gmail e [password per le app](https://myaccount.google.com/apppasswords). Se sono vuote, le email vengono solo scritte nel log |
+| `MAIL_FROM_NAME` | Opzionale | Nome con cui arrivano le email e marchio che vi compare (predefinito `ARCADE`) |
+| `MAIL_TIMEOUT` | Opzionale | Millisecondi di attesa per connessione, lettura e scrittura con l'SMTP (predefinito `15000`). Gli errori di connessione vengono ritentati fino a 3 volte (pause di 2 s e 6 s) |
+| `EMAIL_VERIFICATION_REQUIRED` | Opzionale | Predefinito `true`: creare un account invia un'email con un link e non si può accedere finché non lo si clicca. Con `false` gli account nascono verificati e la registrazione restituisce la sessione (lo usano solo i test) |
+| `AUTH_IP_LIMIT_PER_MINUTE` | Opzionale | Richieste al minuto per IP a registrazione, reinvio e verifica dell'email (predefinito `60`; poi 429 `auth.tooManyRequests` con `Retry-After`). In produzione (`prod`) l'IP reale proviene da `X-Forwarded-For` (`server.forward-headers-strategy: native`) |
+| `EMAIL_VERIFICATION_TTL` | Opzionale | Validità del link di verifica, in formato ISO-8601 (predefinita `P1D`, 24 ore) |
+| `FRONTEND_URL` | Opzionale | URL del negozio per il link di verifica e il logo delle email (le altre email non hanno pulsanti). Se manca, si usa la prima origine di `CORS_ALLOWED_ORIGINS` |
+| `SERVER_PORT` | Opzionale | Predefinita `PORT` (la imposta Render) oppure 8080 (`.env.example` usa 8081) |
+| `PAYMENT_FAILURE_RATE` | Opzionale | Probabilità di rifiuto casuale nelle demo (da 0.0 a 1.0, predefinita 0) |
+| `STEAM_SYNC_ENABLED` | Opzionale | Sincronizza prezzo e sconto con l'API pubblica di Steam all'avvio e ogni 6 h (predefinito `true`); l'admin può anche lanciarla a mano |
+| `STEAM_SYNC_CRON` | Opzionale | Frequenza della sincronizzazione con Steam (cron di Spring, predefinita `0 0 */6 * * *`) |
+| `CORS_ALLOWED_ORIGINS` | Opzionale | URL del frontend (predefinito `http://localhost:5173`) |
+| `CLOUDINARY_URL` | Opzionale | `cloudinary://<api_key>:<api_secret>@<cloud_name>`, da un account gratuito di Cloudinary. Se è vuota, il caricamento delle copertine si disattiva da solo (si possono comunque incollare URL)  La API key richiede il permesso di caricamento (azione *create*); una chiave con permessi limitati dà 403 |
+| `OPENROUTER_API_KEY` | Opzionale | Chiave da [openrouter.ai/keys](https://openrouter.ai/keys). Se è vuota, l'assistente si disattiva da solo e risponde 503 senza fare alcuna chiamata di rete |
+| `OPENROUTER_MODEL` | Opzionale | Modello dell'assistente: uno o più separati da virgole, che OpenRouter prova in ordine se uno è saturo (predefinito `minimax/minimax-m3.1-flash:free,google/gemma-4-31b-it:free`). I modelli `:free` richiedono di attivare un'opzione di privacy nell'account OpenRouter |
+| `app.openrouter.global-per-hour` / `cooldown` | In `application.yml` | Tetto di messaggi all'ora tra tutti gli utenti (200) e pausa dopo un 429 di OpenRouter (5 min), per non esaurire la quota gratuita |
 
-### 3. Arrancar
+### 3. Avviare
 ```bash
 ./mvnw spring-boot:run          # Windows: .\mvnw.cmd spring-boot:run
 ```
-Flyway crea el esquema al arrancar y Hibernate lo valida (`ddl-auto=validate`). Para comprobar que funciona: `GET http://localhost:8081/actuator/health` debe devolver `{"status":"UP"}`.
+Flyway crea lo schema all'avvio e Hibernate lo convalida (`ddl-auto=validate`). Per verificare che funzioni: `GET http://localhost:8081/actuator/health` deve restituire `{"status":"UP"}`.
 
-### 4. Probar
-Con la app arrancada, **Swagger UI** está en `http://localhost:8081/swagger-ui.html`: el botón *Authorize* acepta el `accessToken` del login.
+### 4. Provare
+Con l'app avviata, **Swagger UI** è su `http://localhost:8081/swagger-ui.html`: il pulsante *Authorize* accetta l'`accessToken` del login.
 
-También puedes importar [`postman/Capstone-Steam.postman_collection.json`](postman/Capstone-Steam.postman_collection.json) y ejecútala con el **Collection Runner**. Es un flujo completo: registro, refresh y logout, publicación de un juego, compra, reseña, amigos y perfil, estado de la subida de portadas y asistente (acepta 200 o 503 según haya clave de OpenRouter). Los tokens y los ids se guardan solos. Para la carpeta *Admin*, pon tu `ADMIN_PASSWORD` en la variable `adminPassword`.
+Puoi anche importare [`postman/Capstone-Steam.postman_collection.json`](postman/Capstone-Steam.postman_collection.json) ed eseguirla con il **Collection Runner**. È un flusso completo: registrazione, refresh e logout, pubblicazione di un gioco, acquisto, recensione, amici e profilo, stato del caricamento delle copertine e assistente (accetta 200 o 503 a seconda che ci sia o meno la chiave di OpenRouter). I token e gli id si salvano da soli. Per la cartella *Admin*, inserisci la tua `ADMIN_PASSWORD` nella variabile `adminPassword`.
 
 ## Frontend
 
 ```bash
 cd frontend
 npm install
-npm run dev      # http://localhost:5173 (el backend debe estar en el 8081)
+npm run dev      # http://localhost:5173 (il backend deve essere sulla 8081)
 ```
 
-ARCADE es la tienda completa: portada con destacados, catálogo con todos los filtros de la Criteria API, ficha del juego con reseñas 👍/👎 (porcentaje, etiqueta y filtro por idioma), carrito y pago simulado, pedidos, biblioteca (con sesiones de juego simuladas), wishlist, amigos y perfil público, ajustes, el chat del asistente, panel del estudio para developers (con subida de portadas) y panel de moderación para admins. Todo se explica en [frontend/README.md](frontend/README.md).
+ARCADE è il negozio completo: home con i giochi in evidenza, catalogo con tutti i filtri della Criteria API, scheda del gioco con recensioni 👍/👎 (percentuale, etichetta e filtro per lingua), carrello e pagamento simulato, ordini, libreria (con sessioni di gioco simulate), wishlist, amici e profilo pubblico, impostazioni, la chat dell'assistente, pannello dello studio per i developer (con caricamento delle copertine) e pannello di moderazione per gli admin. Tutto è spiegato in [frontend/README.md](frontend/README.md).
 
-**Usuarios demo** (tras ejecutar `node scripts/seed-demo.mjs`): `demo_player` (jugador con biblioteca, wishlist, carrito y un pago rechazado), las cuentas de los estudios, como `team_cherry` (tiene un borrador para publicar), y 60 reseñadores (`rev_es_01` a `rev_es_20`, y lo mismo con `en` e `it`), todas con la contraseña `password123`; y `admin` / el `ADMIN_PASSWORD` de tu `.env`.
+**Utenti demo** (dopo aver eseguito `node scripts/seed-demo.mjs`): `demo_player` (giocatore con libreria, wishlist, carrello e un pagamento rifiutato), gli account degli studi, come `team_cherry` (ha una bozza da pubblicare), e 60 recensori (da `rev_es_01` a `rev_es_20`, e lo stesso con `en` e `it`), tutti con la password `password123`; e `admin` / l'`ADMIN_PASSWORD` del tuo `.env`.
 
-## Arquitectura
+## Architettura
 
-El código se organiza **por funcionalidad** y cada una sigue las capas `Controller → Service (@Transactional) → Repository`. Los controllers solo devuelven DTOs (`record`), nunca entidades.
+Il codice è organizzato **per funzionalità** e ognuna segue i livelli `Controller → Service (@Transactional) → Repository`. I controller restituiscono solo DTO (`record`), mai entità.
 
 ```
 com.capstone.steam
-├── auth/          registro, login, refresh token (RefreshTokenService) y logout
-├── security/      JWT, filtro, SecurityConfig y respuestas 401/403
-├── user/          perfil, administración de usuarios y admin inicial
-├── genre/         géneros
-├── game/          CRUD de developer, moderación de admin y catálogo público
+├── auth/          registrazione, login, refresh token (RefreshTokenService) e logout
+├── security/      JWT, filtro, SecurityConfig e risposte 401/403
+├── user/          profilo, amministrazione degli utenti e admin iniziale
+├── genre/         generi
+├── game/          CRUD del developer, moderazione dell'admin e catalogo pubblico
 │   └── search/    Criteria API (GameCriteriaRepository, GameSearchCriteria, GameSort)
 ├── cart/  wishlist/  library/  review/
-├── friend/        amistades, búsqueda de jugadores y perfil público
-├── cover/         subida de portadas (CoverService, CloudinaryCoverStorage)
-├── recommendation/ asistente de recomendaciones (OpenRouterChatModel, ChatRateLimiter)
-├── steamstore/    importación de juegos y sincronización de precios con la tienda de Steam
-├── order/         pedidos, checkout y pagos
+├── friend/        amicizie, ricerca di giocatori e profilo pubblico
+├── cover/         caricamento delle copertine (CoverService, CloudinaryCoverStorage)
+├── recommendation/ assistente di consigli (OpenRouterChatModel, ChatRateLimiter)
+├── steamstore/    importazione di giochi e sincronizzazione dei prezzi con lo store di Steam
+├── order/         ordini, checkout e pagamenti
 │   └── payment/   PaymentGateway + SimulatedPaymentGateway
-├── notification/  eventos, MailListener, EmailService, EmailTemplates y MailTexts
-├── config/        AsyncConfig (pool mailExecutor) y OpenApiConfig (Swagger)
-└── common/        GlobalExceptionHandler (ProblemDetail), excepciones, PageResponse y Slugs
+├── notification/  eventi, MailListener, EmailService, EmailTemplates e MailTexts
+├── config/        AsyncConfig (pool mailExecutor) e OpenApiConfig (Swagger)
+└── common/        GlobalExceptionHandler (ProblemDetail), eccezioni, PageResponse e Slugs
 ```
 
-**Flujo de un pago aprobado:**
+**Flusso di un pagamento approvato:**
 ```
 POST /api/orders/{id}/pay
- └─ OrderService.pay()                               ── una transacción ──
-     ├─ PaymentGateway.charge()                          (simulado)
-     ├─ OrderRepository.markPaid()   UPDATE … WHERE status='PENDING'   → 0 filas = 409
-     ├─ biblioteca (INSERT) · GameRepository.incrementSalesCount()     (UPDATE atómico)
-     ├─ se limpian el carrito y la wishlist
+ └─ OrderService.pay()                               ── una transazione ──
+     ├─ PaymentGateway.charge()                          (simulato)
+     ├─ OrderRepository.markPaid()   UPDATE … WHERE status='PENDING'   → 0 righe = 409
+     ├─ libreria (INSERT) · GameRepository.incrementSalesCount()       (UPDATE atomico)
+     ├─ si svuotano carrello e wishlist
      └─ publishEvent(OrderPaidEvent)
                                                       ── COMMIT ──
  MailListener.onOrderPaid()   @TransactionalEventListener(AFTER_COMMIT)
-                              @Async("mailExecutor")  → hilo mail-N → Gmail SMTP
+                              @Async("mailExecutor")  → thread mail-N → Gmail SMTP
 ```
-La respuesta HTTP no espera al SMTP. Si la transacción hace rollback, no se envía ningún correo. Y si falla el correo, se registra en el log sin afectar a la compra.
+La risposta HTTP non attende l'SMTP. Se la transazione fa rollback, non viene inviata alcuna email. E se l'invio dell'email fallisce, l'errore viene scritto nel log senza incidere sull'acquisto.
 
-**El recibo de compra** lista cada juego con una miniatura de su portada (64×36), el título y el precio pagado con descuento (`OrderItem.unitPrice`), y debajo el total. `OrderPaidEvent` lleva esas líneas ya resueltas: se construyen dentro de la transacción de `pay()`, porque el listener corre después del commit y en otro hilo, donde `Game` (LAZY) ya no se puede cargar. La portada solo se enlaza si la URL empieza por `http://` o `https://` (`EmailTemplates.safeImageUrl`); si no, queda una celda vacía del mismo ancho. Todo el texto se escapa con `HtmlUtils`.
+**La ricevuta di acquisto** elenca ogni gioco con una miniatura della copertina (64×36), il titolo e il prezzo pagato con lo sconto (`OrderItem.unitPrice`), e sotto il totale. `OrderPaidEvent` porta con sé queste righe già risolte: vengono costruite dentro la transazione di `pay()`, perché il listener gira dopo il commit e su un altro thread, dove `Game` (LAZY) non si può più caricare. La copertina viene collegata solo se l'URL inizia con `http://` o `https://` (`EmailTemplates.safeImageUrl`); altrimenti resta una cella vuota della stessa larghezza. Tutto il testo viene sottoposto a escape con `HtmlUtils`.
 
-**El idioma de los correos** sale de `users.locale`. Los textos de cada idioma están en el record `MailTexts` (una constante por idioma), así el compilador obliga a que ninguno se quede sin traducir. Los tres eventos llevan el `locale`, leído del usuario dentro de la transacción. Si falta o no se reconoce, el correo sale en español.
+**La lingua delle email** deriva da `users.locale`. I testi di ciascuna lingua sono nel record `MailTexts` (una costante per lingua), così il compilatore impone che nessuna resti senza traduzione. I tre eventi portano il `locale`, letto dall'utente dentro la transazione. Se manca o non viene riconosciuto, l'email esce in spagnolo.
 
-## Base de datos (Flyway V1 a V12)
+## Database (Flyway da V1 a V12)
 
-| Migración | Contenido |
+| Migrazione | Contenuto |
 |---|---|
-| **V1** `base_schema` | `roles` (con datos iniciales), `users`, `user_roles`, `genres` (12 iniciales), `games` (precio, descuento, estado, contadores y `version`) y `game_genres` |
-| **V2** `storefront` | `library_entries`, `cart_items`, `wishlist_items` y `reviews` (con `UNIQUE(user, game)` en todas) |
-| **V3** `orders_payments` | `orders` (PENDING, PAID, FAILED o CANCELLED), `order_items` (precio congelado), `payments` y `library_entries.order_id` |
-| **V4** `catalog_indexes` | Índices del catálogo. En PostgreSQL: **trigramas `pg_trgm` (GIN)** sobre `lower(title)` para `LIKE '%texto%'` y un índice parcial para "más vendidos" |
-| **V5** `user_locale` | `users.locale` (idioma de los correos): `es` por defecto, con un `CHECK` que solo admite `es`, `en` o `it` |
-| **V6** `game_description_translations` | `games.description_en` y `description_it`: la descripción en inglés e italiano (la de siempre es la española y hace de respaldo) |
-| **V7** `steam_link` | `games.steam_app_id` (único) y `price_synced_at`: enlace con la tienda de Steam para sincronizar precio y descuento |
-| **V8** `steam_style_reviews` | `reviews.language` (`es`, `en` o `it`), fuera `reviews.rating` y `games.rating_sum`; `rating_count` pasa a `review_count` y se añade `positive_count`. Recalcula los contadores desde las reseñas existentes |
-| **V9** `friendships` | `users.profile_public` (falso por defecto) y la tabla `friendships`: una fila por pareja sea cual sea la dirección (`UNIQUE(user_low_id, user_high_id)`), con estado `PENDING` o `ACCEPTED` |
-| **V10** `refresh_tokens` | `refresh_tokens`: SHA-256 del token (nunca el token), familia, caducidad, fecha de revocación y sustituto |
-| **V11** `friendships_pair_check` | `CHECK ck_friendships_pair`: el par `(user_low_id, user_high_id)` tiene que ser el del solicitante y el destinatario |
-| **V12.1** `username_lower_unique` | Índice único sobre `lower(username)`: el usuario es único sin distinguir mayúsculas también en la base de datos. PostgreSQL usa un índice por expresión; H2 (tests) una columna generada `username_lower` con un `UNIQUE`, porque H2 no admite índices por expresión |
-| **V12** `email_verification` | `users.email_verified` (las cuentas que ya existían quedan verificadas) y la tabla `email_verification_tokens`: SHA-256 del enlace (nunca el token), caducidad, fecha de uso los datos del registro que lo generó (usuario, contraseña cifrada, nombre, idioma y tipo de cuenta) y el contador de contraseñas erróneas |
+| **V1** `base_schema` | `roles` (con dati iniziali), `users`, `user_roles`, `genres` (12 iniziali), `games` (prezzo, sconto, stato, contatori e `version`) e `game_genres` |
+| **V2** `storefront` | `library_entries`, `cart_items`, `wishlist_items` e `reviews` (con `UNIQUE(user, game)` in tutte) |
+| **V3** `orders_payments` | `orders` (PENDING, PAID, FAILED o CANCELLED), `order_items` (prezzo congelato), `payments` e `library_entries.order_id` |
+| **V4** `catalog_indexes` | Indici del catalogo. Su PostgreSQL: **trigrammi `pg_trgm` (GIN)** su `lower(title)` per `LIKE '%testo%'` e un indice parziale per i «più venduti» |
+| **V5** `user_locale` | `users.locale` (lingua delle email): `es` per impostazione predefinita, con un `CHECK` che ammette solo `es`, `en` o `it` |
+| **V6** `game_description_translations` | `games.description_en` e `description_it`: la descrizione in inglese e italiano (quella originale è in spagnolo e fa da riserva) |
+| **V7** `steam_link` | `games.steam_app_id` (univoco) e `price_synced_at`: collegamento con lo store di Steam per sincronizzare prezzo e sconto |
+| **V8** `steam_style_reviews` | `reviews.language` (`es`, `en` o `it`), eliminati `reviews.rating` e `games.rating_sum`; `rating_count` diventa `review_count` e si aggiunge `positive_count`. Ricalcola i contatori dalle recensioni esistenti |
+| **V9** `friendships` | `users.profile_public` (falso per impostazione predefinita) e la tabella `friendships`: una riga per coppia in qualunque direzione (`UNIQUE(user_low_id, user_high_id)`), con stato `PENDING` o `ACCEPTED` |
+| **V10** `refresh_tokens` | `refresh_tokens`: SHA-256 del token (mai il token), famiglia, scadenza, data di revoca e sostituto |
+| **V11** `friendships_pair_check` | `CHECK ck_friendships_pair`: la coppia `(user_low_id, user_high_id)` deve corrispondere a richiedente e destinatario |
+| **V12.1** `username_lower_unique` | Indice univoco su `lower(username)`: il nome utente è univoco senza distinguere maiuscole e minuscole anche nel database. PostgreSQL usa un indice per espressione; H2 (test) una colonna generata `username_lower` con un `UNIQUE`, perché H2 non supporta gli indici per espressione |
+| **V12** `email_verification` | `users.email_verified` (gli account già esistenti restano verificati) e la tabella `email_verification_tokens`: SHA-256 del link (mai il token), scadenza, data di utilizzo, i dati della registrazione che lo ha generato (utente, password cifrata, nome, lingua e tipo di account) e il contatore delle password errate |
 
-El enunciado pide V1 a V4; V5 a V12 se añadieron después (idioma de los correos, traducciones, Steam, reseñas estilo Steam, amigos, refresh tokens, la integridad del par de amigos y la verificación de email). V1 a V3 y V5 a V12 son SQL portable; V4 y V12.1 tienen una variante por motor. V4 tiene dos versiones ([postgresql](src/main/resources/db/migration/postgresql) y [h2](src/main/resources/db/migration/h2)), porque H2 no soporta los índices por trigramas ni los parciales. Flyway elige la adecuada con `locations: …/common, …/{vendor}`.
+La traccia del corso richiede V1 a V4; V5 a V12 sono state aggiunte in seguito (lingua delle email, traduzioni, Steam, recensioni in stile Steam, amici, refresh token, integrità della coppia di amici e verifica dell'email). V1 a V3 e V5 a V12 sono SQL portabile; V4 e V12.1 hanno una variante per motore. V4 ha due versioni ([postgresql](src/main/resources/db/migration/postgresql) e [h2](src/main/resources/db/migration/h2)), perché H2 non supporta gli indici a trigrammi né quelli parziali. Flyway sceglie quella adatta con `locations: …/common, …/{vendor}`.
 
-Las reglas de integridad también las garantiza la base de datos, no solo el código Java: `CHECK` (precio ≥ 0, descuento 0 a 100, `positive_count <= review_count`, idioma y estados válidos), `UNIQUE` y claves foráneas con `ON DELETE` pensado caso por caso.
+Le regole di integrità sono garantite anche dal database, non solo dal codice Java: `CHECK` (prezzo ≥ 0, sconto da 0 a 100, `positive_count <= review_count`, lingua e stati validi), `UNIQUE` e chiavi esterne con `ON DELETE` pensato caso per caso.
 
 ## API
 
-La autenticación es `Authorization: Bearer <accessToken>`. El token se obtiene en el registro o el login y dura 15 minutos; con el refresh token (7 días) se renueva sin volver a iniciar sesión.
+L'autenticazione è `Authorization: Bearer <accessToken>`. Il token si ottiene alla registrazione o al login e dura 15 minuti; con il refresh token (7 giorni) si rinnova senza effettuare di nuovo l'accesso.
 
-| Método | Ruta | Acceso | Descripción |
+| Metodo | Percorso | Accesso | Descrizione |
 |---|---|---|---|
-| POST | `/api/auth/register` | público | Registro (`accountType`: PLAYER o DEVELOPER; `locale` opcional: `es`, `en` o `it`, por defecto `es`) → 201 con `{id, email, verificationRequired: true}` y un correo con el enlace de verificación (sin sesión). Con `EMAIL_VERIFICATION_REQUIRED=false` devuelve `accessToken` y `refreshToken` |
-| POST | `/api/auth/verify-email/preview` | público | `{token}` → `{username}` si el enlace sigue vigente (no lo gasta); 400 si está usado, caducado o no existe |
-| POST | `/api/auth/verify-email` | público | `{token, password}` (la contraseña de ese registro) → verifica el email y devuelve `accessToken` y `refreshToken`. 400 si el enlace no vale (`auth.verificationInvalid`) o la contraseña no es la del registro (`auth.verificationPasswordInvalid`, 5 fallos anulan el enlace); 409 si el usuario del enlace lo cogió otra cuenta |
-| POST | `/api/auth/resend-verification` | público | `{email}` → 204 siempre (no revela si la cuenta existe). 429 al pasar de 3 correos por hora y email (registro incluido) |
-| POST | `/api/auth/login` | público | Login con username **o** email → `accessToken` y `refreshToken`. 403 con `code: auth.emailNotVerified` si la contraseña es correcta pero falta verificar el email |
-| POST | `/api/auth/refresh` | público | `{refreshToken}` → par nuevo (rotación). 401 si está caducado, revocado o ya usado (en ese caso se revoca su familia) |
-| POST | `/api/auth/logout` | público | `{refreshToken}` → 204; revoca la sesión (idempotente) |
-| GET / PATCH | `/api/users/me` | usuario | Ver y editar el perfil (incluidos `locale`, el idioma de los correos, y `profilePublic`) |
-| GET | `/api/users/search?q=` | usuario | Busca jugadores por nombre (2 a 50 caracteres) |
-| GET | `/api/users/{username}/profile` | usuario | Perfil de un jugador; biblioteca y amigos solo si es público, amigo o el propio |
-| GET | `/api/friends` · `/api/friends/requests` | usuario | Mis amigos · solicitudes recibidas (`incoming`) y enviadas (`outgoing`) |
-| POST | `/api/friends/requests` | jugador | `{username}` → 201, solicitud PENDING (409 si ya existe o ya son amigos) |
-| POST | `/api/friends/requests/{id}/accept` · `/reject` | jugador | Aceptar (200) o rechazar (204) una solicitud recibida |
-| DELETE | `/api/friends/requests/{id}` · `/api/friends/{username}` | usuario | Cancelar una solicitud enviada · borrar un amigo (204) |
-| GET | `/api/genres` | público | Géneros |
-| GET | `/api/games` | público | Catálogo con filtros (ver abajo) |
-| GET | `/api/games/{slug}` | público | Ficha del juego |
-| GET | `/api/games/{slug}/reviews` | público | Reseñas paginadas; `?language=es\|en\|it` es opcional (sin él salen todas) |
-| GET / POST | `/api/developer/games` | developer | Mis juegos / crear (DRAFT) |
-| GET / PUT / DELETE | `/api/developer/games/{id}` | developer (dueño) | Ver, editar (con `version` → 409 si está desactualizada) y borrar (solo borradores sin ventas) |
-| POST | `/api/developer/games/{id}/publish` · `/unpublish` | developer (dueño) | DRAFT ↔ PUBLISHED |
-| POST | `/api/developer/games/discount` | developer | Descuento masivo a los juegos publicados |
-| POST | `/api/developer/games/{id}/cover` · `/api/admin/games/{id}/cover` | developer (dueño) · admin | Subir la portada (multipart, campo `file`; JPEG, PNG o WebP de hasta 5 MB) → el juego con su `coverUrl`. 400 si no es una imagen válida, 413 si pesa más, 503 si Cloudinary no está activado |
-| GET | `/api/uploads/covers/status` | usuario | `{"enabled": true\|false}`: si la subida de portadas está activa |
-| POST | `/api/recommendations/chat` | usuario | Asistente: `{messages:[{role,content}]}` (máximo 10; el último, del usuario) → `{reply, games}`. 429 si pasa de 20 mensajes por hora, 503 si el asistente no está disponible |
-| POST | `/api/developer/games/import` | developer | Importar un juego de la tienda de Steam por AppID |
-| GET / DELETE | `/api/cart` | usuario | Ver y vaciar el carrito |
-| PUT / DELETE | `/api/cart/items/{gameId}` | usuario | Añadir y quitar (idempotentes) |
-| GET | `/api/wishlist` · PUT / DELETE `/api/wishlist/{gameId}` | usuario | Lista de deseos |
-| GET | `/api/library` | usuario | Mi biblioteca |
-| GET | `/api/library/status/{gameId}` | usuario | ¿Lo tengo? ¿Está en el carrito o la wishlist? ¿Lo he reseñado? |
-| POST | `/api/library/{gameId}/play` | usuario | Sesión de juego simulada: suma `minutes` (1 a 1440) al tiempo jugado. 404 si no lo tienes |
-| POST | `/api/orders` | usuario | Checkout: carrito → pedido PENDING |
-| POST | `/api/orders/{id}/pay` | usuario | Pagar → 200 PAID · **402** FAILED · 409 si ya está procesado |
-| POST | `/api/orders/{id}/cancel` | usuario | Cancelar un pedido pendiente |
-| GET | `/api/orders` · `/api/orders/{id}` | usuario | Historial y detalle |
-| POST | `/api/reviews` · PUT / DELETE `/api/reviews/{id}` | usuario | Reseñar un juego de mi biblioteca: `{gameId, recommended, body?, language?}` (autor; el admin también puede borrar) |
-| GET | `/api/admin/users` | admin | Usuarios paginados; `?q=` filtra por usuario o email (sin distinguir mayúsculas) |
-| PUT | `/api/admin/users/{id}/roles` | admin | Cambiar roles |
-| PATCH | `/api/admin/users/{id}/enabled` | admin | Activar o desactivar cuenta |
-| POST | `/api/admin/users/{id}/verify-email` | admin | Dar el email de la cuenta por verificado, aplicando los datos de su último enlace (idempotente) |
-| POST | `/api/admin/users/{userId}/library/{gameId}` | admin | Regalar un juego |
-| POST / PUT / DELETE | `/api/admin/genres[/{id}]` | admin | CRUD de géneros |
-| GET | `/api/admin/games?status=` | admin | Juegos por estado |
-| PATCH | `/api/admin/games/{id}/status` | admin | Retirar (DELISTED) o volver a publicar |
-| POST | `/api/admin/steam/sync` | admin | Sincronizar ahora precios y descuentos con Steam |
+| POST | `/api/auth/register` | pubblico | Registrazione (`accountType`: PLAYER o DEVELOPER; `locale` facoltativo: `es`, `en` o `it`, predefinito `es`) → 201 con `{id, email, verificationRequired: true}` e un'email con il link di verifica (senza sessione). Con `EMAIL_VERIFICATION_REQUIRED=false` restituisce `accessToken` e `refreshToken` |
+| POST | `/api/auth/verify-email/preview` | pubblico | `{token}` → `{username}` se il link è ancora valido (non lo consuma); 400 se è usato, scaduto o inesistente |
+| POST | `/api/auth/verify-email` | pubblico | `{token, password}` (la password di quella registrazione) → verifica l'email e restituisce `accessToken` e `refreshToken`. 400 se il link non vale (`auth.verificationInvalid`) o la password non è quella della registrazione (`auth.verificationPasswordInvalid`, 5 errori annullano il link); 409 se il nome utente del link è stato preso da un altro account |
+| POST | `/api/auth/resend-verification` | pubblico | `{email}` → sempre 204 (non rivela se l'account esiste). 429 oltre le 3 email all'ora per indirizzo (registrazione inclusa) |
+| POST | `/api/auth/login` | pubblico | Login con username **o** email → `accessToken` e `refreshToken`. 403 con `code: auth.emailNotVerified` se la password è corretta ma manca la verifica dell'email |
+| POST | `/api/auth/refresh` | pubblico | `{refreshToken}` → nuova coppia (rotazione). 401 se è scaduto, revocato o già usato (in tal caso si revoca la sua famiglia) |
+| POST | `/api/auth/logout` | pubblico | `{refreshToken}` → 204; revoca la sessione (idempotente) |
+| GET / PATCH | `/api/users/me` | utente | Vedere e modificare il profilo (inclusi `locale`, la lingua delle email, e `profilePublic`) |
+| GET | `/api/users/search?q=` | utente | Cerca giocatori per nome (da 2 a 50 caratteri) |
+| GET | `/api/users/{username}/profile` | utente | Profilo di un giocatore; libreria e amici solo se è pubblico, amico o il proprio |
+| GET | `/api/friends` · `/api/friends/requests` | utente | I miei amici · richieste ricevute (`incoming`) e inviate (`outgoing`) |
+| POST | `/api/friends/requests` | giocatore | `{username}` → 201, richiesta PENDING (409 se esiste già o sono già amici) |
+| POST | `/api/friends/requests/{id}/accept` · `/reject` | giocatore | Accettare (200) o rifiutare (204) una richiesta ricevuta |
+| DELETE | `/api/friends/requests/{id}` · `/api/friends/{username}` | utente | Annullare una richiesta inviata · eliminare un amico (204) |
+| GET | `/api/genres` | pubblico | Generi |
+| GET | `/api/games` | pubblico | Catalogo con filtri (vedi sotto) |
+| GET | `/api/games/{slug}` | pubblico | Scheda del gioco |
+| GET | `/api/games/{slug}/reviews` | pubblico | Recensioni paginate; `?language=es\|en\|it` è facoltativo (senza, compaiono tutte) |
+| GET / POST | `/api/developer/games` | developer | I miei giochi / creare (DRAFT) |
+| GET / PUT / DELETE | `/api/developer/games/{id}` | developer (proprietario) | Vedere, modificare (con `version` → 409 se non aggiornata) ed eliminare (solo bozze senza vendite) |
+| POST | `/api/developer/games/{id}/publish` · `/unpublish` | developer (proprietario) | DRAFT ↔ PUBLISHED |
+| POST | `/api/developer/games/discount` | developer | Sconto in blocco sui giochi pubblicati |
+| POST | `/api/developer/games/{id}/cover` · `/api/admin/games/{id}/cover` | developer (proprietario) · admin | Caricare la copertina (multipart, campo `file`; JPEG, PNG o WebP fino a 5 MB) → il gioco con il suo `coverUrl`. 400 se non è un'immagine valida, 413 se pesa di più, 503 se Cloudinary non è attivo |
+| GET | `/api/uploads/covers/status` | utente | `{"enabled": true\|false}`: indica se il caricamento delle copertine è attivo |
+| POST | `/api/recommendations/chat` | utente | Assistente: `{messages:[{role,content}]}` (massimo 10; l'ultimo, dell'utente) → `{reply, games}`. 429 oltre i 20 messaggi all'ora, 503 se l'assistente non è disponibile |
+| POST | `/api/developer/games/import` | developer | Importare un gioco dallo store di Steam tramite AppID |
+| GET / DELETE | `/api/cart` | utente | Vedere e svuotare il carrello |
+| PUT / DELETE | `/api/cart/items/{gameId}` | utente | Aggiungere e rimuovere (idempotenti) |
+| GET | `/api/wishlist` · PUT / DELETE `/api/wishlist/{gameId}` | utente | Wishlist |
+| GET | `/api/library` | utente | La mia libreria |
+| GET | `/api/library/status/{gameId}` | utente | Ce l'ho? È nel carrello o nella wishlist? L'ho recensito? |
+| POST | `/api/library/{gameId}/play` | utente | Sessione di gioco simulata: aggiunge `minutes` (da 1 a 1440) al tempo di gioco. 404 se non lo possiedi |
+| POST | `/api/orders` | utente | Checkout: carrello → ordine PENDING |
+| POST | `/api/orders/{id}/pay` | utente | Pagare → 200 PAID · **402** FAILED · 409 se è già stato elaborato |
+| POST | `/api/orders/{id}/cancel` | utente | Annullare un ordine in sospeso |
+| GET | `/api/orders` · `/api/orders/{id}` | utente | Storico e dettaglio |
+| POST | `/api/reviews` · PUT / DELETE `/api/reviews/{id}` | utente | Recensire un gioco della mia libreria: `{gameId, recommended, body?, language?}` (autore; anche l'admin può eliminare) |
+| GET | `/api/admin/users` | admin | Utenti paginati; `?q=` filtra per utente o email (senza distinguere maiuscole e minuscole) |
+| PUT | `/api/admin/users/{id}/roles` | admin | Cambiare i ruoli |
+| PATCH | `/api/admin/users/{id}/enabled` | admin | Attivare o disattivare un account |
+| POST | `/api/admin/users/{id}/verify-email` | admin | Dare per verificata l'email dell'account, applicando i dati del suo ultimo link (idempotente) |
+| POST | `/api/admin/users/{userId}/library/{gameId}` | admin | Regalare un gioco |
+| POST / PUT / DELETE | `/api/admin/genres[/{id}]` | admin | CRUD dei generi |
+| GET | `/api/admin/games?status=` | admin | Giochi per stato |
+| PATCH | `/api/admin/games/{id}/status` | admin | Ritirare (DELISTED) o ripubblicare |
+| POST | `/api/admin/steam/sync` | admin | Sincronizzare subito prezzi e sconti con Steam |
 
-**Búsqueda del catálogo**: todos los filtros son opcionales y combinables.
+**Ricerca nel catalogo**: tutti i filtri sono opzionali e combinabili.
 ```
 GET /api/games?q=hollow&genres=indie,platformer&minPrice=5&maxPrice=20&onSale=true
               &minPositivePercent=80&releasedAfter=2017-01-01&sort=price_asc&page=0&size=20
 ```
-Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated` (por porcentaje de reseñas positivas), `best_selling` y `title`. Los filtros de precio usan el precio con descuento. `minPositivePercent` (0 a 100) deja fuera los juegos con menos de 10 reseñas. Cada juego trae `reviewCount`, `positivePercent` y `reviewScore`.
+Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated` (per percentuale di recensioni positive), `best_selling` e `title`. I filtri di prezzo usano il prezzo scontato. `minPositivePercent` (da 0 a 100) esclude i giochi con meno di 10 recensioni. Ogni gioco include `reviewCount`, `positivePercent` e `reviewScore`.
 
-**Idioma de los correos (`locale`)**: acepta solo `es`, `en` o `it`, en minúsculas. Otro valor responde 400 con `errors.locale`. Sin `locale`, el registro usa `es` y el `PATCH` no lo cambia. Sale siempre en el usuario de la respuesta (`UserResponse`, también dentro de la respuesta del login y el registro) y no va dentro del JWT.
+**Lingua delle email (`locale`)**: accetta solo `es`, `en` o `it`, in minuscolo. Qualsiasi altro valore risponde 400 con `errors.locale`. Senza `locale`, la registrazione usa `es` e il `PATCH` non lo modifica. Compare sempre nell'utente della risposta (`UserResponse`, anche dentro la risposta di login e registrazione) e non è incluso nel JWT.
 
-**Errores**: todos siguen el formato estándar ProblemDetail (RFC 9457).
+**Errori**: seguono tutti il formato standard ProblemDetail (RFC 9457).
 ```json
 {
   "type": "about:blank",
@@ -311,93 +311,93 @@ Valores de `sort`: `newest` (por defecto), `price_asc`, `price_desc`, `top_rated
 }
 ```
 
-## Tests
+## Test
 
 ```bash
-./mvnw test      # 432 tests (H2 en memoria, no necesita PostgreSQL)
-./mvnw verify    # + informe de cobertura en target/site/jacoco/index.html (falla si baja del 80 % de líneas)
+./mvnw test      # 432 test (H2 in memoria, non serve PostgreSQL)
+./mvnw verify    # + report di copertura in target/site/jacoco/index.html (fallisce se scende sotto l'80 % di righe)
 ```
 
-| Tipo | Ejemplos | Qué comprueban |
+| Tipo | Esempi | Cosa verificano |
 |---|---|---|
-| Unitarios (Mockito) | `JwtServiceTest`, `AuthServiceTest`, `OrderServiceTest`, `ReviewServiceTest`, `CartServiceTest` | Reglas de negocio aisladas: tokens manipulados o caducados, delta de reseñas, pago aprobado o rechazado |
-| Repositorio (`@DataJpaTest` + Flyway real) | `GameCriteriaRepositoryTest`, `RepositoryIntegrationTest` | Filtros y órdenes de Criteria API, UPDATE atómicos y restricciones de la base de datos |
-| Integración HTTP (MockMvc) | `AuthIntegrationTest`, `CatalogIntegrationTest`, `CheckoutIntegrationTest`… | Flujos completos con JWT real, 401/403/404/409/402 y el formato ProblemDetail |
-| Correo asíncrono | `MailEventIntegrationTest`, `EmailServiceTest` | El correo sale **después del commit**, en un hilo `mail-*`, y **no** sale si hay rollback. Las plantillas escapan el HTML, el recibo solo enlaza portadas `https`, en el log el email del destinatario sale enmascarado (`l***@gmail.com`) y cada correo sale en el idioma del usuario (es, en o it, con español si falta) |
-| Concurrencia | `AtomicUpdateConcurrencyTest`, `RefreshTokenConcurrencyTest` | Hilos reales: ninguna venta se pierde, **exactamente 1** pago gana el pedido y, de varios refresh simultáneos con el mismo token, **solo uno** recibe tokens nuevos |
-| Nuevas funciones | `ReviewScoreTest`, `FriendIntegrationTest`, `RefreshTokenIntegrationTest`, `CloudinaryCoverStorageTest`, `CoverIntegrationTest`, `RecommendationServiceTest` | Etiquetas de reseñas con las reglas de Steam, visibilidad del perfil, rotación y reutilización de refresh tokens, validación de la imagen por bytes y límite de tamaño (Cloudinary simulado con `MockRestServiceServer`) y el asistente con el cliente de OpenRouter simulado: ningún test llama a la red |
+| Unitari (Mockito) | `JwtServiceTest`, `AuthServiceTest`, `OrderServiceTest`, `ReviewServiceTest`, `CartServiceTest` | Regole di business isolate: token manomessi o scaduti, delta delle recensioni, pagamento approvato o rifiutato |
+| Repository (`@DataJpaTest` + Flyway reale) | `GameCriteriaRepositoryTest`, `RepositoryIntegrationTest` | Filtri e ordinamenti della Criteria API, UPDATE atomici e vincoli del database |
+| Integrazione HTTP (MockMvc) | `AuthIntegrationTest`, `CatalogIntegrationTest`, `CheckoutIntegrationTest`… | Flussi completi con JWT reale, 401/403/404/409/402 e il formato ProblemDetail |
+| Email asincrona | `MailEventIntegrationTest`, `EmailServiceTest` | L'email parte **dopo il commit**, su un thread `mail-*`, e **non** parte se c'è rollback. I template fanno l'escape dell'HTML, la ricevuta collega solo copertine `https`, nel log l'email del destinatario compare mascherata (`l***@gmail.com`) e ogni email esce nella lingua dell'utente (es, en o it, con lo spagnolo se manca) |
+| Concorrenza | `AtomicUpdateConcurrencyTest`, `RefreshTokenConcurrencyTest` | Thread reali: nessuna vendita va persa, **esattamente 1** pagamento si aggiudica l'ordine e, tra più refresh simultanei con lo stesso token, **solo uno** riceve nuovi token |
+| Nuove funzioni | `ReviewScoreTest`, `FriendIntegrationTest`, `RefreshTokenIntegrationTest`, `CloudinaryCoverStorageTest`, `CoverIntegrationTest`, `RecommendationServiceTest` | Etichette delle recensioni con le regole di Steam, visibilità del profilo, rotazione e riutilizzo dei refresh token, validazione dell'immagine dai byte e limite di dimensione (Cloudinary simulato con `MockRestServiceServer`) e l'assistente con il client di OpenRouter simulato: nessun test chiama la rete |
 
-Los tests usan H2 en modo PostgreSQL **con las mismas migraciones de Flyway** que producción; no hay `ddl-auto=create`.
+I test usano H2 in modalità PostgreSQL **con le stesse migrazioni Flyway** della produzione; non c'è `ddl-auto=create`.
 
-**Frontend** (`cd frontend && npm test`): 165 tests en 23 archivos, con Vitest y Testing Library. Cubren el cliente HTTP (token, errores ProblemDetail, 401 y 402, y la renovación de la sesión con refresh token), los formateadores, la detección del idioma del navegador y los flujos de login, registro, verificación de email, checkout (pedido → pago aprobado o rechazado), ajustes, la ficha del juego (reseñas 👍/👎 y filtro por idioma), amigos y perfil, la subida de portadas y el chat del asistente y las cuatro demos jugables sobre las páginas reales con `fetch` simulado, además de la traducción de la interfaz (mismas claves en los tres idiomas, banderas y `Accept-Language`).
+**Frontend** (`cd frontend && npm test`): 165 test in 23 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
 
-**CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta `./mvnw verify` y los tests y el build del frontend en cada push a `main`.
+**CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) esegue `./mvnw verify` e i test e la build del frontend a ogni push su `main`.
 
-## Despliegue
+## Deploy
 
-El repositorio incluye todo lo necesario; solo faltan las cuentas.
+Il repository include tutto il necessario; mancano solo gli account.
 
-**Desplegado en Render:** el frontend en https://capstone-steam-web.onrender.com y la API en https://capstone-steam-api.onrender.com ([Swagger](https://capstone-steam-api.onrender.com/swagger-ui.html)). El frontend va como *static site* de Render en lugar de Vercel: build `cd frontend && npm ci && npm run build`, carpeta `frontend/dist`, `VITE_API_URL` con la URL de la API. Para las rutas de React Router hay una regla *Rewrite* `/*` → `/index.html` en el panel de Render; además, el `postbuild` copia `index.html` como `404.html` por si falta la regla.
+**Rilasciato su Render:** il frontend su https://capstone-steam-web.onrender.com e l'API su https://capstone-steam-api.onrender.com ([Swagger](https://capstone-steam-api.onrender.com/swagger-ui.html)). Il frontend è un *static site* di Render invece di Vercel: build `cd frontend && npm ci && npm run build`, cartella `frontend/dist`, `VITE_API_URL` con l'URL dell'API. Per le rotte di React Router c'è una regola *Rewrite* `/*` → `/index.html` nel pannello di Render; inoltre, il `postbuild` copia `index.html` come `404.html` nel caso la regola manchi.
 
-1. **Todo en Render con el Blueprint.** Ve a *New → Blueprint* y elige este repositorio: [`render.yaml`](render.yaml) crea en Frankfurt la base de datos, la API (a partir del [`Dockerfile`](Dockerfile)) y el frontend como *static site* con la regla *Rewrite*. `JWT_SECRET` se genera solo. Se piden `ADMIN_PASSWORD` y, opcionalmente, `MAIL_USERNAME`, `MAIL_APP_PASSWORD`, `MAIL_FROM`, `CLOUDINARY_URL` y `OPENROUTER_API_KEY` (sin estas dos, la subida de portadas y el asistente quedan desactivados). Si Render asigna otros nombres de servicio, ajusta `CORS_ALLOWED_ORIGINS` y `VITE_API_URL`.
-2. Carga el catálogo demo en la base de datos nueva: `node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD> --api https://<tu-api>.onrender.com`.
+1. **Tutto su Render con il Blueprint.** Vai su *New → Blueprint* e scegli questo repository: [`render.yaml`](render.yaml) crea a Francoforte il database, l'API (a partire dal [`Dockerfile`](Dockerfile)) e il frontend come *static site* con la regola *Rewrite*. `JWT_SECRET` viene generato da solo. Vengono richiesti `ADMIN_PASSWORD` e, facoltativamente, `MAIL_USERNAME`, `MAIL_APP_PASSWORD`, `MAIL_FROM`, `CLOUDINARY_URL` e `OPENROUTER_API_KEY` (senza queste ultime due, il caricamento delle copertine e l'assistente restano disattivati). Se Render assegna altri nomi ai servizi, adatta `CORS_ALLOWED_ORIGINS` e `VITE_API_URL`.
+2. Carica il catalogo demo nel nuovo database: `node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD> --api https://<tu-api>.onrender.com`.
 
-Render solo permite **una PostgreSQL gratuita por cuenta**, y caduca a los 30 días. Como alternativa para el frontend sigue valiendo **Vercel**: *Root Directory* = `frontend` (el [`vercel.json`](frontend/vercel.json) ya configura el build y las rutas), `VITE_API_URL` con la URL de la API y esa URL de Vercel en `CORS_ALLOWED_ORIGINS`.
+Render consente **un solo PostgreSQL gratuito per account**, e scade dopo 30 giorni. Come alternativa per il frontend vale ancora **Vercel**: *Root Directory* = `frontend` (il [`vercel.json`](frontend/vercel.json) configura già build e rotte), `VITE_API_URL` con l'URL dell'API e quell'URL di Vercel in `CORS_ALLOWED_ORIGINS`.
 
-En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda alrededor de 1 minuto en despertarlo. Para acortarlo, el `Dockerfile` genera al construir la imagen una **caché AOT de Java 25** (`app.aot`, con un arranque de entrenamiento que no toca la BD) y arranca con `-Xms128m -Xmx384m -XX:+UseSerialGC -XX:TieredStopAtLevel=1`. En Render el arranque bajó de ~200 s a **~59 s** (en local, de ~5,5 s a ~2,5 s).
+Nel piano gratuito di Render, il backend va in stop dopo 15 minuti senza traffico e la prima richiesta impiega circa 1 minuto a svegliarlo. Per ridurlo, il `Dockerfile` genera durante la build dell'immagine una **cache AOT di Java 25** (`app.aot`, con un avvio di addestramento che non tocca il DB) e parte con `-Xms128m -Xmx384m -XX:+UseSerialGC -XX:TieredStopAtLevel=1`. Su Render l'avvio è sceso da ~200 s a **~59 s** (in locale, da ~5,5 s a ~2,5 s).
 
-### Alternativa: alojarlo en tu propio PC
+### Alternativa: ospitarlo sul proprio PC
 
-[`deploy/local`](deploy/local) publica la tienda desde este equipo, sin pagar hosting: **Caddy** sirve la web compilada y reenvía `/api` al backend, y un **túnel de Cloudflare** la publica en tu dominio con HTTPS sin abrir puertos del router. Usa una base de datos propia (`arcade`), separada de la de desarrollo.
+[`deploy/local`](deploy/local) pubblica il negozio da questo computer, senza pagare un hosting: **Caddy** serve il sito compilato e inoltra `/api` al backend, e un **tunnel di Cloudflare** lo pubblica sul tuo dominio con HTTPS senza aprire porte sul router. Usa un database dedicato (`arcade`), separato da quello di sviluppo.
 
 ```
-navegador ──HTTPS──▶ Cloudflare ──túnel──▶ cloudflared ──▶ Caddy :8088 ─┬─ web (frontend/dist)
+browser ──HTTPS──▶ Cloudflare ──tunnel──▶ cloudflared ──▶ Caddy :8088 ─┬─ web (frontend/dist)
                                                                        └─ /api ──▶ Spring Boot :8090 ──▶ PostgreSQL (arcade)
 ```
 
-1. Copia `deploy/local/host.env.example` como `host.env` y pon tu dominio de Cloudflare en `PUBLIC_HOST` (p. ej. `arcade.tudominio.com`). Los secretos siguen en el `.env` de la raíz.
-2. Una sola vez: `deploy\local\setup-host.cmd`. Instala Caddy y cloudflared (winget), crea la base de datos y el túnel, y apunta el dominio a este PC (abre el navegador para iniciar sesión en Cloudflare).
-3. Arrancar: `deploy\local\start-arcade.cmd -Build -Seed` la primera vez; luego basta `start-arcade.cmd` (`-Build` solo tras cambiar código). Para probar sin dominio, `-NoTunnel` lo deja en `http://localhost:8088`.
-4. Parar: `deploy\local\stop-arcade.cmd`. Los logs quedan en `deploy/local/run/logs`.
+1. Copia `deploy/local/host.env.example` come `host.env` e inserisci il tuo dominio Cloudflare in `PUBLIC_HOST` (ad es. `arcade.tudominio.com`). I segreti restano nel `.env` della radice.
+2. Una sola volta: `deploy\local\setup-host.cmd`. Installa Caddy e cloudflared (winget), crea il database e il tunnel, e punta il dominio a questo PC (apre il browser per accedere a Cloudflare).
+3. Avvio: `deploy\local\start-arcade.cmd -Build -Seed` la prima volta; poi basta `start-arcade.cmd` (`-Build` solo dopo aver cambiato il codice). Per provare senza dominio, `-NoTunnel` lo lascia su `http://localhost:8088`.
+4. Arresto: `deploy\local\stop-arcade.cmd`. I log restano in `deploy/local/run/logs`.
 
-La web solo está en línea mientras el PC esté encendido y el script en marcha.
+Il sito è online solo finché il PC è acceso e lo script è in esecuzione.
 
-## Datos demo y créditos
+## Dati demo e crediti
 
-[`scripts/seed-demo.mjs`](scripts/seed-demo.mjs) carga, **a través de la API**, un catálogo de 60 juegos reales de Steam (59 publicados y *Hollow Knight: Silksong* como borrador, con al menos 5 por género y la descripción en es, en e it), 49 estudios, 6 jugadores con sus compras (una con el pago rechazado), wishlists y tiempo de juego, y **60 reseñadores** (20 por idioma) que compran por el checkout simulado y reseñan en su idioma, con un reparto de votos parecido al de Steam: unas 2.100 reseñas, para que los juegos tengan porcentaje y etiqueta. Las «Extremadamente…» necesitan 500 reseñas y no salen. Los textos salen de un banco propio de frases cortas por idioma y voto; no se copia ninguna reseña real. Los datos están en [`scripts/demo-data.json`](scripts/demo-data.json), y se validan con `node scripts/check-demo-data.mjs` y se puede ejecutar varias veces sin duplicar nada:
+[`scripts/seed-demo.mjs`](scripts/seed-demo.mjs) carica, **tramite l'API**, un catalogo di 60 giochi reali di Steam (59 pubblicati e *Hollow Knight: Silksong* come bozza, con almeno 5 per genere e la descrizione in es, en e it), 49 studi, 6 giocatori con i loro acquisti (uno con il pagamento rifiutato), wishlist e tempo di gioco, e **60 recensori** (20 per lingua) che acquistano con il checkout simulato e recensiscono nella propria lingua, con una distribuzione dei voti simile a quella di Steam: circa 2.100 recensioni, in modo che i giochi abbiano percentuale ed etichetta. Le «Estremamente…» richiedono 500 recensioni e non compaiono. I testi provengono da un archivio proprio di frasi brevi per lingua e voto; non viene copiata alcuna recensione reale. I dati sono in [`scripts/demo-data.json`](scripts/demo-data.json), si convalidano con `node scripts/check-demo-data.mjs` e lo script si può eseguire più volte senza duplicare nulla:
 
 ```bash
-node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD>                                   # contra http://localhost:8081
-node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD> --api https://tu-api.onrender.com # contra el despliegue
+node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD>                                   # contro http://localhost:8081
+node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD> --api https://tu-api.onrender.com # contro il deploy
 ```
 
-El seed espera (lo que diga `Retry-After`) y reintenta si la API le responde 429 por el límite por IP (contra producción tarda unos minutos; no hace falta tocar variables de Render); otros 429 los trata como error. Valida la cuenta de admin **antes de registrar la primera cuenta**, para no dejar cuentas sin verificar, y si relanzas el seed tras una ejecución a medias verifica con el admin las cuentas que quedaron pendientes (no las vuelve a registrar). La API exige verificar el email de las cuentas nuevas, así que el seed las verifica con la cuenta de admin (`POST /api/admin/users/{id}/verify-email`). La contraseña va en `--admin-password` o en la variable `ADMIN_PASSWORD` (el usuario, por defecto `admin`, en `--admin-login`). Sin ella, el seed termina con «Falta --admin-password» antes de registrar la primera cuenta nueva (asume que la API exige verificar el email, como en dev y prod; solo los tests la desactivan). Solo verifica a mano cuentas cuyo email es el del seed. En una base ya sembrada, relanzarlo no crea nada y no necesita la contraseña.
+Il seed attende (quanto indica `Retry-After`) e riprova se l'API risponde 429 per il limite per IP (contro la produzione richiede qualche minuto; non serve toccare le variabili di Render); altri 429 vengono trattati come errore. Convalida l'account admin **prima di registrare il primo account**, per non lasciare account non verificati, e se rilanci il seed dopo un'esecuzione interrotta verifica con l'admin gli account rimasti in sospeso (non li registra di nuovo). L'API richiede di verificare l'email dei nuovi account, quindi il seed li verifica con l'account admin (`POST /api/admin/users/{id}/verify-email`). La password va in `--admin-password` o nella variabile `ADMIN_PASSWORD` (l'utente, predefinito `admin`, in `--admin-login`). Senza di essa, il seed termina con «Falta --admin-password» prima di registrare il primo nuovo account (presuppone che l'API richieda la verifica dell'email, come in dev e prod; solo i test la disattivano). Verifica a mano solo account la cui email è quella del seed. In un database già popolato, rilanciarlo non crea nulla e non richiede la password.
 
-Las portadas, cápsulas e imágenes de cabecera se enlazan desde el CDN de Steam (`cdn.cloudflare.steamstatic.com`), tanto en la tienda como en el correo de recibo. Los nombres, las imágenes y las marcas pertenecen a sus respectivos estudios y editores; se usan solo como datos de demostración en este proyecto educativo. Los textos de las reseñas son propios; las descripciones de los juegos nuevos vienen de la tienda de Steam.
+Le copertine, le capsule e le immagini di intestazione sono collegate dalla CDN di Steam (`cdn.cloudflare.steamstatic.com`), sia nel negozio sia nell'email di ricevuta. I nomi, le immagini e i marchi appartengono ai rispettivi studi ed editori; sono usati solo come dati dimostrativi in questo progetto didattico. I testi delle recensioni sono propri; le descrizioni dei giochi nuovi provengono dallo store di Steam.
 
-## Decisiones técnicas
+## Decisioni tecniche
 
-La justificación de cada decisión (D1 a D51) está en [handoff.md](handoff.md). Estas son las más relevantes:
+La motivazione di ciascuna decisione (da D1 a D51) è in [handoff.md](handoff.md) (in spagnolo). Queste sono le più rilevanti:
 
-- **Contadores protegidos.** `sales_count`, `review_count` y `positive_count` son de solo lectura para JPA (`insertable/updatable = false`) y solo cambian con UPDATE atómicos. Así, un developer que edita su juego nunca pisa una venta o una reseña concurrente.
-- **Máquina de estados del pedido en SQL.** `WHERE status = 'PENDING'` garantiza que un pedido solo se paga una vez, aunque se haga doble clic o lleguen peticiones concurrentes. Además, `UNIQUE(user_id, game_id)` impide tener el mismo juego dos veces en la biblioteca.
-- **Pago rechazado = commit.** El pedido FAILED y el intento de pago se guardan para dejar constancia; el controller responde 402 sin lanzar una excepción.
-- **Criteria sin trampas.**
-  - El filtro de géneros usa un subquery `IN`, sin join ni `DISTINCT`.
-  - Los precios y los porcentajes de reseñas positivas se comparan sin dividir, así que nunca hay una división entre cero.
-  - Los NULL van al final con un `CASE` portable.
-  - Siempre se desempata por `id` para que la paginación sea estable.
-- **Bloqueo optimista expuesto al cliente.** El `PUT` de un juego acepta `version`; si está desactualizada, responde 409 en lugar de sobrescribir los cambios de otra pestaña.
-- **Refresh token con rotación y familias.** Solo se guarda el hash; la revocación es un UPDATE atómico condicional (`revokeIfActive`), así que de varios refresh simultáneos con el mismo token gana uno solo. Reutilizar un token revoca su familia.
-- **Reseñas sin contadores descuadrados.** Editar o borrar una reseña la lee con bloqueo pesimista (`findByIdForUpdate`), para que el voto del que sale el delta sea el bloqueado.
-- **Sin filtraciones de información.** Un pedido ajeno devuelve 404 (no 403), los listados usan un orden fijo en el servidor y los datos del usuario se escapan en los correos HTML.
+- **Contatori protetti.** `sales_count`, `review_count` e `positive_count` sono di sola lettura per JPA (`insertable/updatable = false`) e cambiano solo con UPDATE atomici. Così, un developer che modifica il proprio gioco non sovrascrive mai una vendita o una recensione concorrente.
+- **Macchina a stati dell'ordine in SQL.** `WHERE status = 'PENDING'` garantisce che un ordine venga pagato una volta sola, anche con un doppio clic o richieste concorrenti. Inoltre, `UNIQUE(user_id, game_id)` impedisce di avere lo stesso gioco due volte nella libreria.
+- **Pagamento rifiutato = commit.** L'ordine FAILED e il tentativo di pagamento vengono salvati per tenerne traccia; il controller risponde 402 senza lanciare un'eccezione.
+- **Criteria senza trappole.**
+  - Il filtro dei generi usa una subquery `IN`, senza join né `DISTINCT`.
+  - I prezzi e le percentuali di recensioni positive si confrontano senza dividere, quindi non c'è mai una divisione per zero.
+  - I NULL vanno in fondo con un `CASE` portabile.
+  - Si ordina sempre anche per `id` perché la paginazione sia stabile.
+- **Lock ottimistico esposto al client.** Il `PUT` di un gioco accetta `version`; se non è aggiornata, risponde 409 invece di sovrascrivere le modifiche di un'altra scheda.
+- **Refresh token con rotazione e famiglie.** Si salva solo l'hash; la revoca è un UPDATE atomico condizionale (`revokeIfActive`), quindi tra più refresh simultanei con lo stesso token ne vince uno solo. Riutilizzare un token revoca la sua famiglia.
+- **Recensioni senza contatori sballati.** Modificare o eliminare una recensione la legge con lock pessimistico (`findByIdForUpdate`), in modo che il voto da cui deriva il delta sia quello bloccato.
+- **Nessuna fuga di informazioni.** Un ordine altrui restituisce 404 (non 403), gli elenchi usano un ordinamento fisso sul server e i dati dell'utente vengono sottoposti a escape nelle email HTML.
 
-### Limitaciones conocidas
-- El registro con el email de una cuenta sin verificar responde 201 con el `id` de esa cuenta (no con uno nuevo), así que el `id` de la cuenta pendiente es visible para quien conozca el email. No es un dato sensible, y el seed y Postman lo necesitan para verificar con el admin.
-- Desactivar una cuenta o cambiarle los roles corta su token de acceso al instante, sin consultar la base de datos en cada petición: el backend guarda una marca en memoria. Esa marca se pierde al reiniciar (el token vuelve a valer hasta 15 minutos) y no se comparte entre varias instancias.
-- El refresh token se guarda en `localStorage`, como el de acceso, así que un XSS podría leerlo. Una cookie `httpOnly` sería más segura, pero entre dominios (Vercel y Render) complica CORS y SameSite.
-- La purga diaria de `refresh_tokens` solo borra familias enteras ya caducadas; con varias instancias correría en todas (es idempotente).
-- El límite de mensajes del asistente vive en memoria: se pierde al reiniciar y no se comparte entre varias instancias del backend.
-- Las etiquetas «Extremadamente positivas» y «Extremadamente negativas» necesitan 500 reseñas; la demo no llega y no salen.
-- El pago bloquea el pedido (`SELECT … FOR UPDATE`) mientras llama a la pasarela, así que dos pagos simultáneos no cobran dos veces. Con un proveedor real seguiría haciendo falta una idempotency key para los reintentos tras un timeout de red.
-- La portada del recibo se carga desde la URL de la portada del juego. Las portadas **subidas** van a Cloudinary (https), un almacenamiento propio, y ya no filtran la apertura del correo a un servidor ajeno. Las portadas **pegadas como URL** siguen igual: ese servidor puede saber cuándo se abre el correo (como un píxel de seguimiento), igual que en la tienda web. Gmail lo atenúa porque sirve las imágenes a través de su proxy.
+### Limitazioni note
+- La registrazione con l'email di un account non verificato risponde 201 con l'`id` di quell'account (non con uno nuovo), quindi l'`id` dell'account in sospeso è visibile a chi conosce l'email. Non è un dato sensibile, e il seed e Postman ne hanno bisogno per verificare con l'admin.
+- Disattivare un account o cambiargli i ruoli interrompe subito il suo token di accesso, senza interrogare il database a ogni richiesta: il backend conserva un indicatore in memoria. Tale indicatore si perde al riavvio (il token torna a valere fino a 15 minuti) e non è condiviso tra più istanze.
+- Il refresh token è salvato in `localStorage`, come quello di accesso, quindi un XSS potrebbe leggerlo. Un cookie `httpOnly` sarebbe più sicuro, ma tra domini diversi (Vercel e Render) complica CORS e SameSite.
+- La pulizia giornaliera di `refresh_tokens` elimina solo intere famiglie già scadute; con più istanze girerebbe su tutte (è idempotente).
+- Il limite di messaggi dell'assistente vive in memoria: si perde al riavvio e non è condiviso tra più istanze del backend.
+- Le etichette «Estremamente positive» ed «Estremamente negative» richiedono 500 recensioni; la demo non ci arriva e non compaiono.
+- Il pagamento blocca l'ordine (`SELECT … FOR UPDATE`) mentre chiama il gateway, quindi due pagamenti simultanei non addebitano due volte. Con un provider reale servirebbe comunque una idempotency key per i nuovi tentativi dopo un timeout di rete.
+- La copertina della ricevuta viene caricata dall'URL della copertina del gioco. Le copertine **caricate** vanno su Cloudinary (https), un archivio proprio, e non rivelano più l'apertura dell'email a un server esterno. Le copertine **incollate come URL** restano come prima: quel server può sapere quando l'email viene aperta (come un pixel di tracciamento), esattamente come nel negozio web. Gmail lo attenua perché serve le immagini tramite il proprio proxy.
