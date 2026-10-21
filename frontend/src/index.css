@@ -134,7 +134,7 @@ h1 { max-width: 520px; margin: 0; font-size: clamp(38px, 5vw, 67px); line-height
   .topbar { height: auto; min-height: 72px; padding: 14px 18px; flex-wrap: wrap; gap: 12px; }
   .mobile-brand { display: flex; }
   .search { order: 3; width: 100%; }
-  .profile, .cart-button span, .search kbd { display: none; }
+  .profile > span:not(.avatar), .profile > svg, .cart-button span, .search kbd { display: none; }
   .lang-switch { gap: 2px; padding: 3px; }
   .lang-switch button { width: 26px; height: 26px; }
   .content { padding: 18px 18px 45px; }

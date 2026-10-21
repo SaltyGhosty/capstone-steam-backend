@@ -164,9 +164,13 @@ export default function Layout() {
         <nav className="mobile-nav" aria-label={t('nav.mobile')}>
           <NavLink to="/" end><Icon name="home" /> {t('nav.start')}</NavLink>
           <NavLink to="/browse"><Icon name="compass" /> {t('nav.browse')}</NavLink>
+          <NavLink to="/demos"><Icon name="play" /> {t('nav.demos')}</NavLink>
           <NavLink to="/library"><Icon name="library" /> {t('nav.library')}</NavLink>
           <NavLink to="/wishlist"><Icon name="heart" /> {t('nav.wishlist')}</NavLink>
           <NavLink to="/orders"><Icon name="receipt" /> {t('nav.orders')}</NavLink>
+          {isPlayer && <NavLink to="/friends"><Icon name="users" /> {t('nav.friends')}</NavLink>}
+          {hasRole('ROLE_DEVELOPER') && <NavLink to="/developer"><Icon name="code" /> {t('nav.myGames')}</NavLink>}
+          {hasRole('ROLE_ADMIN') && <NavLink to="/admin"><Icon name="shield" /> {t('nav.moderation')}</NavLink>}
           <NavLink to="/settings"><Icon name="settings" /> {t('nav.settings')}</NavLink>
         </nav>
 
