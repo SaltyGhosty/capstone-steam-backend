@@ -9,6 +9,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import com.capstone.steam.user.Role;
+import com.capstone.steam.user.RoleName;
 import com.capstone.steam.user.User;
 
 /**
@@ -59,6 +60,10 @@ public final class AppUserPrincipal implements UserDetails {
 
     public List<String> getRoles() {
         return authorities.stream().map(GrantedAuthority::getAuthority).toList();
+    }
+
+    public boolean isAdmin() {
+        return getRoles().contains(RoleName.ROLE_ADMIN.name());
     }
 
     @Override

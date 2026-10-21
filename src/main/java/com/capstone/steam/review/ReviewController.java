@@ -17,7 +17,6 @@ import com.capstone.steam.common.dto.PageResponse;
 import com.capstone.steam.review.dto.ReviewRequest;
 import com.capstone.steam.review.dto.ReviewResponse;
 import com.capstone.steam.security.AppUserPrincipal;
-import com.capstone.steam.user.RoleName;
 
 import jakarta.validation.Valid;
 
@@ -30,11 +29,16 @@ public class ReviewController {
         this.reviewService = reviewService;
     }
 
-    /** Público (GET /api/games/** es permitAll). {@code language} es opcional: sin él salen todas. */
+    /**
+     * Público (GET /api/games/** es permitAll), con el principal opcional para las fichas de juegos retirados.
+     * {@code language} es opcional: sin él salen todas.
+     */
     @GetMapping("/api/games/{slug}/reviews")
     public PageResponse<ReviewResponse> listForGame(@PathVariable String slug,
-            @RequestParam(required = false) String language, Pageable pageable) {
-        return reviewService.listForGame(slug, language, pageable);
+            @RequestParam(required = false) String language, Pageable pageable,
+            @AuthenticationPrincipal AppUserPrincipal user) {
+        return reviewService.listForGame(slug, language, pageable, user == null ? null : user.getId(),
+                user != null && user.isAdmin());
     }
 
     @PostMapping("/api/reviews")
@@ -53,7 +57,7 @@ public class ReviewController {
     @DeleteMapping("/api/reviews/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@AuthenticationPrincipal AppUserPrincipal user, @PathVariable Long id) {
-        boolean isAdmin = user.getRoles().contains(RoleName.ROLE_ADMIN.name());
+        boolean isAdmin = user.isAdmin();
         reviewService.delete(user.getId(), isAdmin, id);
     }
 }

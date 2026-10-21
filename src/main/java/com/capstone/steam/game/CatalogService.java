@@ -13,17 +13,20 @@ import com.capstone.steam.game.search.GameCriteriaRepository;
 import com.capstone.steam.game.search.GameSearchCriteria;
 import com.capstone.steam.game.search.GameSort;
 
-/** Lectura pública del escaparate: solo juegos PUBLISHED. */
+/** Lectura pública del escaparate: el catálogo solo trae PUBLISHED; la ficha de un DELISTED la ven sus dueños. */
 @Service
 @Transactional(readOnly = true)
 public class CatalogService {
 
     private final GameCriteriaRepository gameCriteriaRepository;
     private final GameRepository gameRepository;
+    private final GameVisibility gameVisibility;
 
-    public CatalogService(GameCriteriaRepository gameCriteriaRepository, GameRepository gameRepository) {
+    public CatalogService(GameCriteriaRepository gameCriteriaRepository, GameRepository gameRepository,
+            GameVisibility gameVisibility) {
         this.gameCriteriaRepository = gameCriteriaRepository;
         this.gameRepository = gameRepository;
+        this.gameVisibility = gameVisibility;
     }
 
     public PageResponse<GameSummaryResponse> search(GameSearchCriteria criteria, GameSort sort, int page, int size) {
@@ -35,9 +38,10 @@ public class CatalogService {
         return PageResponse.of(result, GameSummaryResponse::from);
     }
 
-    public GameDetailResponse getBySlug(String slug) {
+    /** {@code viewerId} es null sin sesión; quien no puede verla recibe el mismo 404 que si no existiera. */
+    public GameDetailResponse getBySlug(String slug, Long viewerId, boolean viewerIsAdmin) {
         return gameRepository.findBySlug(slug)
-                .filter(Game::isPublished)
+                .filter(game -> gameVisibility.canView(game, viewerId, viewerIsAdmin))
                 .map(GameDetailResponse::from)
                 .orElseThrow(() -> NotFoundException.of("game", slug));
     }

@@ -46,6 +46,7 @@ class ReviewServiceTest {
     @Mock private GameRepository gameRepository;
     @Mock private LibraryRepository libraryRepository;
     @Mock private UserRepository userRepository;
+    @Mock private com.capstone.steam.game.GameVisibility gameVisibility;
     @InjectMocks private ReviewService service;
 
     private Game game;
@@ -166,7 +167,7 @@ class ReviewServiceTest {
 
     @Test
     void listWithAnInvalidLanguageIsRejected() {
-        assertThatThrownBy(() -> service.listForGame("celeste", "fr", Pageable.unpaged()))
+        assertThatThrownBy(() -> service.listForGame("celeste", "fr", Pageable.unpaged(), null, false))
                 .isInstanceOf(BadRequestException.class);
     }
 

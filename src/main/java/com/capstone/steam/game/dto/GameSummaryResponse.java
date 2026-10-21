@@ -23,7 +23,8 @@ public record GameSummaryResponse(
         int positivePercent,
         ReviewScore reviewScore,
         List<GenreResponse> genres,
-        String developerName) {
+        String developerName,
+        boolean developerDeleted) {
 
     public static GameSummaryResponse from(Game game) {
         return new GameSummaryResponse(
@@ -39,7 +40,8 @@ public record GameSummaryResponse(
                 game.getPositivePercent(),
                 game.getReviewScore(),
                 genres(game),
-                game.getDeveloper().getDisplayName());
+                game.getDeveloper().getDisplayName(),
+                game.getDeveloper().isDeleted());
     }
 
     static List<GenreResponse> genres(Game game) {

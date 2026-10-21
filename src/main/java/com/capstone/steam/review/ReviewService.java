@@ -15,6 +15,7 @@ import com.capstone.steam.common.exception.ForbiddenException;
 import com.capstone.steam.common.exception.NotFoundException;
 import com.capstone.steam.game.Game;
 import com.capstone.steam.game.GameRepository;
+import com.capstone.steam.game.GameVisibility;
 import com.capstone.steam.library.LibraryRepository;
 import com.capstone.steam.review.dto.ReviewRequest;
 import com.capstone.steam.review.dto.ReviewResponse;
@@ -39,22 +40,25 @@ public class ReviewService {
     private final GameRepository gameRepository;
     private final LibraryRepository libraryRepository;
     private final UserRepository userRepository;
+    private final GameVisibility gameVisibility;
 
     public ReviewService(ReviewRepository reviewRepository, GameRepository gameRepository,
-            LibraryRepository libraryRepository, UserRepository userRepository) {
+            LibraryRepository libraryRepository, UserRepository userRepository, GameVisibility gameVisibility) {
         this.reviewRepository = reviewRepository;
         this.gameRepository = gameRepository;
         this.libraryRepository = libraryRepository;
         this.userRepository = userRepository;
+        this.gameVisibility = gameVisibility;
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<ReviewResponse> listForGame(String slug, String language, Pageable pageable) {
+    public PageResponse<ReviewResponse> listForGame(String slug, String language, Pageable pageable, Long viewerId,
+            boolean viewerIsAdmin) {
         if (language != null && !LANGUAGES.contains(language)) {
             throw new BadRequestException("review.invalidLanguage", language);
         }
         Game game = gameRepository.findBySlug(slug)
-                .filter(Game::isPublished)
+                .filter(found -> gameVisibility.canView(found, viewerId, viewerIsAdmin))
                 .orElseThrow(() -> NotFoundException.of("game", slug));
         PageRequest paging = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), NEWEST_FIRST);
         var page = language == null
