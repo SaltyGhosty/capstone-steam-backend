@@ -8,7 +8,7 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (copertine) · OpenRouter (assistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Test** | Backend: 434 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 165 test in 23 file · CI su GitHub Actions |
+| **Test** | Backend: 434 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 168 test in 23 file · CI su GitHub Actions |
 | **API** | Swagger UI su `/swagger-ui.html` · 83 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -329,7 +329,7 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 
 I test usano H2 in modalità PostgreSQL **con le stesse migrazioni Flyway** della produzione; non c'è `ddl-auto=create`.
 
-**Frontend** (`cd frontend && npm test`): 165 test in 23 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
+**Frontend** (`cd frontend && npm test`): 168 test in 23 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
 
 **CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) esegue `./mvnw verify` e i test e la build del frontend a ogni push su `main`.
 

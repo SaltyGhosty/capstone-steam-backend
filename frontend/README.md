@@ -94,7 +94,7 @@ Minigiochi propri (senza sprite, musica né nomi dei giochi reali) ispirati a qu
 
 ## Test
 
-`npm test`: 165 test in 23 file.
+`npm test`: 168 test in 23 file.
 
 | File | Cosa verifica |
 |---|---|
