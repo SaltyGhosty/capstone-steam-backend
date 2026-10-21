@@ -24,8 +24,10 @@ WORKDIR /app/extracted
 
 # Arranque rápido en el plan free (0,1 CPU): la JVM de Java 25 guarda en app.aot las clases ya cargadas y
 # enlazadas durante un arranque de entrenamiento. Mismos flags que en ENTRYPOINT.
+# El heap va fijo (384 MB = 75 % de los 512 MB del plan free): con MaxRAMPercentage, la máquina de build
+# (con mucha RAM) entrenaba con un heap enorme sin punteros comprimidos y la caché no servía en el contenedor.
 # El entrenamiento no toca la BD: sin Flyway, sin metadatos JDBC, y sale en cuanto el contexto está listo.
-ENV JAVA_FLAGS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
+ENV JAVA_FLAGS="-Xmx384m -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
 RUN java $JAVA_FLAGS -XX:AOTCacheOutput=app.aot \
       -Dspring.context.exit=onRefresh -Dspring.profiles.active=prod \
       -Dspring.flyway.enabled=false -Dspring.jpa.hibernate.ddl-auto=none \
