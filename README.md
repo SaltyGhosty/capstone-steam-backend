@@ -344,7 +344,7 @@ El repositorio incluye todo lo necesario; solo faltan las cuentas.
 
 Render solo permite **una PostgreSQL gratuita por cuenta**, y caduca a los 30 días. Como alternativa para el frontend sigue valiendo **Vercel**: *Root Directory* = `frontend` (el [`vercel.json`](frontend/vercel.json) ya configura el build y las rutas), `VITE_API_URL` con la URL de la API y esa URL de Vercel en `CORS_ALLOWED_ORIGINS`.
 
-En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda unos 3 minutos en despertarlo. Para acortarlo, el `Dockerfile` genera al construir la imagen una **caché AOT de Java 25** (`app.aot`, con un arranque de entrenamiento que no toca la BD) y arranca con `-XX:+UseSerialGC -XX:TieredStopAtLevel=1`; en local el arranque bajó de ~5,5 s a ~2,5 s.
+En el plan gratuito de Render, el backend se duerme tras 15 minutos sin tráfico y la primera petición tarda unos 3 minutos en despertarlo. Para acortarlo, el `Dockerfile` genera al construir la imagen una **caché AOT de Java 25** (`app.aot`, con un arranque de entrenamiento que no toca la BD) y arranca con `-Xms128m -Xmx384m -XX:+UseSerialGC -XX:TieredStopAtLevel=1`. En Render el arranque bajó de ~200 s a **~59 s** (en local, de ~5,5 s a ~2,5 s).
 
 ### Alternativa: alojarlo en tu propio PC
 
