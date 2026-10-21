@@ -144,6 +144,8 @@ export const adminApi = {
   setEnabled: (id: number, enabled: boolean) =>
     api<User>(`/api/admin/users/${id}/enabled`, { method: 'PATCH', body: { enabled } }),
   verifyEmail: (id: number) => api<User>(`/api/admin/users/${id}/verify-email`, { method: 'POST' }),
+  deleteUser: (id: number) => api<User>(`/api/admin/users/${id}`, { method: 'DELETE' }),
+  cancelDeletion: (id: number) => api<User>(`/api/admin/users/${id}/deletion/cancel`, { method: 'POST' }),
   grantGame: (userId: number, gameId: number) =>
     api<LibraryEntry>(`/api/admin/users/${userId}/library/${gameId}`, { method: 'POST' }),
   createGenre: (name: string) => api<Genre>('/api/admin/genres', { method: 'POST', body: { name } }),

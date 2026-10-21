@@ -17,7 +17,7 @@ const base = {
 const hades = {
   id: 1, title: 'Hades', slug: 'hades', coverUrl: null, price: 24.99, discountPercent: 0, finalPrice: 24.99,
   releaseDate: null, reviewCount: 120, positivePercent: 96, reviewScore: 'OVERWHELMINGLY_POSITIVE',
-  genres: [], developerName: 'Supergiant',
+  genres: [], developerName: 'Supergiant', developerDeleted: false,
 };
 
 const bodiesOf = (fetchMock: ReturnType<typeof mockFetch>) =>

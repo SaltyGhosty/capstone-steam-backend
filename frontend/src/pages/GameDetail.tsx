@@ -37,6 +37,8 @@ export default function GameDetail() {
   const own = ownership.data;
   const isMine = user?.id === g.developer.id;
   const wished = wishlistIds.has(g.id);
+  const studio = g.developer.displayName ?? t('game.deletedStudio');
+  const delisted = g.status === 'DELISTED';
 
   const onAdd = async () => {
     if (await addToCart(g.id, g.title)) ownership.setData(own ? { ...own, inCart: true } : own);
@@ -46,7 +48,7 @@ export default function GameDetail() {
     <>
       <section className="hero detail-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(8,12,18,.98) 0%, rgba(8,12,18,.8) 50%, rgba(8,12,18,.2) 100%), url("${wideImage(g.coverUrl)}")` }}>
         <div className="hero-copy">
-          <p className="eyebrow">{g.developer.displayName.toUpperCase()} · {formatDate(g.releaseDate)}</p>
+          <p className="eyebrow">{studio.toUpperCase()} · {formatDate(g.releaseDate)}</p>
           <h1>{g.title.toUpperCase()}</h1>
           <div className="detail-meta">
             <ReviewScoreBadge game={g} />
@@ -54,6 +56,16 @@ export default function GameDetail() {
           <div className="hero-tags">
             {g.genres.map((genre) => <Link key={genre.id} to={`/browse?genres=${genre.slug}`}>{genreName(genre)}</Link>)}
           </div>
+          {delisted ? (
+            <div className="buy-box">
+              <p><b>{t('game.delisted')}</b></p>
+              <small className="hint">{t('game.delistedHint')}</small>
+              <div className="hero-actions">
+                {isMine && <Link className="secondary" to={`/developer/games/${g.id}`}><Icon name="edit" size={18} /> {t('game.yoursEdit')}</Link>}
+                {own?.owned && <Link className="primary" to="/library"><Icon name="library" size={18} /> {t('game.inLibrary')}</Link>}
+              </div>
+            </div>
+          ) : (
           <div className="buy-box">
             <Price price={g.price} finalPrice={g.finalPrice} discountPercent={g.discountPercent} />
             {g.priceSyncedAt && <small className="hint">{t('steam.priceSynced', { date: formatDateTime(g.priceSyncedAt) })}</small>}
@@ -79,6 +91,7 @@ export default function GameDetail() {
               )}
             </div>
           </div>
+          )}
         </div>
         {g.coverUrl && <img className="detail-cover" src={g.coverUrl} alt={t('game.coverOf', { title: g.title })} />}
       </section>
@@ -91,7 +104,7 @@ export default function GameDetail() {
         <aside className="section">
           <div className="section-heading"><div><p className="eyebrow">{t('game.sheetEyebrow')}</p><h2>{t('game.details')}</h2></div></div>
           <dl className="panel facts">
-            <dt>{t('game.studio')}</dt><dd>{g.developer.displayName}</dd>
+            <dt>{t('game.studio')}</dt><dd>{studio}</dd>
             <dt>{t('game.release')}</dt><dd>{formatDate(g.releaseDate)}</dd>
             <dt>{t('game.genres')}</dt><dd>{g.genres.length ? genreLabel(g.genres) : '—'}</dd>
             <dt>{t('game.sold')}</dt><dd>{g.salesCount}</dd>
