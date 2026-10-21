@@ -8,8 +8,8 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (copertine) · OpenRouter (assistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Test** | Backend: 432 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 165 test in 23 file · CI su GitHub Actions |
-| **API** | Swagger UI su `/swagger-ui.html` · 74 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
+| **Test** | Backend: 434 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 165 test in 23 file · CI su GitHub Actions |
+| **API** | Swagger UI su `/swagger-ui.html` · 83 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
 
@@ -299,13 +299,13 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 
 **Lingua delle email (`locale`)**: accetta solo `es`, `en` o `it`, in minuscolo. Qualsiasi altro valore risponde 400 con `errors.locale`. Senza `locale`, la registrazione usa `es` e il `PATCH` non lo modifica. Compare sempre nell'utente della risposta (`UserResponse`, anche dentro la risposta di login e registrazione) e non è incluso nel JWT.
 
-**Errori**: seguono tutti il formato standard ProblemDetail (RFC 9457).
+**Errori**: seguono tutti il formato standard ProblemDetail (RFC 9457), con i testi nella lingua della richiesta (`Accept-Language`: `it`, `en` o `es`).
 ```json
 {
   "type": "about:blank",
   "title": "Bad Request",
   "status": 400,
-  "detail": "La petición contiene campos no válidos",
+  "detail": "La richiesta contiene campi non validi",
   "instance": "/api/auth/register",
   "errors": { "email": "must be a well-formed email address" }
 }
@@ -314,7 +314,7 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 ## Test
 
 ```bash
-./mvnw test      # 432 test (H2 in memoria, non serve PostgreSQL)
+./mvnw test      # 434 test (H2 in memoria, non serve PostgreSQL)
 ./mvnw verify    # + report di copertura in target/site/jacoco/index.html (fallisce se scende sotto l'80 % di righe)
 ```
 
@@ -371,7 +371,7 @@ node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD>                    
 node scripts/seed-demo.mjs --admin-password <ADMIN_PASSWORD> --api https://tu-api.onrender.com # contro il deploy
 ```
 
-Il seed attende (quanto indica `Retry-After`) e riprova se l'API risponde 429 per il limite per IP (contro la produzione richiede qualche minuto; non serve toccare le variabili di Render); altri 429 vengono trattati come errore. Convalida l'account admin **prima di registrare il primo account**, per non lasciare account non verificati, e se rilanci il seed dopo un'esecuzione interrotta verifica con l'admin gli account rimasti in sospeso (non li registra di nuovo). L'API richiede di verificare l'email dei nuovi account, quindi il seed li verifica con l'account admin (`POST /api/admin/users/{id}/verify-email`). La password va in `--admin-password` o nella variabile `ADMIN_PASSWORD` (l'utente, predefinito `admin`, in `--admin-login`). Senza di essa, il seed termina con «Falta --admin-password» prima di registrare il primo nuovo account (presuppone che l'API richieda la verifica dell'email, come in dev e prod; solo i test la disattivano). Verifica a mano solo account la cui email è quella del seed. In un database già popolato, rilanciarlo non crea nulla e non richiede la password.
+Il seed attende (quanto indica `Retry-After`) e riprova se l'API risponde 429 per il limite per IP (contro la produzione richiede qualche minuto; non serve toccare le variabili di Render); altri 429 vengono trattati come errore. Convalida l'account admin **prima di registrare il primo account**, per non lasciare account non verificati, e se rilanci il seed dopo un'esecuzione interrotta verifica con l'admin gli account rimasti in sospeso (non li registra di nuovo). L'API richiede di verificare l'email dei nuovi account, quindi il seed li verifica con l'account admin (`POST /api/admin/users/{id}/verify-email`). La password va in `--admin-password` o nella variabile `ADMIN_PASSWORD` (l'utente, predefinito `admin`, in `--admin-login`). Senza di essa, il seed si ferma con un messaggio che chiede `--admin-password` prima di registrare il primo nuovo account (presuppone che l'API richieda la verifica dell'email, come in dev e prod; solo i test la disattivano). Verifica a mano solo account la cui email è quella del seed. In un database già popolato, rilanciarlo non crea nulla e non richiede la password.
 
 Le copertine, le capsule e le immagini di intestazione sono collegate dalla CDN di Steam (`cdn.cloudflare.steamstatic.com`), sia nel negozio sia nell'email di ricevuta. I nomi, le immagini e i marchi appartengono ai rispettivi studi ed editori; sono usati solo come dati dimostrativi in questo progetto didattico. I testi delle recensioni sono propri; le descrizioni dei giochi nuovi provengono dallo store di Steam.
 
