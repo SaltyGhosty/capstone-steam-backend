@@ -59,7 +59,7 @@ function Hero({ games }: { games: GameDetail[] }) {
   return (
     <section id="featured" className="hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(8,12,18,.98) 0%, rgba(8,12,18,.74) 45%, rgba(8,12,18,.1) 100%), url("${wideImage(active.coverUrl)}")` }}>
       <div className="hero-copy">
-        <p className="eyebrow">{slide === 0 ? t('home.topRated') : t('home.featured')} · {(active.developer.displayName ?? t('game.deletedStudio')).toUpperCase()}</p>
+        <p className="eyebrow">{slide === 0 ? t('home.topRated') : t('home.featured')} · {(active.developer.deleted ? t('game.deletedStudio') : active.developer.displayName ?? '').toUpperCase()}</p>
         <h1><Link to={`/games/${active.slug}`}>{active.title.toUpperCase()}</Link></h1>
         <p className="hero-description">{active.description || t('home.noDescription')}</p>
         <div className="hero-tags">{active.genres.map((g) => <span key={g.id}>{genreName(g)}</span>)}</div>

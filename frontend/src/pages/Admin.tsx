@@ -88,7 +88,7 @@ function GamesTab() {
                     {g.coverUrl && <img src={g.coverUrl} alt="" />}
                     {g.status === 'PUBLISHED' ? <Link to={`/games/${g.slug}`}>{g.title}</Link> : <span>{g.title}</span>}
                   </div></td>
-                  <td>{g.developer.displayName ?? t('game.deletedStudio')}</td>
+                  <td>{g.developer.deleted ? t('game.deletedStudio') : g.developer.displayName}</td>
                   <td><span className={`badge ${g.status.toLowerCase()}`}>{gameStatus(g.status)}</span></td>
                   <td>{formatMoney(g.finalPrice)}</td>
                   <td>{g.salesCount}</td>

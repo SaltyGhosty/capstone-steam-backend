@@ -37,7 +37,8 @@ export default function GameDetail() {
   const own = ownership.data;
   const isMine = user?.id === g.developer.id;
   const wished = wishlistIds.has(g.id);
-  const studio = g.developer.displayName ?? t('game.deletedStudio');
+  // Lo decide la bandera de la API: un estudio vivo puede no tener nombre visible
+  const studio = g.developer.deleted ? t('game.deletedStudio') : g.developer.displayName ?? '';
   const delisted = g.status === 'DELISTED';
 
   const onAdd = async () => {

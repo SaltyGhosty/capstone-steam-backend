@@ -61,6 +61,16 @@ describe('ficha del juego', () => {
     expect(screen.queryByRole('button', { name: /lista de deseos/i })).not.toBeInTheDocument();
   });
 
+  it('un estudio vivo sin nombre no sale como eliminado: manda la bandera de la API', async () => {
+    setup({
+      'GET /api/games/neon-drift': { body: { ...game, developer: { id: 2, displayName: null, deleted: false } } },
+    });
+    renderRoutes(routes, '/games/neon-drift');
+
+    expect(await screen.findByText('Muy positivas')).toBeInTheDocument();
+    expect(screen.queryByText(/Estudio eliminado/i)).not.toBeInTheDocument();
+  });
+
   it('muestra la etiqueta y el porcentaje de reseñas positivas', async () => {
     setup();
     renderRoutes(routes, '/games/neon-drift');

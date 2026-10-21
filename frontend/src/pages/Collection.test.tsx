@@ -28,6 +28,13 @@ describe('biblioteca', () => {
     expect(await screen.findByText('Supergiant')).toBeInTheDocument();
   });
 
+  it('un estudio vivo sin nombre no sale como eliminado: manda la bandera de la API', async () => {
+    setup([{ ...entry, developerName: null, developerDeleted: false }]);
+    renderRoutes({ '/library': <Library /> }, '/library');
+    expect(await screen.findByText('Neon Drift')).toBeInTheDocument();
+    expect(screen.queryByText('Estudio eliminado')).not.toBeInTheDocument();
+  });
+
   it('muestra «Estudio eliminado» cuando el estudio ya no existe', async () => {
     setup([{ ...entry, developerName: null, developerDeleted: true }]);
     renderRoutes({ '/library': <Library /> }, '/library');

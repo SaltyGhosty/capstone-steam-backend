@@ -33,6 +33,24 @@ function setup(extra = {}) {
 
 afterEach(() => vi.restoreAllMocks());
 
+describe('admin: juegos', () => {
+  it('pinta «Estudio eliminado» según la bandera de la API, no según el nombre', async () => {
+    const game = {
+      id: 1, title: 'Vivo', slug: 'vivo', coverUrl: null, status: 'PUBLISHED', finalPrice: 10, salesCount: 0,
+      developer: { id: 7, displayName: null, deleted: false },
+    };
+    setup({
+      'GET /api/admin/games': { body: page([game, { ...game, id: 2, title: 'Huerfano', slug: 'huerfano', developer: { id: 8, displayName: null, deleted: true } }]) },
+    });
+    renderRoutes(routes, '/admin');
+
+    const alive = (await screen.findByText('Vivo')).closest('tr')!;
+    expect(within(alive).queryByText('Estudio eliminado')).not.toBeInTheDocument();
+    const orphan = screen.getByText('Huerfano').closest('tr')!;
+    expect(within(orphan).getByText('Estudio eliminado')).toBeInTheDocument();
+  });
+});
+
 describe('admin: usuarios', () => {
   it('elimina y cancela la baja de un usuario', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
