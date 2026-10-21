@@ -69,6 +69,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
              order by u.id""")
     List<User> lockCountingAdmins();
 
+    /** Cuántos administradores que cuentan hay sin contar a {@code excludeId}; sin bloqueo (ver {@code AdminGuard}). */
+    @Query("""
+            select count(u) from User u
+             where u.enabled = true and u.deletionScheduledAt is null and u.deletedAt is null and u.id <> :excludeId
+               and exists (select r.id from u.roles r where r.name = com.capstone.steam.user.RoleName.ROLE_ADMIN)""")
+    long countCountingAdminsExcluding(Long excludeId);
+
     Optional<User> findByUsernameIgnoreCase(String username);
 
     boolean existsByEmail(String email);

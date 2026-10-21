@@ -101,6 +101,19 @@ class LastAdminIntegrationTest {
         assertThat(activeAdmins()).isEqualTo(1);
     }
 
+    @Test
+    void concurrentMutualRoleRemovalLeavesOneAdmin() throws Exception {
+        List<Object> results = runTogether(List.of(
+                () -> userService.updateRoles(adminA, adminB, Set.of(RoleName.ROLE_USER)),
+                () -> userService.updateRoles(adminB, adminA, Set.of(RoleName.ROLE_USER))));
+
+        assertThat(results.stream().filter(r -> !(r instanceof Exception)).count()).isEqualTo(1);
+        List<Object> rejected = results.stream().filter(r -> r instanceof Exception).toList();
+        assertThat(rejected).hasSize(1).first().isInstanceOf(ConflictException.class)
+                .extracting(e -> ((ConflictException) e).getCode()).isEqualTo("user.lastAdmin");
+        assertThat(activeAdmins()).isEqualTo(1);
+    }
+
     private List<Object> runTogether(List<Callable<Object>> tasks) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(tasks.size());
         CountDownLatch ready = new CountDownLatch(tasks.size());
