@@ -246,7 +246,124 @@ class ChatIntegrationTest {
         mvc.perform(send(leo, "ana", "yo sí")).andExpect(status().isCreated());
     }
 
+    @Test
+    void activityCountsIncomingRequestsAndUnreadMessages() throws Exception {
+        mvc.perform(auth(get("/api/friends/activity"), leo)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(0));
+
+        mvc.perform(send(ana, "leo", "uno")).andExpect(status().isCreated());
+        mvc.perform(send(ana, "leo", "dos")).andExpect(status().isCreated());
+        mvc.perform(auth(post("/api/friends/requests"), sam).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"leo\"}")).andExpect(status().isCreated());
+
+        mvc.perform(auth(get("/api/friends/activity"), leo)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.incomingRequests.length()").value(1))
+                .andExpect(jsonPath("$.incomingRequests[0].username").value("sam"))
+                .andExpect(jsonPath("$.incomingRequests[0].id").isNumber())
+                .andExpect(jsonPath("$.unread.length()").value(1))
+                .andExpect(jsonPath("$.unread[0].username").value("ana"))
+                .andExpect(jsonPath("$.unread[0].count").value(2))
+                .andExpect(jsonPath("$.unread[0].lastMessageAt").exists())
+                .andExpect(jsonPath("$.total").value(3));
+        // quien escribe no tiene nada pendiente
+        mvc.perform(auth(get("/api/friends/activity"), ana)).andExpect(jsonPath("$.total").value(0));
+
+        mvc.perform(auth(post("/api/friends/ana/messages/read"), leo)).andExpect(status().isNoContent());
+        mvc.perform(auth(get("/api/friends/activity"), leo)).andExpect(jsonPath("$.unread.length()").value(0))
+                .andExpect(jsonPath("$.total").value(1));
+        mvc.perform(get("/api/friends/activity")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void activityIgnoresPausedOrDisabledSenders() throws Exception {
+        mvc.perform(send(ana, "leo", "hola")).andExpect(status().isCreated());
+        mvc.perform(auth(post("/api/friends/requests"), sam).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"leo\"}")).andExpect(status().isCreated());
+        mvc.perform(auth(get("/api/friends/activity"), leo)).andExpect(jsonPath("$.total").value(2));
+
+        for (String name : new String[] { "ana", "sam" }) {
+            pause(name);
+        }
+
+        mvc.perform(auth(get("/api/friends/activity"), leo)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.incomingRequests.length()").value(0))
+                .andExpect(jsonPath("$.unread.length()").value(0))
+                .andExpect(jsonPath("$.total").value(0));
+    }
+
+    @Test
+    void conversationsIncludeExFriendsReadOnlyAndFriendsWithoutMessages() throws Exception {
+        befriend(ana, sam, "sam");
+        mvc.perform(send(ana, "leo", "primero")).andExpect(status().isCreated());
+        mvc.perform(send(leo, "ana", "respuesta")).andExpect(status().isCreated());
+        mvc.perform(send(sam, "ana", "de sam")).andExpect(status().isCreated());
+        // leo deja de ser amigo: sigue saliendo con su historial, pero ya no es amigo
+        mvc.perform(auth(delete("/api/friends/leo"), ana)).andExpect(status().isNoContent());
+        befriend(ana, register("zoe", "PLAYER"), "zoe"); // amiga sin mensajes
+
+        mvc.perform(auth(get("/api/friends/conversations"), ana)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].username").value("sam"))
+                .andExpect(jsonPath("$[0].friend").value(true))
+                .andExpect(jsonPath("$[0].unread").value(1))
+                .andExpect(jsonPath("$[0].lastMessage").value("de sam"))
+                .andExpect(jsonPath("$[1].username").value("leo"))
+                .andExpect(jsonPath("$[1].friend").value(false))
+                .andExpect(jsonPath("$[1].unread").value(1))
+                .andExpect(jsonPath("$[1].lastMessage").value("respuesta"))
+                .andExpect(jsonPath("$[1].lastMessageAt").exists())
+                .andExpect(jsonPath("$[2].username").value("zoe"))
+                .andExpect(jsonPath("$[2].friend").value(true))
+                .andExpect(jsonPath("$[2].unread").value(0))
+                .andExpect(jsonPath("$[2].lastMessage").doesNotExist())
+                .andExpect(jsonPath("$[2].lastMessageAt").doesNotExist());
+
+        // una cuenta en pausa desaparece de la lista
+        pause("sam");
+        mvc.perform(auth(get("/api/friends/conversations"), ana))
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].username").value("leo"));
+    }
+
+    @Test
+    void conversationsAreCappedAtFifty() throws Exception {
+        User anaUser = userRepository.findByUsernameIgnoreCase("ana").orElseThrow();
+        for (int i = 0; i < 55; i++) {
+            String name = "bot" + i;
+            register(name, "PLAYER");
+            User bot = userRepository.findByUsernameIgnoreCase(name).orElseThrow();
+            messageRepository.save(new FriendMessage(bot, anaUser, "hola " + i));
+        }
+        messageRepository.flush();
+
+        mvc.perform(auth(get("/api/friends/conversations"), ana)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(50))
+                .andExpect(jsonPath("$[0].username").value("bot54"));
+    }
+
+    @Test
+    void friendListCarriesUnreadMessages() throws Exception {
+        mvc.perform(send(ana, "leo", "uno")).andExpect(status().isCreated());
+        mvc.perform(send(ana, "leo", "dos")).andExpect(status().isCreated());
+
+        mvc.perform(auth(get("/api/friends"), leo))
+                .andExpect(jsonPath("$[0].user.username").value("ana"))
+                .andExpect(jsonPath("$[0].unreadMessages").value(2));
+        mvc.perform(auth(get("/api/friends"), ana)).andExpect(jsonPath("$[0].unreadMessages").value(0));
+        // el perfil enseña la lista de amigos de otro, pero nunca lo que esa persona tiene sin leer
+        mvc.perform(auth(get("/api/users/leo/profile"), ana)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.friends[0].user.username").value("ana"))
+                .andExpect(jsonPath("$.friends[0].unreadMessages").value(0));
+    }
+
     // ------------------------------ ayudas ------------------------------
+
+    private void pause(String username) throws Exception {
+        long id = userRepository.findByUsernameIgnoreCase(username).orElseThrow().getId();
+        mvc.perform(auth(patch("/api/admin/users/" + id + "/enabled"), adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
+                .andExpect(status().isOk());
+    }
 
     /** Cuerpo JSON escrito a mano: {@code text} ya lleva las secuencias de escape de JSON (por ejemplo \\n). */
     private MockHttpServletRequestBuilder send(String token, String username, String text) {

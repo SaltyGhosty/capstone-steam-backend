@@ -25,6 +25,15 @@ public interface FriendMessageRepository extends JpaRepository<FriendMessage, Lo
              where m.recipient.id = :recipientId and m.sender.id = :senderId and m.readAt is null""")
     int markRead(Long recipientId, Long senderId, Instant now);
 
+    /** El último mensaje de cada conversación en la que participa este usuario, del más nuevo al más viejo. */
+    @Query("""
+            select m from FriendMessage m join fetch m.sender join fetch m.recipient
+             where (m.sender.id = :userId or m.recipient.id = :userId)
+               and m.id = (select max(m2.id) from FriendMessage m2
+                            where m2.userLowId = m.userLowId and m2.userHighId = m.userHighId)
+             order by m.id desc""")
+    List<FriendMessage> findLastOfEachConversation(Long userId);
+
     /** Sin leer por remitente, solo de jugadores visibles (mismo criterio que FriendService.isPlayer). */
     @Query("""
             select new com.capstone.steam.friend.UnreadCount(m.sender.id, count(m), max(m.createdAt))

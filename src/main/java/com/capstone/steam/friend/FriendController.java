@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.capstone.steam.friend.dto.ConversationResponse;
+import com.capstone.steam.friend.dto.FriendActivityResponse;
 import com.capstone.steam.friend.dto.FriendRequestResponse;
 import com.capstone.steam.friend.dto.FriendRequestsResponse;
 import com.capstone.steam.friend.dto.FriendResponse;
@@ -26,14 +28,27 @@ import jakarta.validation.Valid;
 public class FriendController {
 
     private final FriendService friendService;
+    private final ChatService chatService;
 
-    public FriendController(FriendService friendService) {
+    public FriendController(FriendService friendService, ChatService chatService) {
         this.friendService = friendService;
+        this.chatService = chatService;
     }
 
     @GetMapping
     public List<FriendResponse> friends(@AuthenticationPrincipal AppUserPrincipal principal) {
         return friendService.friends(principal.getId());
+    }
+
+    /** Lo pendiente (solicitudes y mensajes sin leer). */
+    @GetMapping("/activity")
+    public FriendActivityResponse activity(@AuthenticationPrincipal AppUserPrincipal principal) {
+        return chatService.activity(principal.getId());
+    }
+
+    @GetMapping("/conversations")
+    public List<ConversationResponse> conversations(@AuthenticationPrincipal AppUserPrincipal principal) {
+        return chatService.conversations(principal.getId());
     }
 
     @GetMapping("/requests")
