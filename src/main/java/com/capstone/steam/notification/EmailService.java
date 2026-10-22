@@ -19,6 +19,7 @@ import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 
 import com.capstone.steam.notification.EmailTemplates.Brand;
 import com.capstone.steam.notification.EmailTemplates.Email;
@@ -29,11 +30,12 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 /**
- * Envío por SMTP (Gmail). Nunca lanza excepciones: un correo que falla se registra en el log
+ * Envío por la API HTTP de Brevo ({@code BREVO_API_KEY}, la de producción: Render free bloquea el SMTP)
+ * o, sin esa clave, por SMTP (Gmail). Nunca lanza excepciones: un correo que falla se registra en el log
  * y no afecta a la operación de negocio, que ya hizo commit.
  *
- * <p>Si no hay credenciales ({@code MAIL_USERNAME} vacío), el correo queda desactivado y solo se
- * registra en el log, para poder desarrollar sin cuenta de Gmail.
+ * <p>Sin {@code BREVO_API_KEY} ni {@code MAIL_USERNAME}, el correo queda desactivado y solo se
+ * registra en el log, para poder desarrollar sin cuenta de correo.
  *
  * <p>El correo llega con nombre de remitente ({@code MAIL_FROM_NAME}, por defecto «ARCADE») y sus
  * botones apuntan al frontend ({@code FRONTEND_URL}; si falta, el primer origen de
@@ -51,6 +53,8 @@ public class EmailService {
     private static final List<String> RESERVED_DOMAINS = List.of("example.com", "example.net", "example.org");
 
     private final JavaMailSender mailSender;
+    /** null si no hay {@code BREVO_API_KEY}: entonces se usa el SMTP. */
+    private final BrevoMailClient brevo;
     private final String from;
     private final Brand brand;
     private final boolean enabled;
@@ -68,25 +72,38 @@ public class EmailService {
     private final Sleeper sleeper;
 
     @Autowired
-    public EmailService(JavaMailSender mailSender,
+    public EmailService(JavaMailSender mailSender, BrevoMailClient brevo,
             @Value("${app.mail.from:}") String from,
             @Value("${app.mail.from-name:}") String fromName,
             @Value("${app.mail.store-url:}") String storeUrl,
             @Value("${spring.mail.username:}") String smtpUsername) {
-        this(mailSender, from, fromName, storeUrl, smtpUsername, Thread::sleep);
+        this(mailSender, brevo, from, fromName, storeUrl, smtpUsername, Thread::sleep);
+    }
+
+    /** Solo SMTP (tests). */
+    public EmailService(JavaMailSender mailSender, String from, String fromName, String storeUrl, String smtpUsername) {
+        this(mailSender, null, from, fromName, storeUrl, smtpUsername, Thread::sleep);
     }
 
     EmailService(JavaMailSender mailSender, String from, String fromName, String storeUrl, String smtpUsername,
             Sleeper sleeper) {
+        this(mailSender, null, from, fromName, storeUrl, smtpUsername, sleeper);
+    }
+
+    EmailService(JavaMailSender mailSender, BrevoMailClient brevo, String from, String fromName, String storeUrl,
+            String smtpUsername, Sleeper sleeper) {
         this.sleeper = sleeper;
         this.mailSender = mailSender;
+        this.brevo = brevo != null && brevo.enabled() ? brevo : null;
         this.from = from == null || from.isBlank() ? smtpUsername : from.trim(); // MAIL_FROM= vacío o con espacios en .env
         this.brand = new Brand(
                 fromName == null || fromName.isBlank() ? DEFAULT_FROM_NAME : fromName.trim(), // MAIL_FROM_NAME= vacío
                 firstUrl(storeUrl));
-        this.enabled = !smtpUsername.isBlank();
-        if (!enabled) {
-            log.info("Correo desactivado: MAIL_USERNAME no está configurado (los envíos solo se registran en el log)");
+        this.enabled = this.brevo != null || !smtpUsername.isBlank();
+        if (this.brevo != null) {
+            log.info("Correo por la API HTTP de Brevo (BREVO_API_KEY): el SMTP no se usa");
+        } else if (!enabled) {
+            log.info("Correo desactivado: ni BREVO_API_KEY ni MAIL_USERNAME están configurados (los envíos solo se registran en el log)");
         }
     }
 
@@ -148,19 +165,24 @@ public class EmailService {
         }
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
-                MimeMessage message = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
-                helper.setFrom(from, brand.name());
-                helper.setTo(to);
-                helper.setSubject(email.subject());
-                helper.setText(email.html(), true);
-                mailSender.send(message);
+                if (brevo != null) {
+                    brevo.send(from, brand.name(), to, email.subject(), email.html());
+                } else {
+                    MimeMessage message = mailSender.createMimeMessage();
+                    MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+                    helper.setFrom(from, brand.name());
+                    helper.setTo(to);
+                    helper.setSubject(email.subject());
+                    helper.setText(email.html(), true);
+                    mailSender.send(message);
+                }
                 log.info("Correo enviado: para={} asunto=\"{}\"", masked, email.subject());
                 return;
-            } catch (MailException | MessagingException | UnsupportedEncodingException ex) {
-                // el servidor SMTP suele repetir la dirección en su error ("Invalid Addresses: ...")
+            } catch (MailException | MessagingException | UnsupportedEncodingException | RestClientException ex) {
+                // el servidor suele repetir la dirección en su error ("Invalid Addresses: ...")
                 String reason = ex.getMessage() == null ? null : ex.getMessage().replace(to, masked);
-                if (attempt < MAX_ATTEMPTS && isConnectionFailure(ex)) {
+                boolean retryable = brevo != null ? BrevoMailClient.isRetryable(ex) : isConnectionFailure(ex);
+                if (attempt < MAX_ATTEMPTS && retryable) {
                     log.warn("Reintento {}/{} del correo a {} (\"{}\"): {}", attempt + 1, MAX_ATTEMPTS, masked,
                             email.subject(), reason);
                     try {

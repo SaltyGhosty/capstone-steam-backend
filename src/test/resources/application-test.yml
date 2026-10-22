@@ -25,3 +25,6 @@ app:
     username: admin
     email: admin@test.local
     password: Admin12345!
+  mail:
+    brevo:
+      api-key: "" # aunque el .env tenga BREVO_API_KEY, los tests nunca envían correos reales

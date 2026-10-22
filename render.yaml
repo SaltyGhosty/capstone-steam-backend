@@ -32,7 +32,9 @@ services:
       - key: MAIL_APP_PASSWORD
         sync: false
       - key: MAIL_FROM
-        sync: false # vacío o igual a MAIL_USERNAME
+        sync: false # vacío o igual a MAIL_USERNAME; tiene que estar verificado en Brevo
+      - key: BREVO_API_KEY
+        sync: false # Render free bloquea el SMTP: los correos salen por la API HTTP de Brevo
       - key: CLOUDINARY_URL
         sync: false # cloudinary://<api_key>:<api_secret>@<cloud_name>; vacío = sin subida de portadas
       - key: OPENROUTER_API_KEY

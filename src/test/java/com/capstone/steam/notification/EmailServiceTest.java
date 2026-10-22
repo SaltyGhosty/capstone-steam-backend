@@ -3,8 +3,10 @@ package com.capstone.steam.notification;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -25,7 +27,10 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailSendException;
+import org.springframework.http.HttpStatus;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 
 import com.capstone.steam.notification.event.OrderPaidEvent;
 
@@ -387,6 +392,57 @@ class EmailServiceTest {
         retryingService().sendWelcome("ana@test.com", "Ana", "es", null, null);
 
         assertThat(output.getAll()).contains("Reintento 2/3 del correo a a***@test.com").doesNotContain("ana@test.com");
+    }
+
+    // ------------------------------------------------------------------ API HTTP de Brevo (Render bloquea el SMTP)
+
+    private final BrevoMailClient brevo = mock(BrevoMailClient.class);
+
+    private EmailService brevoService(String smtpUsername) {
+        when(brevo.enabled()).thenReturn(true);
+        return new EmailService(mailSender, brevo, "tienda@gmail.com", "ARCADE", STORE, smtpUsername, pauses::add);
+    }
+
+    @Test
+    void withABrevoKeyTheMailGoesThroughTheApiNotSmtp() {
+        brevoService("user@gmail.com").sendWelcome("ana@test.com", "Ana", "it", TOKEN, "ana");
+
+        ArgumentCaptor<String> html = ArgumentCaptor.forClass(String.class);
+        verify(brevo).send(eq("tienda@gmail.com"), eq("ARCADE"),
+                eq("ana@test.com"),
+                eq("Benvenuto su ARCADE! Conferma la tua email"), html.capture());
+        assertThat(html.getValue()).contains("/verify-email?token=" + TOKEN);
+        verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void brevoAloneEnablesMailEvenWithoutGmailCredentials() {
+        brevoService("").sendPurchaseReceipt("ana@test.com", "Ana", 7L, new BigDecimal("9.99"), List.of(), "es");
+
+        verify(brevo).send(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void brevoNetworkErrorsAreRetriedButARejectedKeyIsNot() {
+        doThrow(new ResourceAccessException("timeout")).doNothing()
+                .when(brevo).send(any(), any(), any(), any(), any());
+        var service = brevoService("user@gmail.com");
+
+        service.sendWelcome("ana@test.com", "Ana", "es", null, null);
+        verify(brevo, times(2)).send(any(), any(), any(), any(), any());
+        assertThat(pauses).containsExactly(Duration.ofSeconds(2));
+
+        doThrow(HttpClientErrorException.create(HttpStatus.UNAUTHORIZED, "", null, null, null))
+                .when(brevo).send(any(), any(), any(), any(), any());
+        assertThatCode(() -> service.sendWelcome("ana@test.com", "Ana", "es", null, null)).doesNotThrowAnyException();
+        verify(brevo, times(3)).send(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void brevoAlsoSkipsReservedDomains() {
+        brevoService("user@gmail.com").sendWelcome("demo_player@demo.capstone-steam.local", "Demo", "es", null, null);
+
+        verify(brevo, never()).send(any(), any(), any(), any(), any());
     }
 
     @Test

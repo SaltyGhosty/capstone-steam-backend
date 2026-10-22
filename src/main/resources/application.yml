@@ -110,6 +110,9 @@ app:
   mail:
     from: ${MAIL_FROM:${MAIL_USERNAME:no-reply@capstone-steam.local}}
     from-name: ${MAIL_FROM_NAME:ARCADE} # nombre visible del remitente y marca de los correos
+    # API HTTP de Brevo: con clave, los correos salen por HTTPS y no por SMTP (Render free bloquea los puertos SMTP)
+    brevo:
+      api-key: ${BREVO_API_KEY:}
     # adónde llevan los botones de los correos; sin FRONTEND_URL se usa el primer origen de CORS
     store-url: ${FRONTEND_URL:${CORS_ALLOWED_ORIGINS:http://localhost:5173}}
     executor:
