@@ -69,7 +69,7 @@ public class ChatService {
     @Transactional(readOnly = true)
     public List<MessageResponse> messages(Long userId, String username, Long before, int size) {
         loadPlayer(userId, username);
-        User other = existingUser(username);
+        User other = readableUser(userId, username);
         int pageSize = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
         return messageRepository.findConversation(Math.min(userId, other.getId()), Math.max(userId, other.getId()),
                 before == null ? Long.MAX_VALUE : before, PageRequest.of(0, pageSize)).stream()
@@ -80,7 +80,7 @@ public class ChatService {
     @Transactional
     public void markRead(Long userId, String username) {
         loadPlayer(userId, username);
-        User other = existingUser(username);
+        User other = readableUser(userId, username);
         messageRepository.markRead(userId, other.getId(), clock.instant());
     }
 
@@ -90,7 +90,10 @@ public class ChatService {
      */
     @Transactional(readOnly = true)
     public FriendActivityResponse activity(Long userId) {
-        List<IncomingRequest> requests = friendshipRepository.findIncoming(userId).stream()
+        List<Friendship> incoming = friendshipRepository.findIncoming(userId);
+        // una sola consulta con los roles de quienes enviaron la solicitud (evita una carga perezosa por fila)
+        userRepository.findAllWithRolesByIdIn(incoming.stream().map(f -> f.other(userId).getId()).toList());
+        List<IncomingRequest> requests = incoming.stream()
                 .filter(f -> FriendService.isPlayer(f.other(userId)))
                 .map(f -> new IncomingRequest(f.getId(), f.other(userId).getUsername(),
                         f.other(userId).getDisplayName(), f.getCreatedAt()))
@@ -118,7 +121,10 @@ public class ChatService {
         Map<Long, Long> unread = new HashMap<>();
         messageRepository.countUnreadBySender(userId).forEach(u -> unread.put(u.senderId(), u.count()));
         Map<Long, User> friends = new HashMap<>();
-        friendshipRepository.findAccepted(userId).forEach(f -> friends.put(f.other(userId).getId(), f.other(userId)));
+        List<Friendship> accepted = friendshipRepository.findAccepted(userId);
+        // roles de todos los amigos en una consulta (evita una carga perezosa por amigo en isPlayer)
+        userRepository.findAllWithRolesByIdIn(accepted.stream().map(f -> f.other(userId).getId()).toList());
+        accepted.forEach(f -> friends.put(f.other(userId).getId(), f.other(userId)));
 
         List<FriendMessage> last = messageRepository.findLastOfEachConversation(userId);
         Set<Long> otherIds = new HashSet<>();
@@ -166,11 +172,19 @@ public class ChatService {
                 .orElseThrow(() -> NotFoundException.of("user", name));
     }
 
-    /** Para leer: vale cualquier cuenta que exista y no esté anonimizada (en pausa o desactivada también: se lee su historial). */
-    private User existingUser(String username) {
+    /**
+     * Para leer: un jugador visible, o cualquier cuenta no anonimizada con la que haya historial (una cuenta en pausa se sigue
+     * leyendo). Sin historial, un no jugador responde 404 igual que un usuario que no existe (no se puede enumerar cuentas).
+     */
+    private User readableUser(Long userId, String username) {
         String name = clean(username);
-        return userRepository.findWithRolesByUsernameIgnoreCase(name).filter(u -> !u.isDeleted())
+        User other = userRepository.findWithRolesByUsernameIgnoreCase(name).filter(u -> !u.isDeleted())
                 .orElseThrow(() -> NotFoundException.of("user", name));
+        if (!FriendService.isPlayer(other) && !messageRepository.existsByUserLowIdAndUserHighId(
+                Math.min(userId, other.getId()), Math.max(userId, other.getId()))) {
+            throw NotFoundException.of("user", name);
+        }
+        return other;
     }
 
     private static String clean(String username) {

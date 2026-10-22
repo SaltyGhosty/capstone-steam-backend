@@ -210,10 +210,9 @@ class ChatIntegrationTest {
         // una cuenta que no existe no tiene historial
         mvc.perform(auth(get("/api/friends/nadie/messages"), ana)).andExpect(status().isNotFound());
         mvc.perform(auth(post("/api/friends/nadie/messages/read"), ana)).andExpect(status().isNotFound());
-        // un estudio existe pero no tiene historial
-        mvc.perform(auth(get("/api/friends/studio/messages"), ana)).andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
-        mvc.perform(auth(post("/api/friends/studio/messages/read"), ana)).andExpect(status().isNoContent());
+        // un estudio existe pero no es jugador ni tiene historial: igual que si no existiera (sin enumeración)
+        mvc.perform(auth(get("/api/friends/studio/messages"), ana)).andExpect(status().isNotFound());
+        mvc.perform(auth(post("/api/friends/studio/messages/read"), ana)).andExpect(status().isNotFound());
         mvc.perform(send(ana, "nadie", "hola")).andExpect(status().isNotFound());
         // un estudio no puede escribir (403 playersOnly) ni siquiera a alguien que no existe
         mvc.perform(send(studio, "ana", "hola")).andExpect(status().isForbidden())

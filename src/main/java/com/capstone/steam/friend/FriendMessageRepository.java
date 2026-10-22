@@ -18,6 +18,9 @@ public interface FriendMessageRepository extends JpaRepository<FriendMessage, Lo
              order by m.id desc""")
     List<FriendMessage> findConversation(Long low, Long high, Long beforeId, Pageable page);
 
+    /** Si hay algún mensaje entre esa pareja (low < high). */
+    boolean existsByUserLowIdAndUserHighId(Long low, Long high);
+
     /** Marca como leídos (atómico) los que ese remitente envió a este destinatario; idempotente. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
@@ -28,9 +31,9 @@ public interface FriendMessageRepository extends JpaRepository<FriendMessage, Lo
     /** El último mensaje de cada conversación en la que participa este usuario, del más nuevo al más viejo. */
     @Query("""
             select m from FriendMessage m join fetch m.sender join fetch m.recipient
-             where (m.sender.id = :userId or m.recipient.id = :userId)
-               and m.id = (select max(m2.id) from FriendMessage m2
-                            where m2.userLowId = m.userLowId and m2.userHighId = m.userHighId)
+             where m.id in (select max(m2.id) from FriendMessage m2
+                             where m2.userLowId = :userId or m2.userHighId = :userId
+                             group by m2.userLowId, m2.userHighId)
              order by m.id desc""")
     List<FriendMessage> findLastOfEachConversation(Long userId);
 
