@@ -1,8 +1,9 @@
 // Amigos: buscador de jugadores, solicitudes recibidas y enviadas, y la lista de amigos.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { friendsApi, userApi } from '@/api/endpoints';
 import type { SearchHit, UserCard } from '@/api/types';
+import FriendChat from '@/components/FriendChat';
 import Icon from '@/components/Icon';
 import UserAvatar from '@/components/UserAvatar';
 import { ErrorState, Loading, PageHeader } from '@/components/ui';
@@ -37,6 +38,10 @@ export default function Friends() {
   const [busy, setBusy] = useState(false);
   const friends = useAsync(() => friendsApi.list(), []);
   const requests = useAsync(() => friendsApi.requests(), []);
+  const conversations = useAsync(() => friendsApi.conversations(), []);
+  const [params, setParams] = useSearchParams();
+  const chatWith = params.get('chat');
+  const reloadConversations = conversations.reload;
 
   const term = query.trim();
   // Último término escrito: una respuesta de otro término más viejo se descarta
@@ -107,9 +112,43 @@ export default function Friends() {
     }
   };
 
+  const openChat = (username: string | null) => setParams(username ? { chat: username } : {}, { replace: true });
+  const chatConv = conversations.data?.find((c) => c.username === chatWith);
+  const chatFriend = friends.data?.find((f) => f.user.username === chatWith)?.user;
+  // Un ex-amigo solo sale en conversaciones (friend: false); sin dato se deja escribir y el servidor decide
+  const writable = chatConv ? chatConv.friend : true;
+  const chatName = chatConv ? chatConv.displayName || chatConv.username : chatFriend ? nameOf(chatFriend) : chatWith ?? '';
+
   return (
     <>
       <PageHeader eyebrow={t('friends.eyebrow')} title={t('friends.title')} />
+
+      <section className="panel friend-section">
+        <h3>{t('chat.title')}</h3>
+        <div className={chatWith ? 'chat-layout open' : 'chat-layout'}>
+          <div className="chat-list-col">
+            {conversations.data?.length === 0 && <p className="muted">{t('chat.noConversations')}</p>}
+            <ul className="chat-list">
+              {conversations.data?.map((c) => (
+                <li key={c.username}>
+                  <button className={c.username === chatWith ? 'active' : ''} onClick={() => openChat(c.username)}>
+                    <UserAvatar user={c} />
+                    <span className="chat-preview">
+                      <b>{c.displayName || c.username}</b>
+                      <small>{c.lastMessage}</small>
+                    </span>
+                    {c.unread > 0 && <span className="chat-unread" aria-label={String(c.unread)}>{c.unread}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {chatWith && conversations.data && (
+            <FriendChat username={chatWith} name={chatName} writable={writable}
+              onBack={() => openChat(null)} onChanged={reloadConversations} />
+          )}
+        </div>
+      </section>
 
       <section className="panel friend-section">
         <label className="field">
@@ -180,6 +219,9 @@ export default function Friends() {
             {friends.data.map((f) => (
               <Person key={f.user.username} user={f.user}>
                 {f.since && <small className="muted">{t('friends.since', { date: formatDate(f.since) })}</small>}
+                <button className="secondary small" onClick={() => openChat(f.user.username)}>
+                  {t('chat.open')}
+                </button>
                 {confirming === f.user.username ? (
                   <span className="confirm-inline" role="group" aria-label={t('friends.confirmRemove', { name: nameOf(f.user) })}>
                     <span>{t('friends.confirmRemove', { name: nameOf(f.user) })}</span>
