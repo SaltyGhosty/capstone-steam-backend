@@ -276,6 +276,8 @@ export interface SearchHit {
 export interface FriendResponse {
   user: UserCard;
   since: string | null;
+  /** Mensajes de este amigo que aún no he leído. */
+  unreadMessages: number;
 }
 
 /** `user` es la otra persona, no quien consulta. */
@@ -289,6 +291,47 @@ export interface FriendRequest {
 export interface FriendRequests {
   incoming: FriendRequest[];
   outgoing: FriendRequest[];
+}
+
+/** Solicitud recibida pendiente, en la consulta de actividad. */
+export interface ActivityRequest {
+  id: number;
+  username: string;
+  displayName: string | null;
+  createdAt: string;
+}
+
+/** Mensajes sin leer de un remitente. */
+export interface ActivityUnread {
+  username: string;
+  displayName: string | null;
+  count: number;
+  lastMessageAt: string;
+}
+
+/** `total` = solicitudes recibidas + mensajes sin leer: es el número de «Amigos». */
+export interface FriendActivity {
+  incomingRequests: ActivityRequest[];
+  unread: ActivityUnread[];
+  total: number;
+}
+
+export interface Conversation {
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  friend: boolean;
+  unread: number;
+  lastMessage: string | null;
+  lastMessageAt: string | null;
+}
+
+/** `mine`: lo escribí yo. */
+export interface ChatMessageItem {
+  id: number;
+  mine: boolean;
+  body: string;
+  createdAt: string;
 }
 
 export interface ProfileGame {

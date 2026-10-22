@@ -261,6 +261,10 @@ td.row-actions > * { display: inline-flex; vertical-align: middle; margin-left: 
 .genre-row .icon-button { width: 34px; height: 34px; }
 
 .toast.error { border-color: #5a2c25; background: #1f1513; }
+.toast .toast-action { margin-left: 6px; color: #c8ff68; font-weight: 700; text-decoration: underline; }
+.menu .nav-count { margin-left: auto; padding: 0 5px; }
+.mobile-nav a { position: relative; }
+.nav-badge { position: absolute; top: 0; right: 2px; min-width: 15px; height: 15px; padding: 0 4px; display: grid; place-items: center; border-radius: 8px; color: #111; background: #b7ff3c; font-size: 9px; font-weight: 800; }
 .toast.error span { background: #ff8a7a; }
 
 /* Bloque E: amigos y perfil */
