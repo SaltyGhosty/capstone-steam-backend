@@ -28,10 +28,10 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV14() {
+    void appliesAllMigrationsUpToV15() {
         var applied = flyway.info().applied();
-        assertThat(applied).hasSize(15);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("14");
+        assertThat(applied).hasSize(16);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("15");
     }
 
     @Test
