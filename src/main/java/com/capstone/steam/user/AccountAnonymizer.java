@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.capstone.steam.auth.EmailVerificationTokenRepository;
 import com.capstone.steam.auth.RefreshTokenRepository;
 import com.capstone.steam.cart.CartItemRepository;
+import com.capstone.steam.friend.FriendMessageRepository;
 import com.capstone.steam.friend.FriendshipRepository;
 import com.capstone.steam.game.Game;
 import com.capstone.steam.game.GameRepository;
@@ -35,6 +36,7 @@ public class AccountAnonymizer {
     private final CartItemRepository cartItemRepository;
     private final WishlistItemRepository wishlistRepository;
     private final FriendshipRepository friendshipRepository;
+    private final FriendMessageRepository messageRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final EmailVerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
@@ -44,6 +46,7 @@ public class AccountAnonymizer {
     public AccountAnonymizer(UserRepository userRepository, ReviewRepository reviewRepository,
             GameRepository gameRepository, CartItemRepository cartItemRepository,
             WishlistItemRepository wishlistRepository, FriendshipRepository friendshipRepository,
+            FriendMessageRepository messageRepository,
             RefreshTokenRepository refreshTokenRepository,
             EmailVerificationTokenRepository verificationTokenRepository, PasswordEncoder passwordEncoder,
             ApplicationEventPublisher events, Clock clock) {
@@ -53,6 +56,7 @@ public class AccountAnonymizer {
         this.cartItemRepository = cartItemRepository;
         this.wishlistRepository = wishlistRepository;
         this.friendshipRepository = friendshipRepository;
+        this.messageRepository = messageRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -78,6 +82,7 @@ public class AccountAnonymizer {
         cartItemRepository.deleteAllByUserId(userId);
         wishlistRepository.deleteAllByUserId(userId);
         friendshipRepository.deleteAllOf(userId);
+        messageRepository.deleteAllOf(userId);
         refreshTokenRepository.deleteAllByUserId(userId);
         verificationTokenRepository.deleteAllByUserId(userId);
         retireStudioGames(userId);

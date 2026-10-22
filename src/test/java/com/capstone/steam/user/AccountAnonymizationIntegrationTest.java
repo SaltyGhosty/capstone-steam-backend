@@ -67,7 +67,7 @@ class AccountAnonymizationIntegrationTest {
     @BeforeEach
     void cleanDatabase() {
         for (String table : List.of("payments", "library_entries", "order_items", "orders", "reviews", "cart_items",
-                "wishlist_items", "friendships", "refresh_tokens", "email_verification_tokens", "game_genres",
+                "wishlist_items", "friend_messages", "friendships", "refresh_tokens", "email_verification_tokens", "game_genres",
                 "games")) {
             jdbc.update("DELETE FROM " + table);
         }
@@ -187,6 +187,44 @@ class AccountAnonymizationIntegrationTest {
                     assertThat(e.email()).isEqualTo("victima@test.com");
                     assertThat(e.locale()).isNotNull();
                 });
+    }
+
+    @Test
+    void anonymizationDeletesTheConversations() throws Exception {
+        String victim = register("charlador", "charlador@test.com", "PLAYER");
+        String friend = register("compi", "compi@test.com", "PLAYER");
+        String other = register("tercero", "tercero@test.com", "PLAYER");
+        befriend(victim, friend, "compi");
+        befriend(other, friend, "compi");
+        sendMessage(victim, "compi", "enviado");
+        sendMessage(friend, "charlador", "recibido");
+        sendMessage(other, "compi", "ajeno");
+        long victimId = userId("charlador");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM friend_messages", Integer.class)).isEqualTo(3);
+        requestDeletion(victim);
+
+        clock.now = T0.plus(java.time.Duration.ofDays(14));
+        assertThat(scheduler.runDue()).isOne();
+
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM friend_messages WHERE sender_id = ? OR recipient_id = ?", Integer.class,
+                victimId, victimId)).isZero();
+        // la conversación de los otros dos no se toca
+        assertThat(jdbc.queryForList("SELECT body FROM friend_messages", String.class)).containsExactly("ajeno");
+    }
+
+    private void befriend(String from, String to, String toUsername) throws Exception {
+        String body = mvc.perform(auth(post("/api/friends/requests"), from).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"%s\"}".formatted(toUsername)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        int id = JsonPath.read(body, "$.id");
+        mvc.perform(auth(post("/api/friends/requests/" + id + "/accept"), to)).andExpect(status().isOk());
+    }
+
+    private void sendMessage(String token, String username, String text) throws Exception {
+        mvc.perform(auth(post("/api/friends/" + username + "/messages"), token).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"body\":\"%s\"}".formatted(text)))
+                .andExpect(status().isCreated());
     }
 
     @Test
