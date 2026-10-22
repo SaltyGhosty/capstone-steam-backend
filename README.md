@@ -9,7 +9,7 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail in locale, API di Brevo in produzione) · Cloudinary (copertine) · OpenRouter (assistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
 | **Test** | Backend: 518 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 201 test in 26 file · CI su GitHub Actions |
-| **API** | Swagger UI su `/swagger-ui.html` · 96 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
+| **API** | Swagger UI su `/swagger-ui.html` · 104 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
 
