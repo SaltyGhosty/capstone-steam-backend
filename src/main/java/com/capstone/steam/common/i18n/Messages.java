@@ -3,6 +3,7 @@ package com.capstone.steam.common.i18n;
 import java.util.Locale;
 
 import org.springframework.context.NoSuchMessageException;
+import org.springframework.context.i18n.LocaleContext;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ResourceBundleMessageSource;
 
@@ -34,7 +35,17 @@ public final class Messages {
 
     /** Texto en el idioma de la petición actual. */
     public static String get(String code, Object... args) {
-        return get(LocaleContextHolder.getLocale(), code, args);
+        return get(currentLocale(), code, args);
+    }
+
+    /**
+     * Idioma de la petición actual. Fuera de una petición (tareas programadas, tests unitarios) es el español:
+     * {@link LocaleContextHolder#getLocale()} daría el del sistema, que en el runner del CI es el inglés.
+     */
+    public static Locale currentLocale() {
+        LocaleContext context = LocaleContextHolder.getLocaleContext();
+        Locale locale = context == null ? null : context.getLocale();
+        return locale == null ? DEFAULT : locale;
     }
 
     public static String get(Locale locale, String code, Object... args) {

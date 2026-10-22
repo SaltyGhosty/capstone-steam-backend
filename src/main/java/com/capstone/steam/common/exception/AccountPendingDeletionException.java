@@ -7,8 +7,6 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-import org.springframework.context.i18n.LocaleContextHolder;
-
 import com.capstone.steam.common.i18n.Messages;
 
 /**
@@ -34,7 +32,7 @@ public class AccountPendingDeletionException extends ForbiddenException {
     /** La fecha ya formateada en el idioma de la petición (MessageFormat no sabe de zonas ni de Instant). */
     @Override
     public String getLocalizedMessage() {
-        return Messages.get(getCode(), format(scheduledAt, LocaleContextHolder.getLocale()));
+        return Messages.get(getCode(), format(scheduledAt, Messages.currentLocale()));
     }
 
     private static String format(Instant at, Locale locale) {

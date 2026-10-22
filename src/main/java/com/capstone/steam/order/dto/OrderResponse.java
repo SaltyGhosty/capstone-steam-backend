@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
-import org.springframework.context.i18n.LocaleContextHolder;
-
 import com.capstone.steam.common.i18n.Messages;
 import com.capstone.steam.order.Order;
 import com.capstone.steam.order.OrderItem;
@@ -38,7 +36,7 @@ public record OrderResponse(
 
         static PaymentInfo from(Payment payment) {
             return new PaymentInfo(payment.getMethod(), payment.getStatus(), payment.getProviderRef(),
-                    Messages.getOrSelf(LocaleContextHolder.getLocale(), payment.getFailureReason()), payment.getCreatedAt());
+                    Messages.getOrSelf(Messages.currentLocale(), payment.getFailureReason()), payment.getCreatedAt());
         }
     }
 

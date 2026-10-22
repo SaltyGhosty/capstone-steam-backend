@@ -9,10 +9,10 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.capstone.steam.common.exception.BadRequestException;
+import com.capstone.steam.common.i18n.Messages;
 import com.capstone.steam.game.dto.GameSummaryResponse;
 import com.capstone.steam.recommendation.dto.ChatMessage;
 import com.capstone.steam.recommendation.dto.ChatMessage.Role;
@@ -59,7 +59,7 @@ public class RecommendationService {
         }
         limiter.acquire(userId);
 
-        Locale locale = LocaleContextHolder.getLocale();
+        Locale locale = Messages.currentLocale();
         RecommendationCatalog.Snapshot snapshot = catalog.load(locale);
         long start = System.nanoTime();
         String raw;

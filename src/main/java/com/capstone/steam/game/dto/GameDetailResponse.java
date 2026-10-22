@@ -5,8 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-import org.springframework.context.i18n.LocaleContextHolder;
-
+import com.capstone.steam.common.i18n.Messages;
 import com.capstone.steam.game.Game;
 import com.capstone.steam.game.GameStatus;
 import com.capstone.steam.game.ReviewScore;
@@ -53,7 +52,7 @@ public record GameDetailResponse(
                 game.getId(),
                 game.getTitle(),
                 game.getSlug(),
-                game.getDescription(LocaleContextHolder.getLocale()),
+                game.getDescription(Messages.currentLocale()),
                 new Descriptions(game.getDescription(), game.getDescriptionEn(), game.getDescriptionIt()),
                 game.getCoverUrl(),
                 game.getSteamAppId(),
