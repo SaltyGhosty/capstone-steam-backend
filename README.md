@@ -8,7 +8,7 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail in locale, API di Brevo in produzione) · Cloudinary (copertine) · OpenRouter (assistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Test** | Backend: 499 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 184 test in 25 file · CI su GitHub Actions |
+| **Test** | Backend: 518 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 201 test in 26 file · CI su GitHub Actions |
 | **API** | Swagger UI su `/swagger-ui.html` · 96 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -19,7 +19,7 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 3. [Avvio del progetto](#avvio-del-progetto)
 4. [Frontend](#frontend)
 5. [Architettura](#architettura)
-6. [Database (Flyway da V1 a V13)](#database-flyway-da-v1-a-v13)
+6. [Database (Flyway da V1 a V14)](#database-flyway-da-v1-a-v14)
 7. [API](#api)
 8. [Test](#test)
 9. [Deploy](#deploy)
@@ -62,6 +62,14 @@ I pagamenti sono **simulati**: una carta che termina con `0000` viene sempre rif
 **Amici e profilo.** Partecipano solo gli account di **giocatore** (senza ruolo DEVELOPER né ADMIN) e attivi.
 - Si cerca per nome (da 2 a 50 caratteri), si invia una richiesta e l'altro la accetta o la rifiuta. Si può annullare una richiesta inviata ed eliminare un amico. Se A chiede a B e B aveva già chiesto ad A, vengono accettate entrambe.
 - Il profilo (`/users/:username`) mostra sempre nome, avatar e data di iscrizione. La libreria (con le ore giocate) e l'elenco degli amici sono visibili solo se il profilo è **pubblico**, se chi guarda è **amico** o se è il proprietario stesso. Il profilo è privato per impostazione predefinita (`profilePublic`, in *Impostazioni*). Non si vedono mai email, ordini, carrello né wishlist. La regola viene applicata nel backend.
+
+**Notifiche e chat tra amici.** Un numero accanto a «Amici» (menu laterale, menu mobile e menu dell'avatar) somma le **richieste di amicizia ricevute** e i **messaggi non letti**; oltre 99 mostra «99+».
+- Quando arriva qualcosa di nuovo mentre si usa il sito compare **un solo avviso** cliccabile (concreto, oppure un riepilogo se arrivano più cose insieme) che porta alla richiesta o alla conversazione. La prima consultazione dopo l'accesso non avvisa.
+- Non è in tempo reale: il frontend interroga `GET /api/friends/activity` **ogni 30 secondi** e ogni volta che si torna alla scheda (con una conversazione aperta, i suoi messaggi ogni 4 secondi). Con il piano gratuito di Render è più semplice e affidabile di una connessione permanente. Solo i giocatori consultano.
+- **Chat di testo uno a uno, solo tra amici**, dentro la pagina Amici: da 1 a 1.000 caratteri, senza immagini né «sta scrivendo…». Si salva la cronologia; i messaggi ricevuti si segnano come letti quando si apre la conversazione. Massimo **30 messaggi al minuto** per utente (429 `chat.rateLimited`).
+- **Se non sono più amici**, la conversazione resta e si può **leggere**, ma non scrivere (403 `chat.notFriends`); se tornano amici si può riprendere. Gli account in pausa, disattivati o non giocatori non contano nel numero e non compaiono nell'elenco.
+- Chi cancella l'account (anonimizzazione) perde **tutte le sue conversazioni**, come le recensioni.
+- Ordine degli errori nell'invio: 400 testo vuoto o oltre 1.000 caratteri · 400 messaggio a se stessi · 403 `friend.playersOnly` · 404 · 403 `chat.notFriends` · 429.
 
 **Verifica dell'email.** Creare l'account non avvia la sessione: arriva **una sola email** («Benvenuto su ARCADE! Conferma la tua email», nella lingua scelta) con un link a `/verify-email?token=…`.
 - Cliccandolo l'account risulta verificato e accede subito con la sua sessione. Senza verifica, il login risponde **403** `auth.emailNotVerified` (purché la password sia corretta; con una password errata resta 401, così non si rivela quali account esistono).
@@ -107,7 +115,7 @@ I pagamenti sono **simulati**: una carta che termina con `0000` viene sempre rif
 | Spring Security + JWT stateless | [SecurityConfig](src/main/java/com/capstone/steam/security/SecurityConfig.java), [JwtService](src/main/java/com/capstone/steam/security/JwtService.java) (HS256, jjwt 0.13) e [JwtAuthFilter](src/main/java/com/capstone/steam/security/JwtAuthFilter.java) |
 | **Criteria API** per i filtri del catalogo | [GameCriteriaRepository](src/main/java/com/capstone/steam/game/search/GameCriteriaRepository.java): 9 filtri opzionali e 6 ordinamenti, con una subquery per i generi e paginazione nel database |
 | **UPDATE atomici scritti a mano** | [GameRepository](src/main/java/com/capstone/steam/game/GameRepository.java) (`incrementSalesCount`, `applyReviewDelta`, `bulkDiscountForDeveloper`), [OrderRepository](src/main/java/com/capstone/steam/order/OrderRepository.java) (`markPaid`, `closePending`) e [LibraryRepository](src/main/java/com/capstone/steam/library/LibraryRepository.java) (`addPlaytime`) |
-| Flyway da V1 a V4 (e da V5 a V13) | [db/migration](src/main/resources/db/migration) (vedi [sotto](#database-flyway-da-v1-a-v13)) |
+| Flyway da V1 a V4 (e da V5 a V14) | [db/migration](src/main/resources/db/migration) (vedi [sotto](#database-flyway-da-v1-a-v13)) |
 | Spring Mail + Gmail SMTP | [EmailService](src/main/java/com/capstone/steam/notification/EmailService.java), [EmailTemplates](src/main/java/com/capstone/steam/notification/EmailTemplates.java) e [MailTexts](src/main/java/com/capstone/steam/notification/MailTexts.java) (testi in es, en e it) |
 | Spring Events **AFTER_COMMIT** + `@Async` con **pool dedicato** | [MailListener](src/main/java/com/capstone/steam/notification/MailListener.java) e [AsyncConfig](src/main/java/com/capstone/steam/config/AsyncConfig.java) (`mailExecutor`, thread `mail-*`) |
 | JUnit 5 + Mockito + H2 | [src/test](src/test/java/com/capstone/steam): test unitari, di repository, di integrazione HTTP e di concorrenza |
@@ -227,7 +235,7 @@ La risposta HTTP non attende l'SMTP. Se la transazione fa rollback, non viene in
 
 **La lingua delle email** deriva da `users.locale`. I testi di ciascuna lingua sono nel record `MailTexts` (una costante per lingua), così il compilatore impone che nessuna resti senza traduzione. I tre eventi portano il `locale`, letto dall'utente dentro la transazione. Se manca o non viene riconosciuto, l'email esce in spagnolo.
 
-## Database (Flyway da V1 a V13)
+## Database (Flyway da V1 a V14)
 
 | Migrazione | Contenuto |
 |---|---|
@@ -242,11 +250,12 @@ La risposta HTTP non attende l'SMTP. Se la transazione fa rollback, non viene in
 | **V9** `friendships` | `users.profile_public` (falso per impostazione predefinita) e la tabella `friendships`: una riga per coppia in qualunque direzione (`UNIQUE(user_low_id, user_high_id)`), con stato `PENDING` o `ACCEPTED` |
 | **V10** `refresh_tokens` | `refresh_tokens`: SHA-256 del token (mai il token), famiglia, scadenza, data di revoca e sostituto |
 | **V11** `friendships_pair_check` | `CHECK ck_friendships_pair`: la coppia `(user_low_id, user_high_id)` deve corrispondere a richiedente e destinatario |
+| **V14** `friend_messages` | `friend_messages`: mittente, destinatario, la coppia ordinata (come `friendships`, con un `CHECK`), testo da 1 a 1.000 caratteri e `read_at`, con indici per la conversazione e per i non letti. I messaggi non dipendono dalla riga di `friendships`, quindi restano se finisce l'amicizia |
 | **V13** `account_deletion` | `users.deletion_scheduled_at` (quando l'account verrà anonimizzato), `deletion_requested_by` (`SELF` o `ADMIN`, con `CHECK`) e `deleted_at` (account già anonimizzato), più un indice su `deletion_scheduled_at` per l'attività programmata. Gli account esistenti restano senza cancellazione in sospeso |
 | **V12.1** `username_lower_unique` | Indice univoco su `lower(username)`: il nome utente è univoco senza distinguere maiuscole e minuscole anche nel database. PostgreSQL usa un indice per espressione; H2 (test) una colonna generata `username_lower` con un `UNIQUE`, perché H2 non supporta gli indici per espressione |
 | **V12** `email_verification` | `users.email_verified` (gli account già esistenti restano verificati) e la tabella `email_verification_tokens`: SHA-256 del link (mai il token), scadenza, data di utilizzo, i dati della registrazione che lo ha generato (utente, password cifrata, nome, lingua e tipo di account) e il contatore delle password errate |
 
-La traccia del corso richiede V1 a V4; V5 a V13 sono state aggiunte in seguito (lingua delle email, traduzioni, Steam, recensioni in stile Steam, amici, refresh token, integrità della coppia di amici, verifica dell'email e cancellazione dell'account). V1 a V3 e V5 a V13 sono SQL portabile; V4 e V12.1 hanno una variante per motore. V4 ha due versioni ([postgresql](src/main/resources/db/migration/postgresql) e [h2](src/main/resources/db/migration/h2)), perché H2 non supporta gli indici a trigrammi né quelli parziali. Flyway sceglie quella adatta con `locations: …/common, …/{vendor}`.
+La traccia del corso richiede V1 a V4; V5 a V14 sono state aggiunte in seguito (lingua delle email, traduzioni, Steam, recensioni in stile Steam, amici, refresh token, integrità della coppia di amici, verifica dell'email, cancellazione dell'account e messaggi tra amici). V1 a V3 e V5 a V14 sono SQL portabile; V4 e V12.1 hanno una variante per motore. V4 ha due versioni ([postgresql](src/main/resources/db/migration/postgresql) e [h2](src/main/resources/db/migration/h2)), perché H2 non supporta gli indici a trigrammi né quelli parziali. Flyway sceglie quella adatta con `locations: …/common, …/{vendor}`.
 
 Le regole di integrità sono garantite anche dal database, non solo dal codice Java: `CHECK` (prezzo ≥ 0, sconto da 0 a 100, `positive_count <= review_count`, lingua e stati validi), `UNIQUE` e chiavi esterne con `ON DELETE` pensato caso per caso.
 
@@ -268,7 +277,11 @@ L'autenticazione è `Authorization: Bearer <accessToken>`. Il token si ottiene a
 | POST | `/api/users/me/deletion` | utente | `{password}` → 200 `{deletionScheduledAt}`: mette in pausa il proprio account per 14 giorni e chiude le sessioni; poi viene anonimizzato. 400 `user.deletionWrongPassword` se la password è errata; 409 `user.lastAdmin` se è l'ultimo admin attivo |
 | GET | `/api/users/search?q=` | utente | Cerca giocatori per nome (da 2 a 50 caratteri) |
 | GET | `/api/users/{username}/profile` | utente | Profilo di un giocatore; libreria e amici solo se è pubblico, amico o il proprio |
-| GET | `/api/friends` · `/api/friends/requests` | utente | I miei amici · richieste ricevute (`incoming`) e inviate (`outgoing`) |
+| GET | `/api/friends` · `/api/friends/requests` | utente | I miei amici (con `unreadMessages`) · richieste ricevute (`incoming`) e inviate (`outgoing`) |
+| GET | `/api/friends/activity` | giocatore | `{incomingRequests, unread, total}`: richieste ricevute e messaggi non letti per mittente; `total` è il numero di «Amici». Solo account visibili |
+| GET | `/api/friends/conversations` | giocatore | Le mie conversazioni (al massimo 50): prima quelle con messaggi, poi gli amici senza messaggi; `friend: false` indica un ex amico (sola lettura) |
+| GET / POST | `/api/friends/{username}/messages` | giocatore | Leggere (`?before=<id>&size=` da 1 a 100, predefinito 30, dal più recente) e inviare `{body}` → 201. 400 testo vuoto, troppo lungo o a se stessi; 403 `chat.notFriends`; 404 se l'altro non è un giocatore visibile; 429 oltre i 30 al minuto. La lettura funziona anche con ex amici e account in pausa |
+| POST | `/api/friends/{username}/messages/read` | giocatore | Segna come letti i messaggi **ricevuti** da quella persona (204, idempotente) |
 | POST | `/api/friends/requests` | giocatore | `{username}` → 201, richiesta PENDING (409 se esiste già o sono già amici) |
 | POST | `/api/friends/requests/{id}/accept` · `/reject` | giocatore | Accettare (200) o rifiutare (204) una richiesta ricevuta |
 | DELETE | `/api/friends/requests/{id}` · `/api/friends/{username}` | utente | Annullare una richiesta inviata · eliminare un amico (204) |
@@ -331,7 +344,7 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 ## Test
 
 ```bash
-./mvnw test      # 499 test (H2 in memoria, non serve PostgreSQL)
+./mvnw test      # 518 test (H2 in memoria, non serve PostgreSQL)
 ./mvnw verify    # + report di copertura in target/site/jacoco/index.html (fallisce se scende sotto l'80 % di righe)
 ```
 
@@ -346,7 +359,7 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 
 I test usano H2 in modalità PostgreSQL **con le stesse migrazioni Flyway** della produzione; non c'è `ddl-auto=create`.
 
-**Frontend** (`cd frontend && npm test`): 184 test in 25 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
+**Frontend** (`cd frontend && npm test`): 201 test in 26 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
 
 **CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) esegue `./mvnw verify` e i test e la build del frontend a ogni push su `main`.
 

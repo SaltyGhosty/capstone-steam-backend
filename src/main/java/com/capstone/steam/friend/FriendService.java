@@ -43,12 +43,14 @@ public class FriendService {
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
     private final LibraryRepository libraryRepository;
+    private final FriendMessageRepository messageRepository;
 
     public FriendService(FriendshipRepository friendshipRepository, UserRepository userRepository,
-            LibraryRepository libraryRepository) {
+            LibraryRepository libraryRepository, FriendMessageRepository messageRepository) {
         this.friendshipRepository = friendshipRepository;
         this.userRepository = userRepository;
         this.libraryRepository = libraryRepository;
+        this.messageRepository = messageRepository;
     }
 
     // ------------------------------ Búsqueda ------------------------------
@@ -75,9 +77,16 @@ public class FriendService {
 
     @Transactional(readOnly = true)
     public List<FriendResponse> friends(Long userId) {
+        Map<Long, Integer> unread = new HashMap<>();
+        messageRepository.countUnreadBySender(userId).forEach(u -> unread.put(u.senderId(), (int) u.count()));
+        return friendsOf(userId, unread);
+    }
+
+    /** {@code unread} por id del amigo; el perfil público pasa un mapa vacío para no revelar los mensajes de otro. */
+    private List<FriendResponse> friendsOf(Long userId, Map<Long, Integer> unread) {
         return friendshipRepository.findAccepted(userId).stream()
                 .filter(f -> isPlayer(f.other(userId)))
-                .map(f -> FriendResponse.from(f, userId))
+                .map(f -> FriendResponse.from(f, userId, unread.getOrDefault(f.other(userId).getId(), 0)))
                 .sorted(Comparator.comparing((FriendResponse r) -> r.user().displayName(),
                         Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
                 .toList();
@@ -199,7 +208,7 @@ public class FriendService {
         if (visible) {
             library = libraryRepository.findByUserId(target.getId(), PageRequest.of(0, PROFILE_LIBRARY_LIMIT,
                     Sort.by(Sort.Direction.DESC, "acquiredAt"))).map(ProfileGame::from).getContent();
-            friends = friends(target.getId());
+            friends = friendsOf(target.getId(), Map.of());
         }
         return new PublicProfileResponse(UserCard.from(target), target.getCreatedAt(), target.isProfilePublic(),
                 relation, pendingId(friendship), visible, library, friends);

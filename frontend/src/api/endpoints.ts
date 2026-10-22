@@ -3,7 +3,7 @@ import { api } from './client';
 import type {
   AuthResponse, Cart, CatalogQuery, ChatMessage, ChatResponse, GameDetail, GameRequest, GameStatus, GameSummary, Genre,
   LibraryEntry, Locale, Order, OrderSummary, Ownership, PageResponse, PaymentMethod, RegisterRequest, RegisterResponse, Review, ReviewRequest, Role,
-  FriendRequest, FriendRequests, FriendResponse, PublicProfile, SearchHit, SteamSyncResult, UpdateProfileRequest, User,
+  ChatMessageItem, Conversation, FriendActivity, FriendRequest, FriendRequests, FriendResponse, PublicProfile, SearchHit, SteamSyncResult, UpdateProfileRequest, User,
   WishlistItem,
 } from './types';
 
@@ -52,6 +52,15 @@ export const friendsApi = {
   reject: (id: number) => api<void>(`/api/friends/requests/${id}/reject`, { method: 'POST' }),
   cancel: (id: number) => api<void>(`/api/friends/requests/${id}`, { method: 'DELETE' }),
   remove: (username: string) => api<void>(`/api/friends/${encodeURIComponent(username)}`, { method: 'DELETE' }),
+  activity: () => api<FriendActivity>('/api/friends/activity'),
+  conversations: () => api<Conversation[]>('/api/friends/conversations'),
+  /** Del más nuevo al más antiguo; `before` es el id del mensaje más antiguo que ya se tiene. */
+  messages: (username: string, before?: number, size?: number) =>
+    api<ChatMessageItem[]>(`/api/friends/${encodeURIComponent(username)}/messages`, { query: { before, size } }),
+  sendMessage: (username: string, body: string) =>
+    api<ChatMessageItem>(`/api/friends/${encodeURIComponent(username)}/messages`, { method: 'POST', body: { body } }),
+  markRead: (username: string) =>
+    api<void>(`/api/friends/${encodeURIComponent(username)}/messages/read`, { method: 'POST' }),
 };
 
 export const assistantApi = {

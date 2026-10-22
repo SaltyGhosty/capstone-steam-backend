@@ -23,6 +23,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findWithRolesById(Long id);
 
     @EntityGraph(attributePaths = "roles")
+    @Query("select u from User u where u.id in :ids")
+    List<User> findAllWithRolesByIdIn(java.util.Collection<Long> ids);
+
+    @EntityGraph(attributePaths = "roles")
     Optional<User> findWithRolesByUsernameIgnoreCase(String username);
 
     /**

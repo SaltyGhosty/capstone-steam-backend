@@ -2,12 +2,49 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { ApiError, getRefreshToken, getToken, setRefreshToken, setToken, setUnauthorizedHandler } from '@/api/client';
-import { authApi, cartApi, userApi, wishlistApi } from '@/api/endpoints';
-import type { Cart, RegisterRequest, Role, User } from '@/api/types';
+import { authApi, cartApi, friendsApi, userApi, wishlistApi } from '@/api/endpoints';
+import type { Cart, FriendActivity, RegisterRequest, Role, User } from '@/api/types';
 import { t } from '@/i18n';
 
 type ToastKind = 'success' | 'error';
-interface Toast { id: number; message: string; kind: ToastKind }
+interface ToastAction { label: string; to: string }
+interface Toast { id: number; message: string; kind: ToastKind; action?: ToastAction }
+
+/** Cada cuánto se consulta la actividad de amigos (también al volver a la pestaña). */
+const ACTIVITY_POLL_MS = 30_000;
+const TOAST_MS = 2800;
+const TOAST_WITH_ACTION_MS = 6000;
+
+/** Lo que ya se había visto en la consulta anterior, para saber qué es nuevo. */
+interface ActivitySeen { requestIds: Set<number>; unread: Map<string, number> }
+
+const seenOf = (a: FriendActivity): ActivitySeen => ({
+  requestIds: new Set(a.incomingRequests.map((r) => r.id)),
+  unread: new Map(a.unread.map((u) => [u.username, u.count])),
+});
+
+/** El aviso de lo que ha cambiado desde la consulta anterior: uno solo, concreto o resumen. */
+function friendToast(activity: FriendActivity, seen: ActivitySeen): { message: string; to: string } | null {
+  const newRequests = activity.incomingRequests.filter((r) => !seen.requestIds.has(r.id));
+  const newSenders = activity.unread.filter((u) => u.count > (seen.unread.get(u.username) ?? 0));
+  if (newRequests.length === 1 && newSenders.length === 0) {
+    const r = newRequests[0];
+    return { message: t('toast.friendRequest', { name: r.displayName || r.username }), to: '/friends' };
+  }
+  if (newSenders.length === 1 && newRequests.length === 0) {
+    const u = newSenders[0];
+    return { message: t('toast.friendMessage', { name: u.displayName || u.username }), to: `/friends?chat=${encodeURIComponent(u.username)}` };
+  }
+  const messages = newSenders.reduce((n, u) => n + u.count - (seen.unread.get(u.username) ?? 0), 0);
+  const requests = newRequests.length;
+  if (requests === 0 && messages === 0) return null;
+  const requestsText = t('toast.friendRequests', { count: requests });
+  const messagesText = t('toast.friendMessages', { count: messages });
+  const message = requests && messages
+    ? t('toast.friendSummary', { requests: requestsText, messages: messagesText })
+    : t('toast.friendOnly', { items: requests ? requestsText : messagesText });
+  return { message, to: '/friends' };
+}
 
 interface StoreValue {
   user: User | null;
@@ -32,8 +69,13 @@ interface StoreValue {
   wishlistIds: Set<number>;
   toggleWishlist: (gameId: number, title: string) => Promise<void>;
 
+  /** Solicitudes recibidas + mensajes sin leer: el número de «Amigos». */
+  friendBadge: number;
+  refreshFriendActivity: () => Promise<void>;
+
   toast: Toast | null;
-  notify: (message: string, kind?: ToastKind) => void;
+  /** Con `action` el aviso trae un enlace y dura más. */
+  notify: (message: string, kind?: ToastKind, action?: ToastAction) => void;
   notifyError: (error: unknown) => void;
   /** Lleva al login y vuelve a la página actual después */
   requireLogin: () => boolean;
@@ -51,10 +93,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
 
-  const notify = useCallback((message: string, kind: ToastKind = 'success') => {
+  const [friendBadge, setFriendBadge] = useState(0);
+  // null = aún no hay consulta de esta sesión: la primera no avisa
+  const activitySeen = useRef<ActivitySeen | null>(null);
+
+  const notify = useCallback((message: string, kind: ToastKind = 'success', action?: ToastAction) => {
     window.clearTimeout(toastTimer.current);
-    setToast({ id: Date.now(), message, kind });
-    toastTimer.current = window.setTimeout(() => setToast(null), 2800);
+    setToast({ id: Date.now(), message, kind, action });
+    toastTimer.current = window.setTimeout(() => setToast(null), action ? TOAST_WITH_ACTION_MS : TOAST_MS);
   }, []);
 
   const notifyError = useCallback(
@@ -68,6 +114,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setCart(null);
     setWishlistIds(new Set());
+    setFriendBadge(0);
+    activitySeen.current = null;
   }, []);
 
   const loadUserData = useCallback(async () => {
@@ -219,15 +267,52 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const hasRole = useCallback((role: Role) => Boolean(user?.roles.includes(role)), [user]);
 
+  // Solo los jugadores tienen amigos (estudios y admins no consultan)
+  const isPlayer = Boolean(user) && !hasRole('ROLE_DEVELOPER') && !hasRole('ROLE_ADMIN');
+  const userId = user?.id;
+
+  const refreshFriendActivity = useCallback(async () => {
+    if (!getToken() || !isPlayer) return;
+    const activity = await friendsApi.activity();
+    // si la sesión se cerró mientras llegaba la respuesta, ya no vale
+    if (!getToken()) return;
+    const seen = activitySeen.current;
+    activitySeen.current = seenOf(activity);
+    setFriendBadge(activity.total);
+    const news = seen ? friendToast(activity, seen) : null;
+    if (news) notify(news.message, 'success', { label: t('toast.friendView'), to: news.to });
+  }, [isPlayer, notify]);
+
+  // Consulta al entrar, cada 30 s y al volver a la pestaña. Otra sesión empieza de cero: su primera consulta no avisa.
+  useEffect(() => {
+    activitySeen.current = null;
+    setFriendBadge(0);
+    if (!isPlayer) return;
+    const poll = () => refreshFriendActivity().catch(() => undefined);
+    poll();
+    const timer = window.setInterval(poll, ACTIVITY_POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') poll();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+    // refreshFriendActivity depende de isPlayer; userId reinicia la consulta con otra sesión
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlayer, userId]);
+
   const value = useMemo<StoreValue>(
     () => ({
       user, booting, hasRole, login, recoverAccount, register, verifyEmail, logout, setUser,
       cart, refreshCart, addToCart, removeFromCart,
       wishlistIds, toggleWishlist,
+      friendBadge, refreshFriendActivity,
       toast, notify, notifyError, requireLogin,
     }),
     [user, booting, hasRole, login, recoverAccount, register, verifyEmail, logout, cart, refreshCart, addToCart, removeFromCart,
-      wishlistIds, toggleWishlist, toast, notify, notifyError, requireLogin],
+      wishlistIds, toggleWishlist, friendBadge, refreshFriendActivity, toast, notify, notifyError, requireLogin],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

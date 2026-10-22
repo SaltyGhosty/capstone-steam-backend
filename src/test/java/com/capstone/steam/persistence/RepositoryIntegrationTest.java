@@ -18,6 +18,8 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.capstone.steam.cart.CartItem;
 import com.capstone.steam.cart.CartItemRepository;
+import com.capstone.steam.friend.FriendMessage;
+import com.capstone.steam.friend.FriendMessageRepository;
 import com.capstone.steam.game.Game;
 import com.capstone.steam.game.GameRepository;
 import com.capstone.steam.game.GameStatus;
@@ -49,6 +51,7 @@ class RepositoryIntegrationTest {
     @Autowired private LibraryRepository library;
     @Autowired private CartItemRepository cart;
     @Autowired private OrderRepository orders;
+    @Autowired private FriendMessageRepository friendMessages;
 
     private User developer;
     private User player;
@@ -196,6 +199,44 @@ class RepositoryIntegrationTest {
 
         assertThat(cart.deleteAllByUserId(player.getId())).isEqualTo(1);
         assertThat(cart.existsByUserIdAndGameId(player.getId(), notOwned.getId())).isFalse();
+    }
+
+    @Test
+    void unreadCountIgnoresHiddenSendersAndMarkReadOnlyTouchesWhatWasReceived() {
+        player.setEmailVerified(true);
+        User ana = verifiedPlayer("ana");
+        User bob = verifiedPlayer("bob");
+        User paused = verifiedPlayer("pausada");
+        paused.setEnabled(false);
+        em.persist(new FriendMessage(ana, player, "uno"));
+        em.persist(new FriendMessage(ana, player, "dos"));
+        em.persist(new FriendMessage(bob, player, "tres"));
+        em.persist(new FriendMessage(paused, player, "oculto"));
+        em.persist(new FriendMessage(player, ana, "mio"));
+        em.flush();
+
+        var unread = friendMessages.countUnreadBySender(player.getId());
+        assertThat(unread).extracting("senderId").containsExactlyInAnyOrder(ana.getId(), bob.getId());
+        assertThat(unread.stream().filter(u -> u.senderId().equals(ana.getId())).findFirst().orElseThrow().count())
+                .isEqualTo(2);
+
+        assertThat(friendMessages.markRead(player.getId(), ana.getId(), Instant.now())).isEqualTo(2);
+        assertThat(friendMessages.markRead(player.getId(), ana.getId(), Instant.now())).isZero();
+        assertThat(friendMessages.countUnreadBySender(player.getId())).extracting("senderId")
+                .containsExactly(bob.getId());
+        // lo que envie yo a ana sigue sin leer
+        assertThat(friendMessages.countUnreadBySender(ana.getId())).extracting("count").containsExactly(1L);
+
+        assertThat(friendMessages.deleteAllOf(ana.getId())).isEqualTo(3);
+        assertThat(friendMessages.findAll()).extracting(FriendMessage::getBody)
+                .containsExactlyInAnyOrder("tres", "oculto");
+    }
+
+    private User verifiedPlayer(String username) {
+        User user = new User(username, username + "@test.com", "hash");
+        user.addRole(roles.findByName(RoleName.ROLE_USER).orElseThrow());
+        user.setEmailVerified(true);
+        return em.persist(user);
     }
 
     private Game newGame(String slug, String price) {

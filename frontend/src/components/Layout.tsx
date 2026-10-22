@@ -8,7 +8,7 @@ import AssistantChat from './AssistantChat';
 import Icon, { type IconName } from './Icon';
 import LanguageSwitcher from './LanguageSwitcher';
 
-function SideLink({ to, icon, label, count, end }: { to: string; icon: IconName; label: string; count?: number; end?: boolean }) {
+function SideLink({ to, icon, label, count, end }: { to: string; icon: IconName; label: string; count?: number | string; end?: boolean }) {
   return (
     <NavLink to={to} end={end} className={({ isActive }) => (isActive ? 'active' : undefined)} title={label}>
       <Icon name={icon} /> {label}
@@ -16,6 +16,9 @@ function SideLink({ to, icon, label, count, end }: { to: string; icon: IconName;
     </NavLink>
   );
 }
+
+/** El número de una insignia: nada con 0 y «99+» por encima de 99. */
+const badge = (n: number) => (n > 99 ? '99+' : n > 0 ? String(n) : undefined);
 
 function Brand({ className }: { className: string }) {
   const { t } = useI18n();
@@ -50,7 +53,7 @@ function roleLabel(roles: string[], t: ReturnType<typeof useI18n>['t']) {
 }
 
 export default function Layout() {
-  const { user, hasRole, cart, wishlistIds, logout, toast } = useStore();
+  const { user, hasRole, cart, wishlistIds, friendBadge, logout, toast } = useStore();
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
@@ -90,6 +93,7 @@ export default function Layout() {
   };
 
   const cartCount = cart?.itemCount ?? 0;
+  const friendCount = badge(friendBadge);
   const name = user?.displayName || user?.username || '';
 
   return (
@@ -105,7 +109,7 @@ export default function Layout() {
           <p>{t('nav.collection')}</p>
           <SideLink to="/wishlist" icon="heart" label={t('nav.wishlist')} count={user ? wishlistIds.size : undefined} />
           <SideLink to="/orders" icon="receipt" label={t('nav.orders')} />
-          {isPlayer && <SideLink to="/friends" icon="users" label={t('nav.friends')} />}
+          {isPlayer && <SideLink to="/friends" icon="users" label={t('nav.friends')} count={friendCount} />}
           {hasRole('ROLE_DEVELOPER') && (<><p>{t('nav.studio')}</p><SideLink to="/developer" icon="code" label={t('nav.myGames')} /></>)}
           {hasRole('ROLE_ADMIN') && (<><p>{t('nav.admin')}</p><SideLink to="/admin" icon="shield" label={t('nav.moderation')} /></>)}
         </nav>
@@ -145,7 +149,7 @@ export default function Layout() {
                 {menuOpen && (
                   <div className="menu" role="menu">
                     {isPlayer && <Link to={`/users/${user.username}`} role="menuitem"><Icon name="users" size={16} /> {t('nav.myProfile')}</Link>}
-                    {isPlayer && <Link to="/friends" role="menuitem"><Icon name="users" size={16} /> {t('nav.friends')}</Link>}
+                    {isPlayer && <Link to="/friends" role="menuitem"><Icon name="users" size={16} /> {t('nav.friends')}{friendCount && <span className="nav-count">{friendCount}</span>}</Link>}
                     <Link to="/settings" role="menuitem"><Icon name="settings" size={16} /> {t('nav.settings')}</Link>
                     <Link to="/orders" role="menuitem"><Icon name="receipt" size={16} /> {t('nav.myOrders')}</Link>
                     <button onClick={logout} role="menuitem"><Icon name="logout" size={16} /> {t('nav.logout')}</button>
@@ -168,7 +172,7 @@ export default function Layout() {
           <NavLink to="/library"><Icon name="library" /> {t('nav.library')}</NavLink>
           <NavLink to="/wishlist"><Icon name="heart" /> {t('nav.wishlist')}</NavLink>
           <NavLink to="/orders"><Icon name="receipt" /> {t('nav.orders')}</NavLink>
-          {isPlayer && <NavLink to="/friends"><Icon name="users" /> {t('nav.friends')}</NavLink>}
+          {isPlayer && <NavLink to="/friends"><Icon name="users" /> {t('nav.friends')}{friendCount && <span className="nav-badge">{friendCount}</span>}</NavLink>}
           {hasRole('ROLE_DEVELOPER') && <NavLink to="/developer"><Icon name="code" /> {t('nav.myGames')}</NavLink>}
           {hasRole('ROLE_ADMIN') && <NavLink to="/admin"><Icon name="shield" /> {t('nav.moderation')}</NavLink>}
           <NavLink to="/settings"><Icon name="settings" /> {t('nav.settings')}</NavLink>
@@ -186,6 +190,7 @@ export default function Layout() {
       {toast && (
         <div key={toast.id} className={`toast ${toast.kind}`} role="status">
           <span>{toast.kind === 'error' ? '!' : '✓'}</span>{toast.message}
+          {toast.action && <Link className="toast-action" to={toast.action.to}>{toast.action.label}</Link>}
         </div>
       )}
     </div>
