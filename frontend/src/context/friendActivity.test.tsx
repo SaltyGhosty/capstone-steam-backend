@@ -42,6 +42,7 @@ describe('actividad de amigos', () => {
   beforeEach(() => {
     setToken('jwt-demo');
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
   });
   afterEach(() => vi.useRealTimers());
 
@@ -135,5 +136,59 @@ describe('actividad de amigos', () => {
     const { calls } = setup(['ROLE_USER'], empty);
     await tick(65_000);
     expect(calls()).toBe(0);
+  });
+
+  /** Como setup, pero cada consulta de actividad queda en espera hasta que el test la resuelva. */
+  function setupDeferred() {
+    const pending: ((a: Activity) => void)[] = [];
+    const base = mockFetch({
+      'GET /api/users/me': { body: { ...demoUser, roles: ['ROLE_USER'] } },
+      'GET /api/cart': { body: { items: [], itemCount: 0, total: 0 } },
+      'GET /api/wishlist': { body: page([]) },
+    });
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).includes('/api/friends/activity')) {
+        return new Promise<Response>((resolve) =>
+          pending.push((a) => resolve(new Response(JSON.stringify(a), { status: 200 }))));
+      }
+      return base(input, init);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderRoutes({ '/': <Layout />, '/friends': <p>pantalla amigos</p> }, '/');
+    return { pending };
+  }
+
+  it('una respuesta vieja que llega tarde no pisa a la más reciente', async () => {
+    const { pending } = setupDeferred();
+    await screen.findByRole('navigation', { name: 'Navegación principal' });
+    await waitFor(() => expect(pending).toHaveLength(1));
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+    await waitFor(() => expect(pending).toHaveLength(2));
+    await act(async () => { pending[1](activityOf([], [unread('bob', 5)])); });
+    const side = screen.getByRole('navigation', { name: 'Navegación principal' });
+    expect(await within(side).findByRole('link', { name: /Amigos\s*5/ })).toBeInTheDocument();
+    await act(async () => { pending[0](activityOf([], [unread('bob', 1)])); });
+    expect(within(side).getByRole('link', { name: /Amigos\s*5/ })).toBeInTheDocument();
+  });
+
+  it('el intervalo no lanza otra consulta mientras una sigue en vuelo', async () => {
+    const { pending } = setupDeferred();
+    await screen.findByRole('navigation', { name: 'Navegación principal' });
+    await waitFor(() => expect(pending).toHaveLength(1));
+    await tick(65_000);
+    expect(pending).toHaveLength(1);
+    await act(async () => { pending[0](empty); });
+    await tick(30_000);
+    expect(pending).toHaveLength(2);
+  });
+
+  it('con la pestaña oculta el intervalo no consulta', async () => {
+    const { calls } = setup(['ROLE_USER'], empty);
+    await screen.findByRole('navigation', { name: 'Navegación principal' });
+    await tick(0);
+    const before = calls();
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    await tick(65_000);
+    expect(calls()).toBe(before);
   });
 });

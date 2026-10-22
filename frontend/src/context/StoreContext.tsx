@@ -96,6 +96,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [friendBadge, setFriendBadge] = useState(0);
   // null = aún no hay consulta de esta sesión: la primera no avisa
   const activitySeen = useRef<ActivitySeen | null>(null);
+  // número de la última consulta lanzada (las respuestas anteriores se descartan) y la que sigue en vuelo (0 = ninguna)
+  const activityReqId = useRef(0);
+  const activityInFlight = useRef(0);
 
   const notify = useCallback((message: string, kind: ToastKind = 'success', action?: ToastAction) => {
     window.clearTimeout(toastTimer.current);
@@ -273,9 +276,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshFriendActivity = useCallback(async () => {
     if (!getToken() || !isPlayer) return;
-    const activity = await friendsApi.activity();
-    // si la sesión se cerró mientras llegaba la respuesta, ya no vale
-    if (!getToken()) return;
+    const reqId = ++activityReqId.current;
+    activityInFlight.current = reqId;
+    let activity;
+    try {
+      activity = await friendsApi.activity();
+    } finally {
+      if (activityInFlight.current === reqId) activityInFlight.current = 0;
+    }
+    // si la sesión se cerró o llegó otra consulta más reciente mientras tanto, esta respuesta ya no vale
+    if (!getToken() || reqId !== activityReqId.current) return;
     const seen = activitySeen.current;
     activitySeen.current = seenOf(activity);
     setFriendBadge(activity.total);
@@ -286,11 +296,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Consulta al entrar, cada 30 s y al volver a la pestaña. Otra sesión empieza de cero: su primera consulta no avisa.
   useEffect(() => {
     activitySeen.current = null;
+    activityReqId.current++;
+    activityInFlight.current = 0;
     setFriendBadge(0);
     if (!isPlayer) return;
     const poll = () => refreshFriendActivity().catch(() => undefined);
     poll();
-    const timer = window.setInterval(poll, ACTIVITY_POLL_MS);
+    // el intervalo no consulta con la pestaña oculta ni mientras otra consulta sigue en vuelo
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible' && activityInFlight.current === 0) poll();
+    }, ACTIVITY_POLL_MS);
     const onVisible = () => {
       if (document.visibilityState === 'visible') poll();
     };
