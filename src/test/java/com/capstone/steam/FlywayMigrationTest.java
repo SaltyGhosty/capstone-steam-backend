@@ -13,7 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Verifica que las migraciones V1-V13 se aplican sobre H2 y que las
+ * Verifica que las migraciones V1-V14 se aplican sobre H2 y que las
  * restricciones clave del esquema funcionan.
  */
 @SpringBootTest
@@ -28,10 +28,29 @@ class FlywayMigrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    void appliesAllMigrationsUpToV13() {
+    void appliesAllMigrationsUpToV14() {
         var applied = flyway.info().applied();
-        assertThat(applied).hasSize(14);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("13");
+        assertThat(applied).hasSize(15);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("14");
+    }
+
+    @Test
+    void v14CreatesFriendMessagesWithItsChecks() {
+        long x = insertUser("msg_x");
+        long y = insertUser("msg_y");
+        long z = insertUser("msg_z");
+        String sql = "INSERT INTO friend_messages (sender_id, recipient_id, user_low_id, user_high_id, body) "
+                + "VALUES (?, ?, ?, ?, ?)";
+
+        assertThat(jdbc.update(sql, y, x, x, y, "hola")).isEqualTo(1);
+        // cuerpo vacío
+        assertThatThrownBy(() -> jdbc.update(sql, x, y, x, y, ""))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        // pareja que no es la del remitente y el destinatario
+        assertThatThrownBy(() -> jdbc.update(sql, x, y, x, z, "hola"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThat(jdbc.queryForObject("SELECT read_at FROM friend_messages WHERE body = 'hola'", Object.class))
+                .isNull();
     }
 
     @Test
