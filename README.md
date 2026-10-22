@@ -6,9 +6,9 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 
 | | |
 |---|---|
-| **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (copertine) · OpenRouter (assistente) · JUnit 5 + Mockito + H2 · Maven |
+| **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail in locale, API di Brevo in produzione) · Cloudinary (copertine) · OpenRouter (assistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Test** | Backend: 491 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 184 test in 25 file · CI su GitHub Actions |
+| **Test** | Backend: 499 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 184 test in 25 file · CI su GitHub Actions |
 | **API** | Swagger UI su `/swagger-ui.html` · 96 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -72,7 +72,8 @@ I pagamenti sono **simulati**: una carta che termina con `0000` viene sempre rif
 - Un account disattivato da un admin che verifica la propria email risulta verificato ma riceve 403 e non gli viene emessa alcuna sessione. Registrazione e verifica leggono la riga dell'utente con lock pessimistico.
 - Un admin può verificare un account a mano (`POST /api/admin/users/{id}/verify-email`): lo usano il seed e Postman. Se l'email ha più registrazioni richieste distinte (contano anche i link annullati o scaduti) risponde 409 `auth.verificationAmbiguous` e non verifica nulla; con una sola applica quella.
 - **Limite per IP** di 60 richieste al minuto (gli IPv6 sono raggruppati per prefisso /64; i 429 includono l'intestazione `Retry-After`) su `/register`, `/resend-verification`, `/verify-email` e `/verify-email/preview`. I 5 tentativi di password sono **per registrazione** (utente + password), non per link: un link di reinvio eredita il massimo di errori e gli errori si contano su tutti i link della registrazione, e una registrazione il cui link è stato annullato per 5 errori non viene reinviata (bisogna registrarsi di nuovo).
-- Le email ritentano fino a 3 volte gli errori di connessione all'SMTP (Gmail da Render a volte è lento a connettersi).
+- Le email ritentano fino a 3 volte gli errori di rete (connessione all'SMTP, oppure 429 e 5xx dell'API di Brevo).
+- **In produzione le email passano dall'API HTTP di Brevo** (`BREVO_API_KEY`): dal 26 settembre 2025 Render free blocca il traffico in uscita verso le porte SMTP (25, 465 e 587), quindi Gmail SMTP da Render non si collega mai. In locale, senza quella chiave, si continua a usare Gmail SMTP.
 
 **Cancellare l'account.** Un giocatore o uno studio può cancellare il proprio account dalle Impostazioni (serve la password) e un admin può cancellare quello di chiunque dal pannello. Non si cancella la riga: si **anonimizza**.
 - **14 giorni di pausa** (`ACCOUNT_DELETION_GRACE`): l'account non può accedere (403 `auth.accountPendingDeletion` o `auth.accountDeletionByAdmin`, con `deletionScheduledAt`), le sessioni si chiudono subito e il profilo pubblico sparisce dalle ricerche. I giochi di uno studio restano in vendita durante la pausa.
@@ -142,6 +143,7 @@ cp .env.example .env    # e compila i valori
 | `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Consigliata | Se `ADMIN_PASSWORD` ha un valore, l'admin iniziale viene creato all'avvio |
 | `MAIL_USERNAME`, `MAIL_APP_PASSWORD` | Opzionale | Account Gmail e [password per le app](https://myaccount.google.com/apppasswords). Se sono vuote, le email vengono solo scritte nel log |
 | `MAIL_FROM_NAME` | Opzionale | Nome con cui arrivano le email e marchio che vi compare (predefinito `ARCADE`) |
+| `BREVO_API_KEY` | In produzione | Chiave dell'API di [Brevo](https://www.brevo.com) (piano gratuito, 300 email al giorno). Se c'è, le email escono via HTTPS e non via SMTP: è necessaria su Render free, che blocca le porte SMTP. Il mittente (`MAIL_FROM` o `MAIL_USERNAME`) deve essere verificato in Brevo |
 | `MAIL_TIMEOUT` | Opzionale | Millisecondi di attesa per connessione, lettura e scrittura con l'SMTP (predefinito `15000`). Gli errori di connessione vengono ritentati fino a 3 volte (pause di 2 s e 6 s) |
 | `EMAIL_VERIFICATION_REQUIRED` | Opzionale | Predefinito `true`: creare un account invia un'email con un link e non si può accedere finché non lo si clicca. Con `false` gli account nascono verificati e la registrazione restituisce la sessione (lo usano solo i test) |
 | `AUTH_IP_LIMIT_PER_MINUTE` | Opzionale | Richieste al minuto per IP a registrazione, reinvio e verifica dell'email (predefinito `60`; poi 429 `auth.tooManyRequests` con `Retry-After`). In produzione (`prod`) l'IP reale proviene da `X-Forwarded-For` (`server.forward-headers-strategy: native`) |
@@ -217,7 +219,7 @@ POST /api/orders/{id}/pay
      └─ publishEvent(OrderPaidEvent)
                                                       ── COMMIT ──
  MailListener.onOrderPaid()   @TransactionalEventListener(AFTER_COMMIT)
-                              @Async("mailExecutor")  → thread mail-N → Gmail SMTP
+                              @Async("mailExecutor")  → thread mail-N → Brevo (HTTPS) o Gmail SMTP
 ```
 La risposta HTTP non attende l'SMTP. Se la transazione fa rollback, non viene inviata alcuna email. E se l'invio dell'email fallisce, l'errore viene scritto nel log senza incidere sull'acquisto.
 
@@ -329,7 +331,7 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 ## Test
 
 ```bash
-./mvnw test      # 491 test (H2 in memoria, non serve PostgreSQL)
+./mvnw test      # 499 test (H2 in memoria, non serve PostgreSQL)
 ./mvnw verify    # + report di copertura in target/site/jacoco/index.html (fallisce se scende sotto l'80 % di righe)
 ```
 
