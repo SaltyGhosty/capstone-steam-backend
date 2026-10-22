@@ -137,6 +137,9 @@ class ChatIntegrationTest {
 
         // 1.000 justos valen, también con espacios en los extremos (no cuentan)
         mvc.perform(send(ana, "leo", "  " + "x".repeat(1000) + "  ")).andExpect(status().isCreated());
+        // otros espacios Unicode en los extremos tampoco cuentan
+        mvc.perform(send(ana, "leo", " tab ")).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.body").value("tab"));
         // el salto de línea del medio se guarda tal cual; los extremos se recortan
         mvc.perform(send(ana, "leo", "  una\\ndos  ")).andExpect(status().isCreated())
                 .andExpect(jsonPath("$.body").value("una\ndos"));
@@ -194,13 +197,23 @@ class ChatIntegrationTest {
 
     @Test
     void pausedRecipientIs404AndDeveloperSenderIs403PlayersOnly() throws Exception {
+        mvc.perform(send(ana, "leo", "antes")).andExpect(status().isCreated());
         long leoId = userRepository.findByUsernameIgnoreCase("leo").orElseThrow().getId();
         mvc.perform(auth(patch("/api/admin/users/" + leoId + "/enabled"), adminToken)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
                 .andExpect(status().isOk());
         mvc.perform(send(ana, "leo", "hola")).andExpect(status().isNotFound());
-        mvc.perform(auth(get("/api/friends/leo/messages"), ana)).andExpect(status().isNotFound());
-        mvc.perform(auth(post("/api/friends/leo/messages/read"), ana)).andExpect(status().isNotFound());
+        // leer sí se puede: el historial con una cuenta en pausa sigue ahí
+        mvc.perform(auth(get("/api/friends/leo/messages"), ana)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].body").value("antes"));
+        mvc.perform(auth(post("/api/friends/leo/messages/read"), ana)).andExpect(status().isNoContent());
+        // una cuenta que no existe no tiene historial
+        mvc.perform(auth(get("/api/friends/nadie/messages"), ana)).andExpect(status().isNotFound());
+        mvc.perform(auth(post("/api/friends/nadie/messages/read"), ana)).andExpect(status().isNotFound());
+        // un estudio existe pero no tiene historial
+        mvc.perform(auth(get("/api/friends/studio/messages"), ana)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(auth(post("/api/friends/studio/messages/read"), ana)).andExpect(status().isNoContent());
         mvc.perform(send(ana, "nadie", "hola")).andExpect(status().isNotFound());
         // un estudio no puede escribir (403 playersOnly) ni siquiera a alguien que no existe
         mvc.perform(send(studio, "ana", "hola")).andExpect(status().isForbidden())

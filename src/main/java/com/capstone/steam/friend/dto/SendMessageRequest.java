@@ -7,6 +7,6 @@ import jakarta.validation.constraints.Size;
 public record SendMessageRequest(@NotBlank @Size(max = 1000) String body) {
 
     public SendMessageRequest {
-        body = body == null ? null : body.trim();
+        body = body == null ? null : body.strip();
     }
 }

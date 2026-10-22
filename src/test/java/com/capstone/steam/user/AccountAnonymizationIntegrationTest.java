@@ -67,8 +67,8 @@ class AccountAnonymizationIntegrationTest {
     @BeforeEach
     void cleanDatabase() {
         for (String table : List.of("payments", "library_entries", "order_items", "orders", "reviews", "cart_items",
-                "wishlist_items", "friend_messages", "friendships", "refresh_tokens", "email_verification_tokens", "game_genres",
-                "games")) {
+                "wishlist_items", "friend_messages", "friendships", "refresh_tokens", "email_verification_tokens",
+                "game_genres", "games")) {
             jdbc.update("DELETE FROM " + table);
         }
         jdbc.update("DELETE FROM user_roles WHERE user_id IN (SELECT id FROM users WHERE username <> 'admin')");

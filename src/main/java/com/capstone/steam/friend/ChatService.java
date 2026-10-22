@@ -15,8 +15,8 @@ import com.capstone.steam.user.User;
 import com.capstone.steam.user.UserRepository;
 
 /**
- * Chat uno a uno entre jugadores. Escribir exige ser amigos en ese momento; leer el historial no (los ex-amigos
- * se siguen leyendo). Orden de los errores: friend.self, friend.playersOnly, 404, chat.notFriends, 429.
+ * Chat uno a uno entre jugadores. Escribir exige ser amigos en ese momento y que el otro sea jugador; leer el historial no (los ex-amigos
+ * y las cuentas en pausa se siguen leyendo; las anonimizadas no existen). Orden de los errores: friend.self, friend.playersOnly, 404, chat.notFriends, 429.
  */
 @Service
 public class ChatService {
@@ -58,7 +58,7 @@ public class ChatService {
     @Transactional(readOnly = true)
     public List<MessageResponse> messages(Long userId, String username, Long before, int size) {
         loadPlayer(userId, username);
-        User other = otherPlayer(username);
+        User other = existingUser(username);
         int pageSize = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
         return messageRepository.findConversation(Math.min(userId, other.getId()), Math.max(userId, other.getId()),
                 before == null ? Long.MAX_VALUE : before, PageRequest.of(0, pageSize)).stream()
@@ -69,7 +69,7 @@ public class ChatService {
     @Transactional
     public void markRead(Long userId, String username) {
         loadPlayer(userId, username);
-        User other = otherPlayer(username);
+        User other = existingUser(username);
         messageRepository.markRead(userId, other.getId(), clock.instant());
     }
 
@@ -89,6 +89,13 @@ public class ChatService {
     private User otherPlayer(String username) {
         String name = clean(username);
         return userRepository.findWithRolesByUsernameIgnoreCase(name).filter(FriendService::isPlayer)
+                .orElseThrow(() -> NotFoundException.of("user", name));
+    }
+
+    /** Para leer: vale cualquier cuenta que exista y no esté anonimizada (en pausa o desactivada también: se lee su historial). */
+    private User existingUser(String username) {
+        String name = clean(username);
+        return userRepository.findWithRolesByUsernameIgnoreCase(name).filter(u -> !u.isDeleted())
                 .orElseThrow(() -> NotFoundException.of("user", name));
     }
 
