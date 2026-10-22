@@ -8,7 +8,7 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail) · Cloudinary (copertine) · OpenRouter (assistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Test** | Backend: 480 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 179 test in 25 file · CI su GitHub Actions |
+| **Test** | Backend: 489 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 184 test in 25 file · CI su GitHub Actions |
 | **API** | Swagger UI su `/swagger-ui.html` · 96 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -244,7 +244,7 @@ La risposta HTTP non attende l'SMTP. Se la transazione fa rollback, non viene in
 | **V12.1** `username_lower_unique` | Indice univoco su `lower(username)`: il nome utente è univoco senza distinguere maiuscole e minuscole anche nel database. PostgreSQL usa un indice per espressione; H2 (test) una colonna generata `username_lower` con un `UNIQUE`, perché H2 non supporta gli indici per espressione |
 | **V12** `email_verification` | `users.email_verified` (gli account già esistenti restano verificati) e la tabella `email_verification_tokens`: SHA-256 del link (mai il token), scadenza, data di utilizzo, i dati della registrazione che lo ha generato (utente, password cifrata, nome, lingua e tipo di account) e il contatore delle password errate |
 
-La traccia del corso richiede V1 a V4; V5 a V13 sono state aggiunte in seguito (lingua delle email, traduzioni, Steam, recensioni in stile Steam, amici, refresh token, integrità della coppia di amici e verifica dell'email). V1 a V3 e V5 a V12 sono SQL portabile; V4 e V12.1 hanno una variante per motore. V4 ha due versioni ([postgresql](src/main/resources/db/migration/postgresql) e [h2](src/main/resources/db/migration/h2)), perché H2 non supporta gli indici a trigrammi né quelli parziali. Flyway sceglie quella adatta con `locations: …/common, …/{vendor}`.
+La traccia del corso richiede V1 a V4; V5 a V13 sono state aggiunte in seguito (lingua delle email, traduzioni, Steam, recensioni in stile Steam, amici, refresh token, integrità della coppia di amici, verifica dell'email e cancellazione dell'account). V1 a V3 e V5 a V13 sono SQL portabile; V4 e V12.1 hanno una variante per motore. V4 ha due versioni ([postgresql](src/main/resources/db/migration/postgresql) e [h2](src/main/resources/db/migration/h2)), perché H2 non supporta gli indici a trigrammi né quelli parziali. Flyway sceglie quella adatta con `locations: …/common, …/{vendor}`.
 
 Le regole di integrità sono garantite anche dal database, non solo dal codice Java: `CHECK` (prezzo ≥ 0, sconto da 0 a 100, `positive_count <= review_count`, lingua e stati validi), `UNIQUE` e chiavi esterne con `ON DELETE` pensato caso per caso.
 
@@ -254,13 +254,13 @@ L'autenticazione è `Authorization: Bearer <accessToken>`. Il token si ottiene a
 
 | Metodo | Percorso | Accesso | Descrizione |
 |---|---|---|---|
-| POST | `/api/auth/register` | pubblico | Registrazione (`accountType`: PLAYER o DEVELOPER; `locale` facoltativo: `es`, `en` o `it`, predefinito `es`) → 201 con `{id, email, verificationRequired: true}` e un'email con il link di verifica (senza sessione). Con `EMAIL_VERIFICATION_REQUIRED=false` restituisce `accessToken` e `refreshToken` |
+| POST | `/api/auth/register` | pubblico | Registrazione (`accountType`: PLAYER o DEVELOPER; `locale` facoltativo: `es`, `en` o `it`, predefinito `es`) → 201 con `{id, email, verificationRequired: true}` e un'email con il link di verifica (senza sessione). Con `EMAIL_VERIFICATION_REQUIRED=false` restituisce `accessToken` e `refreshToken`. 400 se il nome utente inizia per `deleted_` o l'email finisce con `@deleted.invalid` (identificatori riservati agli account anonimizzati) |
 | POST | `/api/auth/verify-email/preview` | pubblico | `{token}` → `{username}` se il link è ancora valido (non lo consuma); 400 se è usato, scaduto o inesistente |
-| POST | `/api/auth/verify-email` | pubblico | `{token, password}` (la password di quella registrazione) → verifica l'email e restituisce `accessToken` e `refreshToken`. 400 se il link non vale (`auth.verificationInvalid`) o la password non è quella della registrazione (`auth.verificationPasswordInvalid`, 5 errori annullano il link); 409 se il nome utente del link è stato preso da un altro account |
+| POST | `/api/auth/verify-email` | pubblico | `{token, password}` (la password di quella registrazione) → verifica l'email e restituisce `accessToken` e `refreshToken`. 400 se il link non vale (`auth.verificationInvalid`) o la password non è quella della registrazione (`auth.verificationPasswordInvalid`, 5 errori annullano il link); 409 se il nome utente del link è stato preso da un altro account; 403 se l'account è in pausa per la cancellazione (l'email resta verificata, ma senza sessione) |
 | POST | `/api/auth/resend-verification` | pubblico | `{email}` → sempre 204 (non rivela se l'account esiste). 429 oltre le 3 email all'ora per indirizzo (registrazione inclusa) |
 | POST | `/api/auth/login` | pubblico | Login con username **o** email → `accessToken` e `refreshToken`. 403 con `code: auth.emailNotVerified` se la password è corretta ma manca la verifica dell'email. Con la cancellazione in sospeso e la password corretta risponde 403 `auth.accountPendingDeletion` (l'ha chiesta l'utente: si può recuperare) o `auth.accountDeletionByAdmin`, entrambi con `deletionScheduledAt` |
-| POST | `/api/auth/recover-account` | pubblico | `{login, password}` → annulla la cancellazione e restituisce una sessione (`AuthResponse`), solo se l'ha chiesta l'utente stesso. 403 `auth.accountDeletionByAdmin` se l'ha chiesta un admin; 401 come il login se la password è errata o non c'è nessuna cancellazione |
-| POST | `/api/auth/refresh` | pubblico | `{refreshToken}` → nuova coppia (rotazione). 401 se è scaduto, revocato o già usato (in tal caso si revoca la sua famiglia) |
+| POST | `/api/auth/recover-account` | pubblico | `{login, password}` → annulla la cancellazione e restituisce una sessione (`AuthResponse`), solo se l'ha chiesta l'utente stesso. 403 `auth.accountDeletionByAdmin` se l'ha chiesta un admin; 200 con sessione, come il login, se non c'è nessuna cancellazione in sospeso; 401 come il login solo se la password è errata o l'account non esiste |
+| POST | `/api/auth/refresh` | pubblico | `{refreshToken}` → nuova coppia (rotazione). 401 se è scaduto, revocato o già usato (in tal caso si revoca la sua famiglia), e anche se l'account è disattivato, in pausa per la cancellazione o già eliminato |
 | POST | `/api/auth/logout` | pubblico | `{refreshToken}` → 204; revoca la sessione (idempotente) |
 | GET / PATCH | `/api/users/me` | utente | Vedere e modificare il profilo (inclusi `locale`, la lingua delle email, e `profilePublic`) |
 | POST | `/api/users/me/deletion` | utente | `{password}` → 200 `{deletionScheduledAt}`: mette in pausa il proprio account per 14 giorni e chiude le sessioni; poi viene anonimizzato. 400 `user.deletionWrongPassword` se la password è errata; 409 `user.lastAdmin` se è l'ultimo admin attivo |
@@ -329,7 +329,7 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 ## Test
 
 ```bash
-./mvnw test      # 480 test (H2 in memoria, non serve PostgreSQL)
+./mvnw test      # 489 test (H2 in memoria, non serve PostgreSQL)
 ./mvnw verify    # + report di copertura in target/site/jacoco/index.html (fallisce se scende sotto l'80 % di righe)
 ```
 
@@ -344,7 +344,7 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 
 I test usano H2 in modalità PostgreSQL **con le stesse migrazioni Flyway** della produzione; non c'è `ddl-auto=create`.
 
-**Frontend** (`cd frontend && npm test`): 179 test in 25 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
+**Frontend** (`cd frontend && npm test`): 184 test in 25 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
 
 **CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) esegue `./mvnw verify` e i test e la build del frontend a ogni push su `main`.
 
