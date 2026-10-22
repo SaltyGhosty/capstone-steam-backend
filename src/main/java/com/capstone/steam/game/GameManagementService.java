@@ -134,6 +134,9 @@ public class GameManagementService {
                 if (game.getStatus() != GameStatus.DELISTED) {
                     throw new ConflictException("game.republishOnlyDelisted");
                 }
+                if (game.getDeveloper().isDeleted()) {
+                    throw new ConflictException("game.developerDeleted");
+                }
                 game.setStatus(GameStatus.PUBLISHED);
             }
             case DRAFT -> throw new BadRequestException("game.draftByDeveloper");

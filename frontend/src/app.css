@@ -400,3 +400,8 @@ td.row-actions > * { display: inline-flex; vertical-align: middle; margin-left: 
 @media (prefers-reduced-motion: reduce) {
   .balatro-card, .balatro-bar span { transition: none; }
 }
+.danger-zone { margin-top: 20px; border-color: #5a2a26; }
+.danger-zone p { margin: 0 0 14px; color: #8d95a1; font-size: 13px; }
+.demo-dialog .form p { margin: 0; color: #8d95a1; font-size: 13px; }
+.danger-button { background: #c4392d; border-color: #c4392d; color: white; }
+.danger-button:hover:not(:disabled) { background: #a82f25; }

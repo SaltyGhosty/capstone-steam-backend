@@ -88,7 +88,7 @@ function GamesTab() {
                     {g.coverUrl && <img src={g.coverUrl} alt="" />}
                     {g.status === 'PUBLISHED' ? <Link to={`/games/${g.slug}`}>{g.title}</Link> : <span>{g.title}</span>}
                   </div></td>
-                  <td>{g.developer.displayName}</td>
+                  <td>{g.developer.deleted ? t('game.deletedStudio') : g.developer.displayName}</td>
                   <td><span className={`badge ${g.status.toLowerCase()}`}>{gameStatus(g.status)}</span></td>
                   <td>{formatMoney(g.finalPrice)}</td>
                   <td>{g.salesCount}</td>
@@ -158,6 +158,25 @@ function UsersTab() {
     }
   };
 
+  const remove = async (u: User) => {
+    if (!window.confirm(t('admin.confirmDeleteUser', { user: u.username }))) return;
+    try {
+      replace(await adminApi.deleteUser(u.id));
+      notify(t('admin.deletionRequested', { user: u.username }));
+    } catch (e) {
+      notifyError(e);
+    }
+  };
+
+  const cancelDeletion = async (u: User) => {
+    try {
+      replace(await adminApi.cancelDeletion(u.id));
+      notify(t('admin.deletionCancelled', { user: u.username }));
+    } catch (e) {
+      notifyError(e);
+    }
+  };
+
   const grant = async (e: FormEvent, u: User) => {
     e.preventDefault();
     const gameId = Number(gift[u.id]);
@@ -177,7 +196,7 @@ function UsersTab() {
   return (
     <div className="table-wrap">
       <table className="table">
-        <thead><tr><th>{t('admin.user')}</th><th>{t('admin.joined')}</th><th>{t('admin.roles')}</th><th>{t('admin.status')}</th><th>{t('admin.giftGame')}</th></tr></thead>
+        <thead><tr><th>{t('admin.user')}</th><th>{t('admin.joined')}</th><th>{t('admin.roles')}</th><th>{t('admin.status')}</th><th>{t('admin.giftGame')}</th><th></th></tr></thead>
         <tbody>
           {users.data.content.map((u) => (
             <tr key={u.id}>
@@ -211,6 +230,19 @@ function UsersTab() {
                   </select>
                   <button className="icon-button" disabled={!gift[u.id]} aria-label={t('admin.gift')}><Icon name="gift" size={16} /></button>
                 </form>
+              </td>
+              <td>
+                {u.deletionScheduledAt ? (
+                  <div className="chips">
+                    <span className="badge pending">
+                      {t('admin.deletionScheduled', { date: formatDate(u.deletionScheduledAt) })}{' '}
+                      {t(u.deletionRequestedBy === 'SELF' ? 'admin.deletionBySelf' : 'admin.deletionByAdmin')}
+                    </span>
+                    <button className="chip" onClick={() => cancelDeletion(u)}>{t('admin.cancelDeletion')}</button>
+                  </div>
+                ) : u.id !== me?.id && (
+                  <button className="secondary small danger" onClick={() => remove(u)}>{t('admin.delete')}</button>
+                )}
               </td>
             </tr>
           ))}

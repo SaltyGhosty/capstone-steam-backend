@@ -79,7 +79,8 @@ public class RefreshTokenService {
             throw invalid();
         }
         User user = userRepository.findWithRolesById(current.getUserId()).orElseThrow(RefreshTokenService::invalid);
-        if (!user.isEnabled()) {
+        // En pausa o eliminada cuenta como desactivada: un login en vuelo pudo guardar un token que revokeAll no vio
+        if (!user.isEnabled() || user.isPendingDeletion() || user.isDeleted()) {
             repository.revokeAllForUser(user.getId(), now);
             throw invalid();
         }

@@ -12,7 +12,7 @@ const game = {
   id: 13, title: 'Neon Drift', slug: 'neon-drift', description: 'Carreras', descriptions: { es: 'Carreras', en: null, it: null },
   coverUrl: null, steamAppId: null, priceSyncedAt: null, price: 19.99, discountPercent: 0, finalPrice: 19.99,
   releaseDate: '2026-01-10', status: 'PUBLISHED', reviewCount: 60, positivePercent: 85, reviewScore: 'VERY_POSITIVE',
-  salesCount: 120, genres: [], developer: { id: 2, displayName: 'Studio' },
+  salesCount: 120, genres: [], developer: { id: 2, displayName: 'Studio', deleted: false },
   createdAt: '2026-01-01T10:00:00Z', updatedAt: '2026-01-01T10:00:00Z', version: 0,
 };
 
@@ -47,6 +47,30 @@ const reviewCalls = (fetchMock: ReturnType<typeof mockFetch>) =>
     .filter((url) => url.pathname === '/api/games/neon-drift/reviews');
 
 describe('ficha del juego', () => {
+  it('juego retirado sin botón de compra y con Estudio eliminado', async () => {
+    setup({
+      'GET /api/games/neon-drift': {
+        body: { ...game, status: 'DELISTED', developer: { id: 2, displayName: null, deleted: true } },
+      },
+    }, true);
+    renderRoutes(routes, '/games/neon-drift');
+
+    expect(await screen.findByText('Ya no está a la venta')).toBeInTheDocument();
+    expect(screen.getAllByText(/Estudio eliminado/i).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /Añadir al carrito/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /lista de deseos/i })).not.toBeInTheDocument();
+  });
+
+  it('un estudio vivo sin nombre no sale como eliminado: manda la bandera de la API', async () => {
+    setup({
+      'GET /api/games/neon-drift': { body: { ...game, developer: { id: 2, displayName: null, deleted: false } } },
+    });
+    renderRoutes(routes, '/games/neon-drift');
+
+    expect(await screen.findByText('Muy positivas')).toBeInTheDocument();
+    expect(screen.queryByText(/Estudio eliminado/i)).not.toBeInTheDocument();
+  });
+
   it('muestra la etiqueta y el porcentaje de reseñas positivas', async () => {
     setup();
     renderRoutes(routes, '/games/neon-drift');

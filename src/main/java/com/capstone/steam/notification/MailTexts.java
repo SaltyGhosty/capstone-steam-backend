@@ -55,7 +55,24 @@ record MailTexts(
         String salePreheader,
         String saleEyebrow,
         String saleHeading,
-        String saleBody) {
+        String saleBody,
+        // Baja de la cuenta: programada (por el usuario o por un admin), cancelada y eliminada
+        String deletionScheduledSubject,
+        String deletionScheduledPreheader,
+        String deletionScheduledEyebrow,
+        String deletionScheduledHeading,
+        String deletionScheduledBySelf,
+        String deletionScheduledByAdmin,
+        String deletionCancelledSubject,
+        String deletionCancelledPreheader,
+        String deletionCancelledEyebrow,
+        String deletionCancelledHeading,
+        String deletionCancelledBody,
+        String accountDeletedSubject,
+        String accountDeletedPreheader,
+        String accountDeletedEyebrow,
+        String accountDeletedHeading,
+        String accountDeletedBody) {
 
     static final MailTexts ES = new MailTexts(
             "es",
@@ -90,7 +107,26 @@ record MailTexts(
             "Un juego de tu lista de deseos ha bajado de precio.",
             "Tu lista de deseos · −%d%%",
             "¡%s está en oferta!",
-            "Uno de los juegos que guardaste en tu lista de deseos acaba de bajar de precio:");
+            "Uno de los juegos que guardaste en tu lista de deseos acaba de bajar de precio:",
+            "Baja de tu cuenta programada",
+            "Tu cuenta tiene una fecha de eliminación.",
+            "Baja de la cuenta",
+            "Tu cuenta se va a eliminar",
+            "Tu cuenta se eliminará el %s. Si cambias de idea, inicia sesión antes de esa fecha y pulsa Recuperar mi "
+                    + "cuenta.",
+            "Un administrador ha programado la eliminación de tu cuenta para el %s. Si crees que es un error, "
+                    + "contesta a este correo.",
+            "Tu cuenta vuelve a estar activa",
+            "Se ha cancelado la eliminación de tu cuenta.",
+            "Baja cancelada",
+            "Tu cuenta sigue con nosotros",
+            "Tu cuenta vuelve a estar activa.",
+            "Tu cuenta ha sido eliminada",
+            "Tu cuenta y tus datos personales se han eliminado.",
+            "Cuenta eliminada",
+            "Hasta pronto",
+            "Tu cuenta y tus datos personales se han eliminado. Conservamos los pedidos por obligación legal, sin "
+                    + "datos que te identifiquen.");
 
     static final MailTexts EN = new MailTexts(
             "en",
@@ -124,7 +160,26 @@ record MailTexts(
             "A game on your wishlist just got cheaper.",
             "Your wishlist · −%d%%",
             "%s is on sale!",
-            "One of the games you saved to your wishlist just dropped in price:");
+            "One of the games you saved to your wishlist just dropped in price:",
+            "Account deletion scheduled",
+            "Your account has a deletion date.",
+            "Account deletion",
+            "Your account is about to be deleted",
+            "Your account will be deleted on %s. If you change your mind, sign in before that date and press Recover "
+                    + "my account.",
+            "An administrator has scheduled the deletion of your account for %s. If you think this is a mistake, "
+                    + "reply to this email.",
+            "Your account is active again",
+            "The deletion of your account has been cancelled.",
+            "Deletion cancelled",
+            "Your account is staying with us",
+            "Your account is active again.",
+            "Your account has been deleted",
+            "Your account and personal data have been deleted.",
+            "Account deleted",
+            "See you soon",
+            "Your account and personal data have been deleted. We keep orders as required by law, without any data "
+                    + "that identifies you.");
 
     static final MailTexts IT = new MailTexts(
             "it",
@@ -159,7 +214,26 @@ record MailTexts(
             "Un gioco della tua lista dei desideri è sceso di prezzo.",
             "La tua lista dei desideri · −%d%%",
             "%s è in offerta!",
-            "Uno dei giochi che hai salvato nella tua lista dei desideri è appena sceso di prezzo:");
+            "Uno dei giochi che hai salvato nella tua lista dei desideri è appena sceso di prezzo:",
+            "Eliminazione dell’account programmata",
+            "Il tuo account ha una data di eliminazione.",
+            "Eliminazione dell’account",
+            "Il tuo account sta per essere eliminato",
+            "Il tuo account verrà eliminato il %s. Se cambi idea, accedi prima di quella data e premi Recupera il mio "
+                    + "account.",
+            "Un amministratore ha programmato l’eliminazione del tuo account per il %s. Se pensi che sia un errore, "
+                    + "rispondi a questa email.",
+            "Il tuo account è di nuovo attivo",
+            "L’eliminazione del tuo account è stata annullata.",
+            "Eliminazione annullata",
+            "Il tuo account resta con noi",
+            "Il tuo account è di nuovo attivo.",
+            "Il tuo account è stato eliminato",
+            "Il tuo account e i tuoi dati personali sono stati eliminati.",
+            "Account eliminato",
+            "A presto",
+            "Il tuo account e i tuoi dati personali sono stati eliminati. Conserviamo gli ordini per obbligo di legge, "
+                    + "senza dati che ti identifichino.");
 
     /** Textos del idioma dado. {@code null}, vacío o desconocido ("fr", "en-US"...) → español. */
     static MailTexts of(String locale) {

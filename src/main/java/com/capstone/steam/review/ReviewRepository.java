@@ -1,5 +1,6 @@
 package com.capstone.steam.review;
 
+import java.util.List;
 import java.util.Optional;
 
 import jakarta.persistence.LockModeType;
@@ -24,6 +25,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from Review r where r.id = :id")
     Optional<Review> findByIdForUpdate(Long id);
+
+    /** Las reseñas de un usuario (al anonimizar su cuenta; cada una se relee con bloqueo antes de borrarla). */
+    List<Review> findByUserId(Long userId);
 
     Optional<Review> findByUserIdAndGameId(Long userId, Long gameId);
 

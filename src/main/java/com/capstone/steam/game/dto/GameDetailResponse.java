@@ -41,7 +41,8 @@ public record GameDetailResponse(
         Instant updatedAt,
         Long version) {
 
-    public record DeveloperInfo(Long id, String displayName) {
+    /** {@code displayName} es null y {@code deleted} true si el estudio eliminó su cuenta; el texto lo pone el frontend. */
+    public record DeveloperInfo(Long id, String displayName, boolean deleted) {
     }
 
     public record Descriptions(String es, String en, String it) {
@@ -67,7 +68,8 @@ public record GameDetailResponse(
                 game.getReviewScore(),
                 game.getSalesCount(),
                 GameSummaryResponse.genres(game),
-                new DeveloperInfo(game.getDeveloper().getId(), game.getDeveloper().getDisplayName()),
+                new DeveloperInfo(game.getDeveloper().getId(), game.getDeveloper().getDisplayName(),
+                        game.getDeveloper().isDeleted()),
                 game.getCreatedAt(),
                 game.getUpdatedAt(),
                 game.getVersion());

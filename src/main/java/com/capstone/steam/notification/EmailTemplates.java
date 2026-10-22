@@ -4,6 +4,10 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -11,6 +15,7 @@ import java.util.stream.Collectors;
 import org.springframework.web.util.HtmlUtils;
 
 import com.capstone.steam.notification.event.OrderPaidEvent;
+import com.capstone.steam.user.DeletionRequester;
 
 /**
  * Plantillas HTML de los correos, con el aspecto de la tienda (paleta de
@@ -39,6 +44,8 @@ final class EmailTemplates {
     private static final String ACCENT_INK = "#0b0f08";
     private static final String DANGER = "#ff7b72";
     private static final String FONT = "Inter,'Segoe UI',Helvetica,Arial,sans-serif";
+    /** Zona en la que se da la fecha de la baja: la de la tienda. */
+    private static final ZoneId MAIL_ZONE = ZoneId.of("Europe/Rome");
 
     private EmailTemplates() {
     }
@@ -149,6 +156,42 @@ final class EmailTemplates {
                         money(finalPrice, t));
         return new Email(t.saleSubject().formatted(title, discountPercent),
                 layout(brand, t, t.salePreheader(), body));
+    }
+
+
+    /**
+     * Baja programada. Si la pidió el propio usuario, el correo explica cómo recuperar la cuenta; si la programó un
+     * admin, pide contestar al correo (no hay botón de recuperación: la cuenta no se recupera iniciando sesión).
+     * La fecha va en formato largo del idioma del correo, en la zona de la tienda (Europe/Rome).
+     */
+    static Email deletionScheduled(Brand brand, String displayName, String locale, Instant scheduledAt,
+            DeletionRequester requestedBy) {
+        MailTexts t = MailTexts.of(locale);
+        String date = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(t.moneyLocale())
+                .withZone(MAIL_ZONE).format(scheduledAt);
+        String text = requestedBy == DeletionRequester.ADMIN ? t.deletionScheduledByAdmin() : t.deletionScheduledBySelf();
+        String body = eyebrow(t.deletionScheduledEyebrow(), DANGER)
+                + heading(t.deletionScheduledHeading())
+                + paragraph(greeting(t.failedHello(), displayName, ".") + " " + text.formatted(esc(date)));
+        return new Email(t.deletionScheduledSubject(), layout(brand, t, t.deletionScheduledPreheader(), body));
+    }
+
+    /** La baja pendiente se canceló (por un admin o por el propio usuario al recuperar la cuenta). */
+    static Email deletionCancelled(Brand brand, String displayName, String locale) {
+        MailTexts t = MailTexts.of(locale);
+        String body = eyebrow(t.deletionCancelledEyebrow(), ACCENT)
+                + heading(t.deletionCancelledHeading())
+                + paragraph(greeting(t.failedHello(), displayName, ".") + " " + t.deletionCancelledBody());
+        return new Email(t.deletionCancelledSubject(), layout(brand, t, t.deletionCancelledPreheader(), body));
+    }
+
+    /** La cuenta ya está anonimizada; el correo va al email que tenía antes de anonimizar. */
+    static Email accountDeleted(Brand brand, String displayName, String locale) {
+        MailTexts t = MailTexts.of(locale);
+        String body = eyebrow(t.accountDeletedEyebrow(), MUTED)
+                + heading(t.accountDeletedHeading())
+                + paragraph(greeting(t.failedHello(), displayName, ".") + " " + t.accountDeletedBody());
+        return new Email(t.accountDeletedSubject(), layout(brand, t, t.accountDeletedPreheader(), body));
     }
 
     // ------------------------------------------------------------------

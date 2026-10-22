@@ -126,12 +126,13 @@ public class EmailVerificationService {
 
     /**
      * Verificación a mano por un admin (soporte y seed): aplica el único registro pendiente que tenga la cuenta, si
-     * hay, y la marca como verificada; con varios registros distintos, 409. Idempotente.
+     * hay, y la marca como verificada; con varios registros distintos, 409. Idempotente. Una cuenta eliminada, 404.
      */
     @Transactional
     public User verifyByAdmin(Long userId) {
-        boolean alreadyVerified = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> NotFoundException.of("user", userId)).isEmailVerified();
+        User locked = userRepository.findByIdForUpdate(userId)
+                .filter(user -> !user.isDeleted()).orElseThrow(() -> NotFoundException.of("user", userId));
+        boolean alreadyVerified = locked.isEmailVerified();
         Instant now = clock.instant();
         PendingRegistration toApply = null;
         if (!alreadyVerified) {
@@ -224,11 +225,11 @@ public class EmailVerificationService {
     /**
      * ¿Se puede borrar esta cuenta sin verificar para liberar su usuario? Solo si se creó hace más de lo que
      * dura un enlace (se mide desde la creación, no desde el último enlace: reenviar no retiene el nombre),
-     * no tiene más roles que USER y DEVELOPER y no tiene datos.
+     * no tiene más roles que USER y DEVELOPER y no tiene datos. Una cuenta anonimizada nunca.
      */
     @Transactional(readOnly = true)
     public boolean isReclaimable(User user) {
-        if (user.isEmailVerified() || user.getCreatedAt() == null
+        if (user.isEmailVerified() || user.isDeleted() || user.getCreatedAt() == null
                 || user.getCreatedAt().plus(properties.ttl()).isAfter(clock.instant())) {
             return false;
         }

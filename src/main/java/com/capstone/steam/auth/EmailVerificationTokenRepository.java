@@ -56,6 +56,11 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
                and t.usedAt is null and t.failedAttempts >= :max""")
     int invalidateIfTooManyFailures(Long userId, String username, String passwordHash, Instant now, int max);
 
+    /** Al anonimizar la cuenta: se borran todos sus enlaces de verificación. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from EmailVerificationToken t where t.userId = :userId")
+    int deleteAllByUserId(Long userId);
+
     /** Marca el token como usado solo si seguía sin usar; de dos clics simultáneos solo uno recibe 1. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update EmailVerificationToken t set t.usedAt = :now where t.id = :id and t.usedAt is null")

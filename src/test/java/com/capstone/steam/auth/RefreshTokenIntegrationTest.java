@@ -35,6 +35,9 @@ class RefreshTokenIntegrationTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private jakarta.persistence.EntityManager em;
+
     @Test
     void loginReturnsRefreshTokenAndRefreshRotatesIt() throws Exception {
         register("alyx", "alyx@test.com");
@@ -109,6 +112,22 @@ class RefreshTokenIntegrationTest {
                 .andExpect(status().isOk());
 
         refresh(refresh).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void anAccountPendingDeletionCannotRefreshEvenWithATokenThatEscapedTheRevocation() throws Exception {
+        String refresh = JsonPath.read(register("odessa", "odessa@test.com"), "$.refreshToken");
+        long id = userId("odessa");
+        em.flush();
+        // la baja llega por otra vía (sin pasar por revokeAll): p. ej. un login en vuelo guardó este token
+        jdbc.update("UPDATE users SET deletion_scheduled_at = ?, deletion_requested_by = 'SELF' WHERE id = ?",
+                java.sql.Timestamp.from(java.time.Instant.now().plus(java.time.Duration.ofDays(14))), id);
+        em.clear(); // la fila cambiada por SQL tiene que leerse de la BD
+
+        refresh(refresh).andExpect(status().isUnauthorized());
+        // igual que una cuenta desactivada: se revocan todas sus sesiones
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ? AND revoked_at IS NULL",
+                Integer.class, id)).isZero();
     }
 
     @Test

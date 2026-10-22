@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { ApiError } from '@/api/client';
 import { userApi } from '@/api/endpoints';
 import type { Locale } from '@/api/types';
@@ -6,6 +6,7 @@ import Icon from '@/components/Icon';
 import { FieldError, PageHeader } from '@/components/ui';
 import { useStore } from '@/context/StoreContext';
 import { useI18n } from '@/i18n';
+import { trapTab } from '@/lib/dialog';
 import { formatDate, initials } from '@/lib/format';
 import { LOCALES } from '@/lib/locale';
 
@@ -18,6 +19,8 @@ export default function Settings() {
   const [profilePublic, setProfilePublic] = useState(user?.profilePublic ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  // Baja de la cuenta: diálogo con contraseña; al terminar muestra la fecha y cierra la sesión
+  const [deleting, setDeleting] = useState(false);
 
   if (!user) return null;
 
@@ -88,6 +91,107 @@ export default function Settings() {
           </div>
         </form>
       </div>
+      <section className="panel form danger-zone">
+        <h3>{t('settings.deleteSection')}</h3>
+        <p>{t('settings.deleteIntro')}</p>
+        <div className="form-actions">
+          <button type="button" className="secondary danger" onClick={() => setDeleting(true)}>{t('settings.deleteOpen')}</button>
+        </div>
+      </section>
+      {deleting && (
+        <DeleteAccountDialog developer={user.roles.includes('ROLE_DEVELOPER')} onClose={() => setDeleting(false)} />
+      )}
     </>
+  );
+}
+
+/**
+ * Diálogo de la baja, como el de las demos: el foco entra y se queda dentro (Tab da la vuelta), Escape lo cierra y
+ * al cerrarse el foco vuelve al botón que lo abrió. Con la baja ya pedida solo se sale con «Entendido», que cierra
+ * la sesión.
+ */
+function DeleteAccountDialog({ developer, onClose }: { developer: boolean; onClose: () => void }) {
+  const { logout } = useStore();
+  const { t } = useI18n();
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const doneRef = useRef<HTMLButtonElement>(null);
+  const opener = useRef<Element | null>(document.activeElement);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [deletionDate, setDeletionDate] = useState<string | null>(null);
+
+  // Escape cierra, salvo cuando la baja ya está pedida
+  useEffect(() => {
+    if (deletionDate) return;
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [deletionDate, onClose]);
+
+  // Al abrir, el foco entra en el diálogo (la contraseña ya lo tiene por autoFocus). Al cerrar, vuelve al botón.
+  useEffect(() => {
+    if (!dialogRef.current?.contains(document.activeElement)) dialogRef.current?.focus();
+    const from = opener.current;
+    const keepFocusInside = (e: FocusEvent) => {
+      if (dialogRef.current && e.target instanceof Node && !dialogRef.current.contains(e.target)) dialogRef.current.focus();
+    };
+    document.addEventListener('focusin', keepFocusInside);
+    return () => {
+      document.removeEventListener('focusin', keepFocusInside);
+      if (from instanceof HTMLElement && from.isConnected) from.focus();
+    };
+  }, []);
+
+  // El formulario desaparece al terminar: el foco pasa a «Entendido»
+  useEffect(() => {
+    if (deletionDate) doneRef.current?.focus();
+  }, [deletionDate]);
+
+  const confirm = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const res = await userApi.requestDeletion(password);
+      setPassword('');
+      setDeletionDate(formatDate(res.deletionScheduledAt));
+    } catch (err) {
+      // El mensaje del backend ya viene traducido (contraseña mala, último admin…)
+      setError(err instanceof ApiError ? err.message : t('common.somethingWrong'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="demo-backdrop">
+      <div className="demo-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={dialogRef} tabIndex={-1} onKeyDown={trapTab}>
+        <h2 id={titleId}>{t('settings.deleteSection')}</h2>
+        {deletionDate ? (
+          <>
+            <p>{t('settings.deleteDone', { date: deletionDate })}</p>
+            <div className="form-actions">
+              <button type="button" className="primary small" ref={doneRef} onClick={logout}>{t('settings.deleteDoneButton')}</button>
+            </div>
+          </>
+        ) : (
+          <form className="form" onSubmit={confirm}>
+            <p>{t('settings.deleteIntro')}</p>
+            {developer && <p>{t('settings.deleteStudio')}</p>}
+            <label className="field">
+              <span>{t('settings.deletePassword')}</span>
+              <input type="password" autoComplete="current-password" required autoFocus value={password} onChange={(e) => setPassword(e.target.value)} />
+            </label>
+            {error && <p className="form-error" role="alert">{error}</p>}
+            <div className="form-actions">
+              <button type="button" className="secondary" onClick={onClose}>{t('common.cancel')}</button>
+              <button className="primary small danger-button" disabled={busy}>{t('settings.deleteConfirm')}</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
   );
 }

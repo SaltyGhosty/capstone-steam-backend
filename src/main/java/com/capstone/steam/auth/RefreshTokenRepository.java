@@ -34,6 +34,11 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     @Query("update RefreshToken t set t.replacedById = :replacedById where t.id = :id")
     int linkReplacement(Long id, Long replacedById);
 
+    /** Al anonimizar la cuenta: se borran todas sus sesiones. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from RefreshToken t where t.userId = :userId")
+    int deleteAllByUserId(Long userId);
+
     /**
      * Purga por familias enteras: solo borra las familias cuyos tokens caducaron todos antes de
      * {@code cutoff}. Nunca borra un token suelto de una familia con algún token vigente, para que

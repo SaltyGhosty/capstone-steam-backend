@@ -44,7 +44,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login",
                                 "/api/auth/refresh", "/api/auth/logout", "/api/auth/verify-email",
-                                "/api/auth/verify-email/preview", "/api/auth/resend-verification").permitAll()
+                                "/api/auth/verify-email/preview", "/api/auth/resend-verification",
+                                "/api/auth/recover-account").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/games/**", "/api/genres/**").permitAll()
                         .requestMatchers("/actuator/health/**", "/error").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

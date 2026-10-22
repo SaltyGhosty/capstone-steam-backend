@@ -1,5 +1,6 @@
 package com.capstone.steam.user;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,6 +33,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
             select u from User u
              where u.enabled = true and u.emailVerified = true and u.id <> :excludeId
+               and u.deletionScheduledAt is null and u.deletedAt is null
                and (lower(u.username) like lower(:pattern) escape '!'
                     or lower(u.displayName) like lower(:pattern) escape '!')
                and not exists (select r.id from u.roles r
@@ -42,8 +44,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
-    org.springframework.data.domain.Page<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-            String username, String email, Pageable pageable);
+    /** Listado del panel: sin las cuentas ya anonimizadas. */
+    org.springframework.data.domain.Page<User> findByDeletedAtIsNull(Pageable pageable);
+
+    /** {@code pattern} viene de {@code LikePatterns.contains}. */
+    @Query("""
+            select u from User u
+             where u.deletedAt is null
+               and (lower(u.username) like lower(:pattern) escape '!'
+                    or lower(u.email) like lower(:pattern) escape '!')""")
+    org.springframework.data.domain.Page<User> searchNotDeleted(String pattern, Pageable pageable);
 
     /** Ids por email y por usuario, sin cargar la fila: así se pueden bloquear en orden de id (sin interbloqueos). */
     @Query("select u.id from User u where u.email = :email")
@@ -56,6 +66,32 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.id = :id")
     Optional<User> findByIdForUpdate(Long id);
+
+    /**
+     * Los administradores que cuentan (activos, sin baja programada ni anonimizados), bloqueados por id
+     * ascendente: dos peticiones que quitan admins a la vez se serializan sin interbloqueos.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select u from User u
+             where u.enabled = true and u.deletionScheduledAt is null and u.deletedAt is null
+               and exists (select r.id from u.roles r where r.name = com.capstone.steam.user.RoleName.ROLE_ADMIN)
+             order by u.id""")
+    List<User> lockCountingAdmins();
+
+    /** Cuántos administradores que cuentan hay sin contar a {@code excludeId}; sin bloqueo (ver {@code AdminGuard}). */
+    @Query("""
+            select count(u) from User u
+             where u.enabled = true and u.deletionScheduledAt is null and u.deletedAt is null and u.id <> :excludeId
+               and exists (select r.id from u.roles r where r.name = com.capstone.steam.user.RoleName.ROLE_ADMIN)""")
+    long countCountingAdminsExcluding(Long excludeId);
+
+    /** Las cuentas cuyo plazo ya venció y siguen sin anonimizar, por id (la tarea programada las recorre en ese orden). */
+    @Query("""
+            select u.id from User u
+             where u.deletionScheduledAt <= :now and u.deletedAt is null
+             order by u.id""")
+    List<Long> findIdsDueForDeletion(Instant now);
 
     Optional<User> findByUsernameIgnoreCase(String username);
 

@@ -26,6 +26,7 @@ import com.capstone.steam.auth.dto.RegisterRequest;
 import com.capstone.steam.common.exception.ConflictException;
 import com.capstone.steam.notification.event.UserRegisteredEvent;
 import com.capstone.steam.security.JwtService;
+import com.capstone.steam.user.AccountDeletionService;
 import com.capstone.steam.user.Role;
 import com.capstone.steam.user.RoleName;
 import com.capstone.steam.user.RoleRepository;
@@ -43,6 +44,7 @@ class AuthServiceTest {
     @Mock private ApplicationEventPublisher events;
     @Mock private RefreshTokenService refreshTokenService;
     @Mock private EmailVerificationService verificationService;
+    @Mock private AccountDeletionService accountDeletionService;
 
     private AuthService authService;
 
@@ -50,7 +52,7 @@ class AuthServiceTest {
     void setUp() {
         authService = new AuthService(userRepository, roleRepository, passwordEncoder, authenticationManager,
                 jwtService, events, refreshTokenService, verificationService,
-                new EmailVerificationProperties(false, java.time.Duration.ofDays(1), 3));
+                new EmailVerificationProperties(false, java.time.Duration.ofDays(1), 3), accountDeletionService);
     }
 
     @Test

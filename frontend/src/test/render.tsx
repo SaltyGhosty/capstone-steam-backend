@@ -42,5 +42,7 @@ export const demoUser = {
   locale: 'es',
   profilePublic: false,
   emailVerified: true,
+  deletionScheduledAt: null,
+  deletionRequestedBy: null,
   createdAt: '2026-09-30T10:00:00Z',
 };

@@ -1,5 +1,6 @@
 package com.capstone.steam.game;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,6 +12,7 @@ import com.capstone.steam.game.dto.GameDetailResponse;
 import com.capstone.steam.game.dto.GameSummaryResponse;
 import com.capstone.steam.game.search.GameSearchCriteria;
 import com.capstone.steam.game.search.GameSort;
+import com.capstone.steam.security.AppUserPrincipal;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -40,7 +42,7 @@ public class CatalogController {
     }
 
     @GetMapping("/{slug}")
-    public GameDetailResponse getBySlug(@PathVariable String slug) {
-        return catalogService.getBySlug(slug);
+    public GameDetailResponse getBySlug(@PathVariable String slug, @AuthenticationPrincipal AppUserPrincipal user) {
+        return catalogService.getBySlug(slug, user == null ? null : user.getId(), user != null && user.isAdmin());
     }
 }

@@ -12,6 +12,7 @@ import com.capstone.steam.auth.RefreshTokenService;
 import com.capstone.steam.common.dto.PageResponse;
 import com.capstone.steam.common.exception.BadRequestException;
 import com.capstone.steam.common.exception.NotFoundException;
+import com.capstone.steam.common.util.LikePatterns;
 import com.capstone.steam.security.AccessTokenRevocations;
 import com.capstone.steam.user.dto.UpdateProfileRequest;
 import com.capstone.steam.user.dto.UserResponse;
@@ -24,10 +25,12 @@ public class UserService {
     private final RefreshTokenService refreshTokenService;
     private final AccessTokenRevocations accessTokenRevocations;
     private final EmailVerificationService emailVerificationService;
+    private final AdminGuard adminGuard;
 
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
             RefreshTokenService refreshTokenService, AccessTokenRevocations accessTokenRevocations,
-            EmailVerificationService emailVerificationService) {
+            EmailVerificationService emailVerificationService, AdminGuard adminGuard) {
+        this.adminGuard = adminGuard;
         this.emailVerificationService = emailVerificationService;
         this.accessTokenRevocations = accessTokenRevocations;
         this.userRepository = userRepository;
@@ -66,10 +69,9 @@ public class UserService {
         // para que la paginación la haga la BD y no Hibernate en memoria.
         String term = q == null ? "" : q.trim();
         if (!term.isEmpty()) { // filtro opcional por usuario o email (lo usa el seed para encontrar una cuenta)
-            return PageResponse.of(userRepository
-                    .findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(term, term, pageable), UserResponse::from);
+            return PageResponse.of(userRepository.searchNotDeleted(LikePatterns.contains(term), pageable), UserResponse::from);
         }
-        return PageResponse.of(userRepository.findAll(pageable), UserResponse::from);
+        return PageResponse.of(userRepository.findByDeletedAtIsNull(pageable), UserResponse::from);
     }
 
     @Transactional
@@ -79,7 +81,10 @@ public class UserService {
         if (adminId.equals(userId) && !roles.contains(RoleName.ROLE_ADMIN)) {
             throw new BadRequestException("user.cannotRemoveOwnAdmin");
         }
-        User user = findWithRoles(userId);
+        User user = findLive(userId);
+        if (user.hasRole(RoleName.ROLE_ADMIN) && !roles.contains(RoleName.ROLE_ADMIN)) {
+            adminGuard.requireAnotherAdmin(userId); // no se puede dejar la tienda sin administradores
+        }
         user.getRoles().clear();
         roles.forEach(name -> user.addRole(roleRepository.findByName(name).orElseThrow()));
         // Los roles viajan en el access token: se cortan sus sesiones para que renueve con los nuevos
@@ -93,7 +98,10 @@ public class UserService {
         if (adminId.equals(userId) && !enabled) {
             throw new BadRequestException("user.cannotDisableSelf");
         }
-        User user = findWithRoles(userId);
+        User user = findLive(userId);
+        if (!enabled && user.hasRole(RoleName.ROLE_ADMIN)) {
+            adminGuard.requireAnotherAdmin(userId);
+        }
         user.setEnabled(enabled);
         if (!enabled) {
             refreshTokenService.revokeAll(userId);
@@ -110,5 +118,14 @@ public class UserService {
 
     private User findWithRoles(Long userId) {
         return userRepository.findWithRolesById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
+    }
+
+    /** Para las mutaciones del admin: una cuenta eliminada (anonimizada) ya no existe para él. */
+    private User findLive(Long userId) {
+        User user = findWithRoles(userId);
+        if (user.isDeleted()) {
+            throw NotFoundException.of("user", userId);
+        }
+        return user;
     }
 }

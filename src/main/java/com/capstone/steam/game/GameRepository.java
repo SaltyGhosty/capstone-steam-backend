@@ -29,6 +29,20 @@ public interface GameRepository extends JpaRepository<Game, Long> {
 
     Page<Game> findByDeveloperId(Long developerId, Pageable pageable);
 
+    /** Todos los juegos de un developer, en cualquier estado (al anonimizar su cuenta). */
+    List<Game> findByDeveloperId(Long developerId);
+
+    /** Si algún carrito, wishlist, biblioteca, pedido o reseña apunta al juego (entonces no se puede borrar). */
+    @Query("""
+            select case when exists (select 1 from LibraryEntry l where l.game.id = :gameId)
+                          or exists (select 1 from OrderItem i where i.game.id = :gameId)
+                          or exists (select 1 from CartItem c where c.game.id = :gameId)
+                          or exists (select 1 from WishlistItem w where w.game.id = :gameId)
+                          or exists (select 1 from Review r where r.game.id = :gameId)
+                        then true else false end
+            from Game g where g.id = :gameId""")
+    boolean isReferenced(Long gameId);
+
     Page<Game> findByStatus(GameStatus status, Pageable pageable);
 
     boolean existsBySteamAppId(Integer steamAppId);

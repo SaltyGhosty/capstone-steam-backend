@@ -30,6 +30,11 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
     @Query("delete from WishlistItem w where w.user.id = :userId and w.game.id = :gameId")
     int deleteByUserIdAndGameId(Long userId, Long gameId);
 
+    /** Al anonimizar la cuenta: se vacía la wishlist entera. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from WishlistItem w where w.user.id = :userId")
+    int deleteAllByUserId(Long userId);
+
     /** Tras una compra, los juegos comprados salen de la wishlist. */
     @Modifying
     @Query("delete from WishlistItem w where w.user.id = :userId and w.game.id in :gameIds")

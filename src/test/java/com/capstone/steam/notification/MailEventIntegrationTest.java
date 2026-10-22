@@ -16,10 +16,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mail.MailSendException;
@@ -38,6 +42,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.capstone.steam.notification.event.UserRegisteredEvent;
+import com.capstone.steam.support.MutableClock;
+import com.capstone.steam.user.AccountAnonymizer;
 import com.capstone.steam.notification.event.VerificationEmailEvent;
 import com.jayway.jsonpath.JsonPath;
 
@@ -51,6 +57,7 @@ import jakarta.mail.internet.MimeMessage;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(MutableClock.Config.class)
 @TestPropertySource(properties = {
         "spring.datasource.url=jdbc:h2:mem:mail_events;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
         "spring.mail.username=smtp-user@gmail.com", // activa el envío (el sender es un mock)
@@ -61,10 +68,15 @@ class MailEventIntegrationTest {
     @Autowired private MockMvc mvc;
     @Autowired private ApplicationEventPublisher publisher;
     @Autowired private TransactionTemplate transactionTemplate;
+    @Autowired private AccountAnonymizer anonymizer;
+    @Autowired private MutableClock clock;
+    @Autowired private JdbcTemplate jdbc;
     @MockitoBean private JavaMailSender mailSender;
 
     /** asunto -> nombre del hilo que lo envió */
     private final Map<String, String> sentBy = new ConcurrentHashMap<>();
+    /** destinatario -> asuntos recibidos, en orden */
+    private final Map<String, List<String>> sentTo = new ConcurrentHashMap<>();
 
     @BeforeEach
     void setUp() {
@@ -72,6 +84,8 @@ class MailEventIntegrationTest {
         doAnswer(inv -> {
             MimeMessage message = inv.getArgument(0);
             sentBy.put(message.getSubject(), Thread.currentThread().getName());
+            sentTo.computeIfAbsent(message.getAllRecipients()[0].toString(), k -> new CopyOnWriteArrayList<>())
+                    .add(message.getSubject());
             return null;
         }).when(mailSender).send(any(MimeMessage.class));
     }
@@ -154,7 +168,49 @@ class MailEventIntegrationTest {
         assertThat(List.of(sentBy.get("Recibo de tu compra #" + paid))).allMatch(t -> t.startsWith("mail-"));
     }
 
+    @Test
+    void deletionRequestCancellationAndAnonymizationSendOneMailEach() throws Exception {
+        String username = unique("baja");
+        String email = username + "@test.com";
+        String token = register(username, "PLAYER");
+        clock.now = Instant.now();
+
+        requestDeletion(token);
+        await().atMost(Duration.ofSeconds(5)).until(() -> mailsTo(email, "Baja de tu cuenta programada") == 1);
+
+        long id = jdbc.queryForObject("SELECT id FROM users WHERE username = ?", Long.class, username);
+        String admin = login("admin", "Admin12345!");
+        mvc.perform(auth(post("/api/admin/users/" + id + "/deletion/cancel"), admin)).andExpect(status().isOk());
+        await().atMost(Duration.ofSeconds(5)).until(() -> mailsTo(email, "Tu cuenta vuelve a estar activa") == 1);
+
+        // otra vez a la cola y, vencido el plazo, anonimizar: el correo va al email ANTIGUO
+        clock.now = clock.now.plusSeconds(5); // el reloj está parado: el token nuevo tiene que ser posterior a la revocación
+        requestDeletion(login(username, "password123")); // la baja revocó la sesión: otra vez dentro
+        clock.now = Instant.now().plus(Duration.ofDays(15));
+        anonymizer.anonymize(id);
+
+        await().atMost(Duration.ofSeconds(5)).until(() -> mailsTo(email, "Tu cuenta ha sido eliminada") == 1);
+        assertThat(mailsTo(email, "Baja de tu cuenta programada")).isEqualTo(2);
+        assertThat(mailsTo(email, "Tu cuenta vuelve a estar activa")).isOne();
+    }
+
     // ------------------------------------------------------------------
+
+    private long mailsTo(String email, String subject) {
+        return sentTo.getOrDefault(email, List.of()).stream().filter(subject::equals).count();
+    }
+
+    private String login(String login, String password) throws Exception {
+        return JsonPath.read(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"%s\",\"password\":\"%s\"}".formatted(login, password)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), "$.accessToken");
+    }
+
+    private void requestDeletion(String token) throws Exception {
+        mvc.perform(auth(post("/api/users/me/deletion"), token).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"password123\"}"))
+                .andExpect(status().isOk());
+    }
 
     private static String unique(String prefix) {
         return prefix + "_" + UUID.randomUUID().toString().substring(0, 8);

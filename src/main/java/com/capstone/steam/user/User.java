@@ -5,10 +5,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,7 +21,13 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 
+/**
+ * {@code @DynamicUpdate}: cada UPDATE escribe solo las columnas cambiadas. Las mutaciones del admin cargan la fila
+ * sin bloqueo; escribiendo la fila entera, una copia vieja desharía una baja o una anonimización confirmada entre
+ * la carga y el flush.
+ */
 @Entity
+@DynamicUpdate
 @Table(name = "users")
 public class User {
 
@@ -56,6 +65,18 @@ public class User {
     /** Perfil visible para cualquiera con sesión; si no, solo para los amigos (V9). */
     @Column(name = "profile_public", nullable = false)
     private boolean profilePublic = false;
+
+    /** Cuándo se anonimiza la cuenta; null si no hay baja programada (V13). */
+    @Column(name = "deletion_scheduled_at")
+    private Instant deletionScheduledAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "deletion_requested_by", length = 10)
+    private DeletionRequester deletionRequestedBy;
+
+    /** Cuándo se anonimizó; null mientras la cuenta siga viva. */
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "user_roles",
@@ -163,6 +184,55 @@ public class User {
 
     public void setProfilePublic(boolean profilePublic) {
         this.profilePublic = profilePublic;
+    }
+
+    public Instant getDeletionScheduledAt() {
+        return deletionScheduledAt;
+    }
+
+    public DeletionRequester getDeletionRequestedBy() {
+        return deletionRequestedBy;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void scheduleDeletion(Instant at, DeletionRequester by) {
+        this.deletionScheduledAt = at;
+        this.deletionRequestedBy = by;
+    }
+
+    public void cancelDeletion() {
+        this.deletionScheduledAt = null;
+        this.deletionRequestedBy = null;
+    }
+
+    /** Baja programada y aún sin anonimizar. */
+    public boolean isPendingDeletion() {
+        return deletionScheduledAt != null && deletedAt == null;
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    /**
+     * Deja la fila sin datos personales. Los nombres siguen cumpliendo NOT NULL y UNIQUE y liberan los originales.
+     * Queda verificada: los {@code deleted_<id>} están reservados y la limpieza de cuentas sin verificar no los toca.
+     * Los roles se conservan y el borrado de lo que cuelga del usuario es cosa del servicio.
+     */
+    public void anonymize(String unusablePasswordHash, Instant now) {
+        this.username = "deleted_" + id;
+        this.email = "deleted_" + id + "@deleted.invalid";
+        this.passwordHash = unusablePasswordHash;
+        this.displayName = null;
+        this.avatarUrl = null;
+        this.enabled = false;
+        this.emailVerified = true;
+        this.profilePublic = false;
+        this.deletedAt = now;
+        cancelDeletion();
     }
 
     public Set<Role> getRoles() {

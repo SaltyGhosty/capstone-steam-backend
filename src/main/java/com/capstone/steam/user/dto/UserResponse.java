@@ -3,6 +3,7 @@ package com.capstone.steam.user.dto;
 import java.time.Instant;
 import java.util.List;
 
+import com.capstone.steam.user.DeletionRequester;
 import com.capstone.steam.user.Role;
 import com.capstone.steam.user.User;
 
@@ -17,7 +18,9 @@ public record UserResponse(
         List<String> roles,
         Instant createdAt,
         boolean profilePublic,
-        boolean emailVerified) {
+        boolean emailVerified,
+        Instant deletionScheduledAt,
+        DeletionRequester deletionRequestedBy) {
 
     public static UserResponse from(User user) {
         return new UserResponse(
@@ -31,6 +34,8 @@ public record UserResponse(
                 user.getRoles().stream().map(Role::getName).map(Enum::name).sorted().toList(),
                 user.getCreatedAt(),
                 user.isProfilePublic(),
-                user.isEmailVerified());
+                user.isEmailVerified(),
+                user.getDeletionScheduledAt(),
+                user.getDeletionRequestedBy());
     }
 }

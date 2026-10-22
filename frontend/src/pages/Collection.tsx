@@ -58,6 +58,7 @@ export function Library() {
             </Link>
             <div className="library-info">
               <h3><Link to={`/games/${entry.slug}`}>{entry.title}</Link></h3>
+              <p>{entry.developerDeleted ? t('game.deletedStudio') : entry.developerName}</p>
               <p>{t(entry.orderId ? 'library.bought' : 'library.gift', { date: formatDate(entry.acquiredAt) })}</p>
               <p>{formatPlaytime(entry.playtimeMinutes)}</p>
               <button className="primary small full-width" onClick={() => play(entry.gameId, entry.title)} disabled={playing === entry.gameId}>
