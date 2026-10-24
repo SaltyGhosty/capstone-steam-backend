@@ -1,4 +1,4 @@
-# Capstone Steam
+ # Capstone Steam
 
 Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un frontend in React ([`frontend/`](frontend/)) realizzato a partire da un design di Figma Make. Offre catalogo con ricerca avanzata, pannello per sviluppatori, carrello, wishlist, libreria, recensioni in stile Steam (👍/👎), amici e profilo, un assistente che consiglia giochi e acquisti con pagamento simulato. Le email di conferma vengono inviate in modo asincrono.
 
