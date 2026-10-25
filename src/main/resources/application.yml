@@ -98,7 +98,7 @@ app:
   openrouter:
     # Chat di raccomandazione. Senza chiave l'assistente risponde "non disponibile" e non si fa nessuna chiamata.
     api-key: ${OPENROUTER_API_KEY:}
-    model: ${OPENROUTER_MODEL:minimax/minimax-m3.1-flash:free,google/gemma-4-31b-it:free}
+    model: ${OPENROUTER_MODEL:poolside/laguna-s-2.1:free,poolside/laguna-xs-2.1:free,google/gemma-4-31b-it:free}
     base-url: https://openrouter.ai/api/v1
     timeout: 30s
     global-per-hour: 200 # tetto di messaggi all'ora tra tutti gli utenti

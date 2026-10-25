@@ -380,6 +380,7 @@ Total: **536 tests de backend** (`.\mvnw.cmd clean verify`, 0 fallos) y **208 de
 | Asistente sin juegos propios | El asistente no recomienda lo que ya tienes (D58) | ✅ Hecho | 2026-10-25 | `RecommendationCatalog` filtra biblioteca y juegos propios; prompt actualizado; tests en `RecommendationServiceTest`. |
 | Asistencia al cliente | Formulario `/support` que escribe a soporte por correo (D57) | ✅ Hecho | 2026-10-25 | `POST /api/support`, `SupportRequestEvent`, `Reply-To` en `EmailService`/Brevo, acuse al usuario en es/en/it, `SUPPORT_EMAIL`; página `/support` en el frontend. `SupportIntegrationTest`, `SupportMailListenerTest` y `Support.test.tsx`. |
 | Docs | README, handoff, Postman y agentes al día | ✅ Hecho | 2026-10-19 | `README.md` y `frontend/README.md` con las funciones nuevas, endpoints, variables y cifras; spec corregida (familia en vez de todos); Postman reescrita a 73 peticiones (reseñas 👍/👎, refresh y logout, amigos, estado de portadas y asistente con 200 o 503); cifras de los agentes. **Newman sin ejecutar** con la colección nueva |
+| Asistente sin respuesta | Modelos gratuitos de OpenRouter | ✅ Hecho | 2026-10-25 | El asistente fallaba: OpenRouter devolvía 429 a `minimax-m3.1-flash:free` (retirado de los gratuitos) y a los Gemma (saturados), y la app esperaba 5 min tras cada 429. Probados los 17 modelos `:free`: responden con JSON `poolside/laguna-s-2.1:free` y `poolside/laguna-xs-2.1:free`. Nuevo `OPENROUTER_MODEL` en Render y por defecto |
 
 ---
 

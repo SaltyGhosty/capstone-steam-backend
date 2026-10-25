@@ -42,7 +42,7 @@ services:
       - key: OPENROUTER_API_KEY
         sync: false # clave de OpenRouter; vacía = el chat recomendador dice "no disponible"
       - key: OPENROUTER_MODEL
-        value: minimax/minimax-m3.1-flash:free,google/gemma-4-31b-it:free
+        value: poolside/laguna-s-2.1:free,poolside/laguna-xs-2.1:free,google/gemma-4-31b-it:free
       - key: ACCOUNT_DELETION_GRACE
         value: P14D # pausa antes de anonimizar una cuenta dada de baja
       - key: ACCOUNT_DELETION_CRON
