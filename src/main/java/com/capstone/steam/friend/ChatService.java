@@ -25,8 +25,8 @@ import com.capstone.steam.user.User;
 import com.capstone.steam.user.UserRepository;
 
 /**
- * Chat uno a uno entre jugadores. Escribir exige ser amigos en ese momento y que el otro sea jugador; leer el historial no (los ex-amigos
- * y las cuentas en pausa se siguen leyendo; las anonimizadas no existen). Orden de los errores: friend.self, friend.playersOnly, 404, chat.notFriends, 429.
+ * Chat uno a uno tra giocatori. Scrivere richiede essere amici in quel momento e che l'altro sia un giocatore; leggere lo storico no (gli ex amici
+ * e gli account in pausa si leggono ancora; quelli anonimizzati non esistono). Ordine degli errori: friend.self, friend.playersOnly, 404, chat.notFriends, 429.
  */
 @Service
 public class ChatService {
@@ -54,7 +54,7 @@ public class ChatService {
     public MessageResponse send(Long userId, String username, String body) {
         User me = loadPlayer(userId, username);
         User other = otherPlayer(username);
-        // la amistad se comprueba en esta misma transacción, justo antes de insertar
+        // l'amicizia si verifica in questa stessa transazione, subito prima di inserire
         boolean friends = friendshipRepository
                 .findByPair(Math.min(userId, other.getId()), Math.max(userId, other.getId()))
                 .filter(f -> f.getStatus() == FriendshipStatus.ACCEPTED).isPresent();
@@ -65,7 +65,7 @@ public class ChatService {
         return MessageResponse.from(messageRepository.saveAndFlush(new FriendMessage(me, other, body)), userId);
     }
 
-    /** Del más nuevo al más viejo; {@code before} (id) pide los anteriores a ese mensaje. */
+    /** Dal più nuovo al più vecchio; {@code before} (id) chiede i precedenti a quel messaggio. */
     @Transactional(readOnly = true)
     public List<MessageResponse> messages(Long userId, String username, Long before, int size) {
         loadPlayer(userId, username);
@@ -76,7 +76,7 @@ public class ChatService {
                 .map(m -> MessageResponse.from(m, userId)).toList();
     }
 
-    /** Marca como leídos los mensajes que esa persona me envió; idempotente. */
+    /** Segna come letti i messaggi che quella persona mi ha inviato; idempotente. */
     @Transactional
     public void markRead(Long userId, String username) {
         loadPlayer(userId, username);
@@ -85,13 +85,13 @@ public class ChatService {
     }
 
     /**
-     * Lo pendiente para el número de «Amigos»: solicitudes recibidas y mensajes sin leer, solo de jugadores visibles.
-     * Dos consultas agregadas (solicitudes y no leídos por remitente) más la carga de los nombres.
+     * Le novità per il numero di «Amici»: richieste ricevute e messaggi non letti, solo di giocatori visibili.
+     * Due query aggregate (richieste e non letti per mittente) più il caricamento dei nomi.
      */
     @Transactional(readOnly = true)
     public FriendActivityResponse activity(Long userId) {
         List<Friendship> incoming = friendshipRepository.findIncoming(userId);
-        // una sola consulta con los roles de quienes enviaron la solicitud (evita una carga perezosa por fila)
+        // una sola query con i ruoli di chi ha inviato la richiesta (evita un caricamento lazy per riga)
         userRepository.findAllWithRolesByIdIn(incoming.stream().map(f -> f.other(userId).getId()).toList());
         List<IncomingRequest> requests = incoming.stream()
                 .filter(f -> FriendService.isPlayer(f.other(userId)))
@@ -113,8 +113,8 @@ public class ChatService {
     }
 
     /**
-     * Bandeja de chat: primero quienes tienen mensajes (el último más reciente arriba, también ex-amigos), después los
-     * amigos sin mensajes por nombre; solo jugadores visibles y 50 como máximo.
+     * Casella della chat: prima chi ha messaggi (l'ultimo più recente in alto, anche ex amici), poi gli
+     * amici senza messaggi in ordine di nome; solo giocatori visibili e al massimo 50.
      */
     @Transactional(readOnly = true)
     public List<ConversationResponse> conversations(Long userId) {
@@ -122,14 +122,14 @@ public class ChatService {
         messageRepository.countUnreadBySender(userId).forEach(u -> unread.put(u.senderId(), u.count()));
         Map<Long, User> friends = new HashMap<>();
         List<Friendship> accepted = friendshipRepository.findAccepted(userId);
-        // roles de todos los amigos en una consulta (evita una carga perezosa por amigo en isPlayer)
+        // ruoli di tutti gli amici in una query (evita un caricamento lazy per amico in isPlayer)
         userRepository.findAllWithRolesByIdIn(accepted.stream().map(f -> f.other(userId).getId()).toList());
         accepted.forEach(f -> friends.put(f.other(userId).getId(), f.other(userId)));
 
         List<FriendMessage> last = messageRepository.findLastOfEachConversation(userId);
         Set<Long> otherIds = new HashSet<>();
         last.forEach(m -> otherIds.add(otherOf(m, userId)));
-        // con los roles cargados de una vez se puede aplicar isPlayer
+        // con i ruoli caricati in blocco si può applicare isPlayer
         Map<Long, User> others = new HashMap<>();
         userRepository.findAllWithRolesByIdIn(otherIds).forEach(u -> others.put(u.getId(), u));
 
@@ -153,7 +153,7 @@ public class ChatService {
         return message.getSender().getId().equals(userId) ? message.getRecipient().getId() : message.getSender().getId();
     }
 
-    /** Quien llama: no puede ser él mismo (400) y tiene que ser jugador (403). */
+    /** Chi chiama: non può essere se stesso (400) e deve essere un giocatore (403). */
     private User loadPlayer(Long userId, String username) {
         User me = userRepository.findWithRolesById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
         if (me.getUsername().equalsIgnoreCase(clean(username))) {
@@ -165,7 +165,7 @@ public class ChatService {
         return me;
     }
 
-    /** El otro: jugador visible o 404 (no distingue una cuenta en pausa de una que no existe). */
+    /** L'altro: giocatore visibile o 404 (non distingue un account in pausa da uno che non esiste). */
     private User otherPlayer(String username) {
         String name = clean(username);
         return userRepository.findWithRolesByUsernameIgnoreCase(name).filter(FriendService::isPlayer)
@@ -173,8 +173,8 @@ public class ChatService {
     }
 
     /**
-     * Para leer: un jugador visible, o cualquier cuenta no anonimizada con la que haya historial (una cuenta en pausa se sigue
-     * leyendo). Sin historial, un no jugador responde 404 igual que un usuario que no existe (no se puede enumerar cuentas).
+     * Per leggere: un giocatore visibile, o qualsiasi account non anonimizzato con cui ci sia uno storico (un account in pausa si
+     * legge ancora). Senza storico, un non giocatore risponde 404 come un utente che non esiste (non si possono enumerare gli account).
      */
     private User readableUser(Long userId, String username) {
         String name = clean(username);

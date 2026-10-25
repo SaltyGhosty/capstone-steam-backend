@@ -12,9 +12,9 @@ import com.capstone.steam.game.ReviewScore;
 import com.capstone.steam.genre.dto.GenreResponse;
 
 /**
- * Ficha completa del juego; {@code version} se reenvía en el PUT para el bloqueo optimista.
- * {@code description} va en el idioma de la petición; {@code descriptions} trae las tres tal cual
- * (las usa el formulario del developer).
+ * Scheda completa del gioco; {@code version} viene rinviata nel PUT per il lock ottimistico.
+ * {@code description} è nella lingua della richiesta; {@code descriptions} porta tutte e tre così come sono
+ * (le usa il modulo del developer).
  */
 public record GameDetailResponse(
         Long id,
@@ -40,7 +40,7 @@ public record GameDetailResponse(
         Instant updatedAt,
         Long version) {
 
-    /** {@code displayName} es null y {@code deleted} true si el estudio eliminó su cuenta; el texto lo pone el frontend. */
+    /** {@code displayName} è null e {@code deleted} true se lo studio ha eliminato l'account; il testo lo mette il frontend. */
     public record DeveloperInfo(Long id, String displayName, boolean deleted) {
     }
 

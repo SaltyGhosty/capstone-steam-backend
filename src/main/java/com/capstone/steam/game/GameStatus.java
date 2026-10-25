@@ -1,10 +1,10 @@
 package com.capstone.steam.game;
 
 public enum GameStatus {
-    /** Visible solo para su developer. */
+    /** Visibile solo al suo developer. */
     DRAFT,
-    /** Visible en el catálogo y comprable. */
+    /** Visibile nel catalogo e acquistabile. */
     PUBLISHED,
-    /** Retirado de la tienda por un admin; sigue en las bibliotecas de quien lo compró. */
+    /** Ritirato dallo store da un admin; resta nelle librerie di chi lo ha acquistato. */
     DELISTED
 }

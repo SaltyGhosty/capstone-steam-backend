@@ -1,16 +1,16 @@
 package com.capstone.steam.cover;
 
-/** Dónde se guardan las portadas subidas como archivo. */
+/** Dove si salvano le copertine caricate come file. */
 public interface CoverStorage {
 
-    /** Falso si no hay credenciales configuradas: la subida está desactivada. */
+    /** False se non ci sono credenziali configurate: il caricamento è disattivato. */
     boolean enabled();
 
     /**
-     * Sube la portada del juego (reemplaza la anterior).
+     * Carica la copertina del gioco (sostituisce la precedente).
      *
-     * @return la URL https pública de la imagen
-     * @throws CoverUploadException si el almacén falla o devuelve algo inválido
+     * @return l'URL https pubblico dell'immagine
+     * @throws CoverUploadException se lo storage fallisce o restituisce qualcosa di non valido
      */
     String upload(long gameId, byte[] bytes, ImageType type);
 }

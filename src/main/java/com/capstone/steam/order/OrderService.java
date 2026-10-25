@@ -34,21 +34,21 @@ import com.capstone.steam.user.UserRepository;
 import com.capstone.steam.wishlist.WishlistItemRepository;
 
 /**
- * Checkout en dos pasos:
+ * Checkout in due passi:
  * <ol>
- *   <li>{@link #createFromCart}: congela el carrito en un pedido PENDING con precios snapshot.</li>
- *   <li>{@link #pay}: cobra (simulado). Si se aprueba: PAID, biblioteca, ventas y limpieza de
- *       carrito/wishlist. Si se rechaza: FAILED, y la transacción hace commit igualmente para
- *       dejar constancia del intento (el controller responde 402).</li>
+ *   <li>{@link #createFromCart}: congela il carrello in un ordine PENDING con prezzi snapshot.</li>
+ *   <li>{@link #pay}: addebita (simulato). Se approvato: PAID, libreria, vendite e pulizia di
+ *       carrello/wishlist. Se rifiutato: FAILED, e la transazione fa comunque commit per
+ *       lasciare traccia del tentativo (il controller risponde 402).</li>
  * </ol>
  *
- * <p>La salida de PENDING usa los UPDATE atómicos de OrderRepository: si dos peticiones pagan el
- * mismo pedido a la vez, solo una obtiene 1 fila actualizada; la otra recibe 409 y hace rollback.
- * Además, UNIQUE(user_id, game_id) en library_entries impide tener el mismo juego dos veces aunque
- * dos pedidos distintos lo incluyan.
+ * <p>L'uscita da PENDING usa gli UPDATE atomici di OrderRepository: se due richieste pagano lo
+ * stesso ordine insieme, solo una ottiene 1 riga aggiornata; l'altra riceve 409 e fa rollback.
+ * Inoltre UNIQUE(user_id, game_id) in library_entries impedisce di avere lo stesso gioco due volte anche se
+ * due ordini diversi lo includono.
  *
- * <p>Los UPDATE atómicos limpian el contexto de persistencia, por eso los datos necesarios para
- * el evento se leen antes y la respuesta final se vuelve a consultar.
+ * <p>Gli UPDATE atomici svuotano il contesto di persistenza, per questo i dati necessari per
+ * l'evento si leggono prima e la risposta finale si rilegge.
  */
 @Service
 public class OrderService {
@@ -80,9 +80,7 @@ public class OrderService {
         this.events = events;
     }
 
-    // ------------------------------------------------------------------
-    // Paso 1: carrito -> pedido PENDING
-    // ------------------------------------------------------------------
+    // Passo 1: carrello -> ordine PENDING
 
     @Transactional
     public OrderResponse createFromCart(Long userId) {
@@ -106,11 +104,9 @@ public class OrderService {
         return OrderResponse.from(orderRepository.saveAndFlush(order), null);
     }
 
-    // ------------------------------------------------------------------
-    // Paso 2: pago
-    // ------------------------------------------------------------------
+    // Passo 2: pagamento
 
-    /** Resultado del pago: {@code approved} decide entre 200 y 402 en el controller. */
+    /** Esito del pagamento: {@code approved} decide tra 200 e 402 nel controller. */
     public record PaymentOutcome(boolean approved, OrderResponse order) {
     }
 
@@ -119,8 +115,8 @@ public class OrderService {
         if (request.method() == PaymentMethod.CREDIT_CARD && request.cardNumber() == null) {
             throw new BadRequestException("order.cardRequired");
         }
-        // D33: lectura con bloqueo; un pago concurrente espera aquí, ve el estado final y da 409
-        // sin llamar a la pasarela. Pedido ajeno o inexistente: 404 (D31).
+        // D33: lettura con lock; un pagamento concorrente aspetta qui, vede lo stato finale e dà 409
+        // senza chiamare il gateway. Ordine altrui o inesistente: 404 (D31).
         Order order = orderRepository.findOwnForUpdate(orderId, userId)
                 .orElseThrow(() -> NotFoundException.of("order", orderId));
         if (order.getStatus() != OrderStatus.PENDING) {
@@ -138,8 +134,8 @@ public class OrderService {
             throw new ConflictException("order.ownedCancel", String.valueOf(alreadyOwned));
         }
 
-        // Datos para el evento, leídos antes de que los UPDATE atómicos limpien el contexto
-        // (tras el clear, el proxy LAZY del usuario ya no se podría inicializar)
+        // Dati per l'evento, letti prima che gli UPDATE atomici svuotino il contesto
+        // (dopo il clear, il proxy LAZY dell'utente non si potrebbe più inizializzare)
         User user = order.getUser();
         String email = user.getEmail();
         String displayName = user.getDisplayName();
@@ -172,13 +168,13 @@ public class OrderService {
         return new PaymentOutcome(result.approved(), load(orderId));
     }
 
-    /** Entrega: biblioteca + contador de ventas + limpieza de carrito y wishlist. */
+    /** Consegna: libreria + contatore vendite + pulizia di carrello e wishlist. */
     private void fulfil(Long userId, Long orderId, List<Long> gameIds) {
         User userRef = userRepository.getReferenceById(userId);
         Order orderRef = orderRepository.getReferenceById(orderId);
         gameIds.forEach(gameId -> libraryRepository.save(
                 new LibraryEntry(userRef, gameRepository.getReferenceById(gameId), orderRef)));
-        libraryRepository.flush(); // aquí saltaría el UNIQUE si el juego entró en la biblioteca por otra vía
+        libraryRepository.flush(); // qui scatterebbe lo UNIQUE se il gioco è entrato in libreria per un'altra via
 
         gameRepository.incrementSalesCount(gameIds);
         cartItemRepository.deleteByUserIdAndGameIdIn(userId, gameIds);
@@ -194,9 +190,7 @@ public class OrderService {
         return load(orderId);
     }
 
-    // ------------------------------------------------------------------
-    // Consultas
-    // ------------------------------------------------------------------
+    // Consultazioni
 
     @Transactional(readOnly = true)
     public PageResponse<OrderSummaryResponse> history(Long userId, Pageable pageable) {
@@ -217,7 +211,7 @@ public class OrderService {
         return OrderResponse.from(order, payments.isEmpty() ? null : payments.getLast());
     }
 
-    /** Un pedido ajeno responde 404, no 403: no se revela que existe. */
+    /** Un ordine altrui risponde 404, non 403: non si rivela che esiste. */
     private Order findOwnOrder(Long userId, Long orderId) {
         return orderRepository.findWithItemsById(orderId)
                 .filter(o -> o.getUser().getId().equals(userId))

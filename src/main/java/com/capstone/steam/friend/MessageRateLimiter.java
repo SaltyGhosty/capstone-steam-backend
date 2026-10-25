@@ -7,12 +7,12 @@ import org.springframework.stereotype.Component;
 
 import com.capstone.steam.auth.SlidingWindowLimiter;
 
-/** Límite de envío del chat: {@value #MAX_PER_MINUTE} mensajes por usuario y minuto. La clave es el id del usuario. */
+/** Limite di invio della chat: {@value #MAX_PER_MINUTE} messaggi per utente al minuto. La chiave è l'id dell'utente. */
 @Component
 public class MessageRateLimiter extends SlidingWindowLimiter {
 
     static final int MAX_PER_MINUTE = 30;
-    /** Tope de usuarios distintos en memoria. */
+    /** Tetto di utenti distinti in memoria. */
     static final int MAX_ENTRIES = 100_000;
 
     public MessageRateLimiter(Clock clock) {

@@ -8,7 +8,7 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestClient;
 
-/** Cliente HTTP para Steam (con tiempos máximos: un Steam lento no deja colgada la petición) y @Scheduled. */
+/** Client HTTP per Steam (con tempi massimi: uno Steam lento non lascia appesa la richiesta) e @Scheduled. */
 @Configuration
 @EnableScheduling
 public class SteamConfig {

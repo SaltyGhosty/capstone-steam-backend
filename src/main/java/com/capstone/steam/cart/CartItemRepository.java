@@ -18,7 +18,7 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     @Query("delete from CartItem c where c.user.id = :userId and c.game.id = :gameId")
     int deleteByUserIdAndGameId(Long userId, Long gameId);
 
-    /** Tras pagar se quitan solo los juegos comprados (el usuario pudo añadir otros después de crear el pedido). */
+    /** Dopo il pagamento si tolgono solo i giochi acquistati (l'utente può averne aggiunti altri dopo aver creato l'ordine). */
     @Modifying
     @Query("delete from CartItem c where c.user.id = :userId and c.game.id in :gameIds")
     int deleteByUserIdAndGameIdIn(Long userId, Collection<Long> gameIds);

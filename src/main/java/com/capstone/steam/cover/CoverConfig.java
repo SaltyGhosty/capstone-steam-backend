@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
-/** Cliente HTTP para Cloudinary, con tiempos máximos (un Cloudinary lento no deja colgada la petición). */
+/** Client HTTP per Cloudinary, con tempi massimi (un Cloudinary lento non lascia appesa la richiesta). */
 @Configuration
 public class CoverConfig {
 

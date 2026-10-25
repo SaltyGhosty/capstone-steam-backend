@@ -16,7 +16,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-/** Un mensaje de chat de remitente a destinatario; sobrevive a que dejen de ser amigos. */
+/** Un messaggio di chat da mittente a destinatario; sopravvive alla fine dell'amicizia. */
 @Entity
 @Table(name = "friend_messages")
 public class FriendMessage {
@@ -33,11 +33,11 @@ public class FriendMessage {
     @JoinColumn(name = "recipient_id", nullable = false)
     private User recipient;
 
-    /** Menor de los dos ids de la pareja. */
+    /** Il minore dei due id della coppia. */
     @Column(name = "user_low_id", nullable = false)
     private Long userLowId;
 
-    /** Mayor de los dos ids de la pareja. */
+    /** Il maggiore dei due id della coppia. */
     @Column(name = "user_high_id", nullable = false)
     private Long userHighId;
 
@@ -48,14 +48,14 @@ public class FriendMessage {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    /** Cuándo lo leyó el destinatario; null mientras no. */
+    /** Quando lo ha letto il destinatario; null finché non l'ha fatto. */
     @Column(name = "read_at")
     private Instant readAt;
 
     protected FriendMessage() {
     }
 
-    /** Mensaje nuevo sin leer; calcula el orden low/high de la pareja. */
+    /** Nuovo messaggio non letto; calcola l'ordine low/high della coppia. */
     public FriendMessage(User sender, User recipient, String body) {
         this.sender = sender;
         this.recipient = recipient;

@@ -29,8 +29,8 @@ import com.capstone.steam.user.User;
 import com.capstone.steam.user.UserRepository;
 
 /**
- * Amistades entre jugadores. Solo participan las cuentas de jugador (activas y sin rol DEVELOPER
- * ni ADMIN): cualquier otro usuario es invisible para este servicio.
+ * Amicizie tra giocatori. Partecipano solo gli account giocatore (attivi e senza ruolo DEVELOPER
+ * né ADMIN): qualsiasi altro utente è invisibile a questo servizio.
  */
 @Service
 public class FriendService {
@@ -53,7 +53,7 @@ public class FriendService {
         this.messageRepository = messageRepository;
     }
 
-    // ------------------------------ Búsqueda ------------------------------
+    // Ricerca
 
     @Transactional(readOnly = true)
     public List<SearchHit> search(Long viewerId, String q) {
@@ -73,7 +73,7 @@ public class FriendService {
         }).toList();
     }
 
-    // ------------------------------ Amigos y solicitudes ------------------------------
+    // Amici e richieste
 
     @Transactional(readOnly = true)
     public List<FriendResponse> friends(Long userId) {
@@ -82,7 +82,7 @@ public class FriendService {
         return friendsOf(userId, unread);
     }
 
-    /** {@code unread} por id del amigo; el perfil público pasa un mapa vacío para no revelar los mensajes de otro. */
+    /** {@code unread} per id dell'amico; il profilo pubblico passa una mappa vuota per non rivelare i messaggi di un altro. */
     private List<FriendResponse> friendsOf(Long userId, Map<Long, Integer> unread) {
         return friendshipRepository.findAccepted(userId).stream()
                 .filter(f -> isPlayer(f.other(userId)))
@@ -103,7 +103,7 @@ public class FriendService {
                         .map(f -> FriendRequestResponse.from(f, userId)).toList());
     }
 
-    /** Pide amistad; si el otro ya había pedido a este usuario, acepta esa solicitud (ACCEPTED). */
+    /** Chiede l'amicizia; se l'altro aveva già chiesto a questo utente, accetta quella richiesta (ACCEPTED). */
     @Transactional
     public FriendRequestResponse send(Long requesterId, String username) {
         User requester = userRepository.findWithRolesById(requesterId)
@@ -129,10 +129,10 @@ public class FriendService {
             if (friendship.getRequester().getId().equals(requesterId)) {
                 throw new ConflictException("friend.alreadyRequested");
             }
-            friendship.accept(); // solicitud cruzada: el otro ya había pedido
+            friendship.accept(); // richiesta incrociata: l'altro aveva già chiesto
             return FriendRequestResponse.from(friendship, requesterId);
         }
-        // Si dos solicitudes cruzadas llegan a la vez, la UNIQUE del par hace fallar la segunda (409).
+        // Se due richieste incrociate arrivano insieme, la UNIQUE della coppia fa fallire la seconda (409).
         Friendship saved = friendshipRepository.saveAndFlush(new Friendship(requester, target));
         return FriendRequestResponse.from(saved, requesterId);
     }
@@ -144,17 +144,17 @@ public class FriendService {
         return FriendRequestResponse.from(friendship, userId);
     }
 
-    /** El destinatario rechaza: se borra la fila. */
+    /** Il destinatario rifiuta: si cancella la riga. */
     @Transactional
     public void reject(Long userId, Long requestId) {
         friendshipRepository.delete(pendingFor(requestId, userId, true));
     }
 
-    /** El solicitante cancela su solicitud pendiente. */
+    /** Il richiedente annulla la sua richiesta pendente. */
     @Transactional
     public void cancel(Long userId, Long requestId) {
         pendingFor(requestId, userId, false);
-        // DELETE condicionado a PENDING: si el otro la aceptó entre medias, 0 filas y 404
+        // DELETE condizionato a PENDING: se l'altro l'ha accettata nel frattempo, 0 righe e 404
         if (friendshipRepository.deletePending(requestId) == 0) {
             throw NotFoundException.of("friendRequest", requestId);
         }
@@ -171,21 +171,21 @@ public class FriendService {
         friendshipRepository.delete(friendship);
     }
 
-    /** Solicitud PENDING que este usuario puede resolver: como destinatario o como solicitante. */
+    /** Richiesta PENDING che questo utente può risolvere: come destinatario o come richiedente. */
     private Friendship pendingFor(Long requestId, Long userId, boolean asAddressee) {
         return friendshipRepository.findById(requestId)
                 .filter(f -> f.getStatus() == FriendshipStatus.PENDING)
                 .filter(f -> (asAddressee ? f.getAddressee() : f.getRequester()).getId().equals(userId))
-                // si alguno de los dos ya no es jugador activo, la solicitud es invisible
+                // se uno dei due non è più un giocatore attivo, la richiesta è invisibile
                 .filter(f -> isPlayer(f.getRequester()) && isPlayer(f.getAddressee()))
                 .orElseThrow(() -> NotFoundException.of("friendRequest", requestId));
     }
 
-    // ------------------------------ Perfil ------------------------------
+    // Profilo
 
     /**
-     * Perfil de un jugador. Biblioteca y amigos solo salen si quien mira es el propio usuario, un amigo
-     * o el perfil es público; si no, van a null. La regla vive aquí, no en el frontend.
+     * Profilo di un giocatore. Libreria e amici escono solo se chi guarda è l'utente stesso, un amico
+     * o il profilo è pubblico; altrimenti sono null. La regola vive qui, non nel frontend.
      */
     @Transactional(readOnly = true)
     public PublicProfileResponse profile(Long viewerId, String username) {
@@ -214,14 +214,14 @@ public class FriendService {
                 relation, pendingId(friendship), visible, library, friends);
     }
 
-    // ------------------------------ Utilidades ------------------------------
+    // Utilità
 
-    /** Cuenta de jugador: activa, sin baja pendiente ni anonimizada, con el email verificado y sin rol DEVELOPER ni ADMIN. */
+    /** Account giocatore: attivo, senza disattivazione pendente né anonimizzato, con email verificata e senza ruolo DEVELOPER né ADMIN. */
     static boolean isPlayer(User user) {
         return user.isEnabled() && !user.isPendingDeletion() && !user.isDeleted() && user.isEmailVerified() && !user.hasRole(RoleName.ROLE_DEVELOPER) && !user.hasRole(RoleName.ROLE_ADMIN);
     }
 
-    /** Todas las relaciones (amigos y solicitudes) de un usuario, por el id del otro. */
+    /** Tutte le relazioni (amici e richieste) di un utente, per id dell'altro. */
     private Map<Long, Friendship> relationshipsOf(Long userId) {
         Map<Long, Friendship> byOther = new HashMap<>();
         friendshipRepository.findAccepted(userId).forEach(f -> byOther.put(f.other(userId).getId(), f));

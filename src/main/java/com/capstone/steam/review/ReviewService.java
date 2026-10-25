@@ -23,12 +23,12 @@ import com.capstone.steam.user.User;
 import com.capstone.steam.user.UserRepository;
 
 /**
- * Reseñas. Los contadores del juego (reseñas y positivas) se mantienen con
- * {@link GameRepository#applyReviewDelta} en la misma transacción: si la reseña falla (p. ej.
- * duplicada), el delta hace rollback con ella.
+ * Recensioni. I contatori del gioco (recensioni e positive) si mantengono con
+ * {@link GameRepository#applyReviewDelta} nella stessa transazione: se la recensione fallisce (es.
+ * duplicata), il delta fa rollback con essa.
  *
- * <p>applyReviewDelta limpia el contexto de persistencia (clearAutomatically), así que la
- * respuesta se construye ANTES de llamarlo, mientras las entidades siguen gestionadas.
+ * <p>applyReviewDelta svuota il contesto di persistenza (clearAutomatically), quindi la
+ * risposta si costruisce PRIMA di chiamarlo, mentre le entità sono ancora gestite.
  */
 @Service
 public class ReviewService {
@@ -112,7 +112,7 @@ public class ReviewService {
         return response;
     }
 
-    /** El autor o un admin (moderación). */
+    /** L'autore o un admin (moderazione). */
     @Transactional
     public void delete(Long userId, boolean isAdmin, Long reviewId) {
         Review review = findReview(reviewId);
@@ -129,7 +129,7 @@ public class ReviewService {
         return recommended ? 1 : 0;
     }
 
-    /** Bloquea la fila: dos update/delete simultáneos no calculan el delta con un voto viejo. */
+    /** Blocca la riga: due update/delete simultanei non calcolano il delta con un voto vecchio. */
     private Review findReview(Long reviewId) {
         return reviewRepository.findByIdForUpdate(reviewId).orElseThrow(() -> NotFoundException.of("review", reviewId));
     }

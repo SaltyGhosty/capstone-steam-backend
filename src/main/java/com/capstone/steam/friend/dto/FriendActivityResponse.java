@@ -3,7 +3,7 @@ package com.capstone.steam.friend.dto;
 import java.time.Instant;
 import java.util.List;
 
-/** Lo pendiente de quien consulta: solicitudes recibidas y mensajes sin leer; {@code total} es lo que suma el número de «Amigos». */
+/** Le novità di chi consulta: richieste ricevute e messaggi non letti; {@code total} è ciò che somma il numero di «Amici». */
 public record FriendActivityResponse(List<IncomingRequest> incomingRequests, List<UnreadFrom> unread, int total) {
 
     public record IncomingRequest(Long id, String username, String displayName, Instant createdAt) {

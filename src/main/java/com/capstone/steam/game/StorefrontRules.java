@@ -6,7 +6,7 @@ import com.capstone.steam.common.exception.ConflictException;
 import com.capstone.steam.common.exception.NotFoundException;
 import com.capstone.steam.library.LibraryRepository;
 
-/** Reglas compartidas por carrito, wishlist y checkout para "¿se puede adquirir este juego?". */
+/** Regole condivise da carrello, wishlist e checkout per «si può acquisire questo gioco?». */
 @Component
 public class StorefrontRules {
 
@@ -18,7 +18,7 @@ public class StorefrontRules {
         this.libraryRepository = libraryRepository;
     }
 
-    /** Juego publicado que el usuario todavía no tiene y del que no es el developer. */
+    /** Gioco pubblicato che l'utente non ha ancora e di cui non è il developer. */
     public Game requireAcquirable(Long userId, Long gameId) {
         Game game = gameRepository.findById(gameId)
                 .filter(Game::isPublished)

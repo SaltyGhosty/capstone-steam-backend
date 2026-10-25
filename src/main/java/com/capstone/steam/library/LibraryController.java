@@ -32,13 +32,13 @@ public class LibraryController {
         return libraryService.list(user.getId(), pageable);
     }
 
-    /** ¿Lo tengo? ¿Está en mi carrito/wishlist? ¿Lo he reseñado? */
+    /** Ce l'ho? È nel mio carrello/wishlist? L'ho recensito? */
     @GetMapping("/api/library/status/{gameId}")
     public GameOwnershipResponse ownership(@AuthenticationPrincipal AppUserPrincipal user, @PathVariable Long gameId) {
         return libraryService.ownership(user.getId(), gameId);
     }
 
-    /** Simula una sesión de juego: suma minutos al tiempo jugado. 404 si no lo tienes. */
+    /** Simula una sessione di gioco: somma minuti al tempo giocato. 404 se non lo possiedi. */
     @PostMapping("/api/library/{gameId}/play")
     public LibraryEntryResponse play(@AuthenticationPrincipal AppUserPrincipal user, @PathVariable Long gameId,
             @Valid @RequestBody PlayRequest request) {

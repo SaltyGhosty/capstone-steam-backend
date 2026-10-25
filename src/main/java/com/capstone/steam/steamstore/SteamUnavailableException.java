@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 import com.capstone.steam.common.exception.ApiException;
 
-/** Steam no responde o devuelve algo que no se entiende (502). */
+/** Steam non risponde o restituisce qualcosa che non si capisce (502). */
 public class SteamUnavailableException extends ApiException {
 
     public SteamUnavailableException(Throwable cause) {

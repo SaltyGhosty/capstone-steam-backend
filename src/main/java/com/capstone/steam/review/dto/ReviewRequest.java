@@ -5,8 +5,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * {@code gameId} solo se usa al crear; en el PUT se ignora. {@code language} (es, en o it) es el
- * idioma de la interfaz; si no llega, se usa el idioma del autor.
+ * {@code gameId} si usa solo alla creazione; nel PUT viene ignorato. {@code language} (es, en o it) è la
+ * lingua dell'interfaccia; se non arriva, si usa la lingua dell'autore.
  */
 public record ReviewRequest(
         Long gameId,

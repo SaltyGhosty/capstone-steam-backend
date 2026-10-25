@@ -23,16 +23,16 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Cliente de la API pública de la tienda de Steam ({@code /api/appdetails}). No necesita clave,
- * pero Steam limita a unas 200 peticiones cada 5 minutos: los precios se piden en lotes.
+ * Client dell'API pubblica dello store di Steam ({@code /api/appdetails}). Non richiede chiave,
+ * ma Steam limita a circa 200 richieste ogni 5 minuti: i prezzi si chiedono a blocchi.
  *
- * <p>Steam responde siempre 200 con {@code {"<appid>": {"success": bool, "data": ...}}}; un juego
- * que no existe llega con {@code success: false}, y uno gratuito sin {@code price_overview}.
+ * <p>Steam risponde sempre 200 con {@code {"<appid>": {"success": bool, "data": ...}}}; un gioco
+ * che non esiste arriva con {@code success: false}, e uno gratuito senza {@code price_overview}.
  */
 @Component
 public class SteamStoreClient {
 
-    /** Cuántos AppID se piden en cada llamada de precios. */
+    /** Quanti AppID si chiedono in ogni chiamata dei prezzi. */
     static final int PRICE_BATCH = 50;
 
     private static final List<DateTimeFormatter> RELEASE_FORMATS = List.of(
@@ -50,7 +50,7 @@ public class SteamStoreClient {
         this.country = properties.country();
     }
 
-    /** Precio actual de cada AppID. Los que Steam no conoce o no tienen precio no aparecen en el mapa. */
+    /** Prezzo attuale di ogni AppID. Quelli che Steam non conosce o che non hanno prezzo non compaiono nella mappa. */
     public Map<Integer, SteamPrice> prices(Collection<Integer> appIds) {
         List<Integer> ids = new ArrayList<>(appIds);
         Map<Integer, SteamPrice> result = new HashMap<>();
@@ -69,8 +69,8 @@ public class SteamStoreClient {
     }
 
     /**
-     * Ficha del juego en un idioma de la interfaz (es, en, it). Vacío si Steam no lo conoce.
-     * La fecha de lanzamiento solo se entiende en la ficha en inglés.
+     * Scheda del gioco in una lingua dell'interfaccia (es, en, it). Vuota se Steam non lo conosce.
+     * La data di uscita si capisce solo nella scheda in inglese.
      */
     public Optional<SteamApp> app(int appId, String lang) {
         JsonNode entry = get("/api/appdetails?appids={id}&cc={cc}&l={lang}", appId, country, steamLanguage(lang))
@@ -123,7 +123,7 @@ public class SteamStoreClient {
         };
     }
 
-    /** Steam manda la descripción con entidades HTML (&amp;quot;...) y a veces etiquetas. */
+    /** Steam manda la descrizione con entità HTML (&amp;quot;...) e a volte tag. */
     static String plainText(String html) {
         String text = HtmlUtils.htmlUnescape(html.replaceAll("<[^>]+>", " "));
         return text.replaceAll("\\s+", " ").trim();
@@ -134,7 +134,7 @@ public class SteamStoreClient {
             try {
                 return LocalDate.parse(text.trim(), format);
             } catch (DateTimeParseException ignored) {
-                // se prueba el siguiente formato
+                // si prova il formato successivo
             }
         }
         return null; // "Coming soon", "Q4 2026"...

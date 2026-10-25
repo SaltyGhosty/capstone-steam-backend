@@ -30,8 +30,8 @@ public class ReviewController {
     }
 
     /**
-     * Público (GET /api/games/** es permitAll), con el principal opcional para las fichas de juegos retirados.
-     * {@code language} es opcional: sin él salen todas.
+     * Pubblico (GET /api/games/** è permitAll), con il principal opzionale per le schede di giochi ritirati.
+     * {@code language} è opzionale: senza di esso escono tutte.
      */
     @GetMapping("/api/games/{slug}/reviews")
     public PageResponse<ReviewResponse> listForGame(@PathVariable String slug,

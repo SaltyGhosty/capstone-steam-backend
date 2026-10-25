@@ -19,20 +19,20 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     @EntityGraph(attributePaths = {"genres", "developer"})
     Optional<Game> findWithDetailsById(Long id);
 
-    /** Carga los géneros de una página de juegos en una sola query (evita el N+1 del catálogo). */
+    /** Carica i generi di una pagina di giochi in una sola query (evita l'N+1 del catalogo). */
     @EntityGraph(attributePaths = {"genres", "developer"})
     List<Game> findWithDetailsByIdIn(Collection<Long> ids);
 
-    /** Todos los juegos de un estado con géneros y developer, para el prompt del asistente. */
+    /** Tutti i giochi di uno stato con generi e developer, per il prompt dell'assistente. */
     @EntityGraph(attributePaths = {"genres", "developer"})
     List<Game> findWithDetailsByStatusOrderByIdAsc(GameStatus status);
 
     Page<Game> findByDeveloperId(Long developerId, Pageable pageable);
 
-    /** Todos los juegos de un developer, en cualquier estado (al anonimizar su cuenta). */
+    /** Tutti i giochi di un developer, in qualsiasi stato (all'anonimizzazione del suo account). */
     List<Game> findByDeveloperId(Long developerId);
 
-    /** Si algún carrito, wishlist, biblioteca, pedido o reseña apunta al juego (entonces no se puede borrar). */
+    /** Se un carrello, wishlist, libreria, ordine o recensione punta al gioco (allora non si può eliminare). */
     @Query("""
             select case when exists (select 1 from LibraryEntry l where l.game.id = :gameId)
                           or exists (select 1 from OrderItem i where i.game.id = :gameId)
@@ -49,25 +49,23 @@ public interface GameRepository extends JpaRepository<Game, Long> {
 
     Optional<Game> findBySteamAppId(Integer steamAppId);
 
-    /** Los juegos enlazados con Steam, cuyo precio se sincroniza. */
+    /** I giochi collegati a Steam, il cui prezzo viene sincronizzato. */
     List<Game> findBySteamAppIdIsNotNull();
 
     boolean existsBySlug(String slug);
 
-    // ------------------------------------------------------------------
-    // UPDATE atómicos escritos a mano: la base de datos hace la suma,
-    // así que no hay read-modify-write ni actualizaciones perdidas con
-    // compras o reseñas concurrentes. No incrementan @Version a propósito:
-    // un contador no debe invalidar la edición en curso de un developer.
-    // ------------------------------------------------------------------
+    // UPDATE atomici scritti a mano: è il database a fare la somma,
+    // quindi niente read-modify-write né aggiornamenti persi con
+    // acquisti o recensioni concorrenti. Non incrementano @Version di proposito:
+    // un contatore non deve invalidare la modifica in corso di un developer.
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update Game g set g.salesCount = g.salesCount + 1 where g.id in :gameIds")
     int incrementSalesCount(Collection<Long> gameIds);
 
     /**
-     * Crear una reseña: (1 si es positiva y 0 si no, +1). Borrarla: (-1 o 0, -1).
-     * Editarla cambiando el voto: (+1 o -1, 0).
+     * Creare una recensione: (1 se positiva e 0 altrimenti, +1). Eliminarla: (-1 o 0, -1).
+     * Modificarla cambiando il voto: (+1 o -1, 0).
      */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
@@ -77,7 +75,7 @@ public interface GameRepository extends JpaRepository<Game, Long> {
              where g.id = :gameId""")
     int applyReviewDelta(Long gameId, int positiveDelta, int countDelta);
 
-    /** Descuento masivo sobre los juegos publicados de un developer. Esto sí es una edición, así que sube la versión. */
+    /** Sconto massivo sui giochi pubblicati di un developer. Questa sì è una modifica, quindi incrementa la versione. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
             update Game g

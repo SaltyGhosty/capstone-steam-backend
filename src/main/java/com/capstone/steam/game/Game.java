@@ -45,7 +45,7 @@ public class Game {
     @Column(nullable = false, unique = true, length = 170)
     private String slug;
 
-    /** En español; también es el respaldo de las traducciones que falten. */
+    /** In spagnolo; è anche il ripiego per le traduzioni mancanti. */
     @Column(length = 10000)
     private String description;
 
@@ -71,7 +71,7 @@ public class Game {
     @Column(name = "cover_url", length = 500)
     private String coverUrl;
 
-    /** AppID de la tienda de Steam; con él se sincronizan precio y descuento. */
+    /** AppID dello store di Steam; con esso si sincronizzano prezzo e sconto. */
     @Column(name = "steam_app_id", unique = true)
     private Integer steamAppId;
 
@@ -88,8 +88,8 @@ public class Game {
             inverseJoinColumns = @JoinColumn(name = "genre_id"))
     private Set<Genre> genres = new HashSet<>();
 
-    // Contadores de solo lectura para JPA: solo cambian con los UPDATE atómicos de GameRepository.
-    // Así una edición del juego (save) nunca pisa ventas o valoraciones concurrentes.
+    // Contatori in sola lettura per JPA: cambiano solo con gli UPDATE atomici di GameRepository.
+    // Così una modifica del gioco (save) non sovrascrive mai vendite o valutazioni concorrenti.
     @Column(name = "sales_count", nullable = false, insertable = false, updatable = false)
     private long salesCount;
 
@@ -121,7 +121,7 @@ public class Game {
         this.price = price;
     }
 
-    /** Precio con el descuento aplicado, redondeado a 2 decimales. */
+    /** Prezzo con lo sconto applicato, arrotondato a 2 decimali. */
     public BigDecimal getFinalPrice() {
         if (discountPercent == 0) {
             return price;
@@ -130,7 +130,7 @@ public class Game {
                 .divide(HUNDRED, 2, RoundingMode.HALF_UP);
     }
 
-    /** Porcentaje de reseñas positivas (0-100, hacia abajo), o 0 si no tiene reseñas. */
+    /** Percentuale di recensioni positive (0-100, per difetto), o 0 se non ha recensioni. */
     public int getPositivePercent() {
         return reviewCount == 0 ? 0 : (int) (100L * positiveCount / reviewCount);
     }
@@ -191,7 +191,7 @@ public class Game {
         this.descriptionIt = descriptionIt;
     }
 
-    /** Descripción en el idioma pedido (es, en, it); si no está traducida, la española. */
+    /** Descrizione nella lingua richiesta (es, en, it); se non è tradotta, quella spagnola. */
     public String getDescription(Locale locale) {
         String translated = switch (locale.getLanguage()) {
             case "en" -> descriptionEn;
@@ -249,7 +249,7 @@ public class Game {
         return priceSyncedAt;
     }
 
-    /** Precio y descuento tal como los tiene Steam ahora mismo. */
+    /** Prezzo e sconto così come li ha Steam in questo momento. */
     public void applySteamPrice(BigDecimal price, int discountPercent, Instant syncedAt) {
         this.price = price;
         this.discountPercent = discountPercent;

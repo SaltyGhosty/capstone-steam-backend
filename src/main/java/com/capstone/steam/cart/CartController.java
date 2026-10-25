@@ -28,7 +28,7 @@ public class CartController {
         return cartService.getCart(user.getId());
     }
 
-    /** PUT porque es idempotente: el recurso "juego X en mi carrito" existe o no. */
+    /** PUT perché è idempotente: la risorsa «gioco X nel mio carrello» esiste oppure no. */
     @PutMapping("/items/{gameId}")
     public CartResponse add(@AuthenticationPrincipal AppUserPrincipal user, @PathVariable Long gameId) {
         return cartService.addItem(user.getId(), gameId);

@@ -9,7 +9,7 @@ import com.capstone.steam.game.Game;
 import com.capstone.steam.game.ReviewScore;
 import com.capstone.steam.genre.dto.GenreResponse;
 
-/** Tarjeta del catálogo. */
+/** Card del catalogo. */
 public record GameSummaryResponse(
         Long id,
         String title,

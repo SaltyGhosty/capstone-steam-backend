@@ -12,10 +12,10 @@ import org.springframework.stereotype.Component;
 import com.capstone.steam.order.PaymentMethod;
 
 /**
- * Pagos simulados, sin proveedor real:
+ * Pagamenti simulati, senza provider reale:
  * <ul>
- *   <li>una tarjeta que termina en {@code declinedSuffix} (por defecto 0000) se rechaza siempre;</li>
- *   <li>además se rechaza al azar con probabilidad {@code failureRate}.</li>
+ *   <li>una carta che termina con {@code declinedSuffix} (per default 0000) viene sempre rifiutata;</li>
+ *   <li>inoltre viene rifiutata a caso con probabilità {@code failureRate}.</li>
  * </ul>
  */
 @Component

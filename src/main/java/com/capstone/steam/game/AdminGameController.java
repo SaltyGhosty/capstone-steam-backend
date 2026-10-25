@@ -18,7 +18,7 @@ import com.capstone.steam.game.dto.StatusRequest;
 
 import jakarta.validation.Valid;
 
-/** Moderación del catálogo (solo ADMIN). */
+/** Moderazione del catalogo (solo ADMIN). */
 @RestController
 @RequestMapping("/api/admin/games")
 public class AdminGameController {

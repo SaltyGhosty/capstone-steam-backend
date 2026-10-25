@@ -13,7 +13,7 @@ import com.capstone.steam.friend.dto.PublicProfileResponse;
 import com.capstone.steam.friend.dto.SearchHit;
 import com.capstone.steam.security.AppUserPrincipal;
 
-/** Búsqueda de jugadores y perfil público. No choca con {@code /api/users/me}: «me» no es un username válido. */
+/** Ricerca di giocatori e profilo pubblico. Non collide con {@code /api/users/me}: «me» non è uno username valido. */
 @RestController
 @RequestMapping("/api/users")
 public class ProfileController {

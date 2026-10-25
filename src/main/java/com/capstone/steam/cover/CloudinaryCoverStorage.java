@@ -32,11 +32,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Sube portadas a Cloudinary con su API REST firmada (sin SDK).
+ * Carica le copertine su Cloudinary con la sua API REST firmata (senza SDK).
  *
- * <p>La firma es el SHA-1 en hexadecimal de los parámetros firmados ordenados alfabéticamente
- * ({@code a=1&b=2}) seguidos del {@code api_secret}. {@code file} y {@code api_key} no se firman.
- * El secreto solo se usa para firmar: no sale en logs, respuestas ni errores.
+ * <p>La firma è lo SHA-1 in esadecimale dei parametri firmati in ordine alfabetico
+ * ({@code a=1&b=2}) seguiti dall'{@code api_secret}. {@code file} e {@code api_key} non si firmano.
+ * Il segreto serve solo a firmare: non compare in log, risposte né errori.
  */
 @Component
 public class CloudinaryCoverStorage implements CoverStorage {
@@ -72,7 +72,7 @@ public class CloudinaryCoverStorage implements CoverStorage {
             this.apiSecret = null;
             this.cloudName = null;
             if (properties.url() != null && !properties.url().isBlank()) {
-                // sin el valor: es un secreto
+                // senza il valore: è un segreto
                 log.warn("CLOUDINARY_URL no tiene el formato cloudinary://<api_key>:<api_secret>@<cloud_name>; subida de portadas desactivada");
             }
         }
@@ -129,12 +129,12 @@ public class CloudinaryCoverStorage implements CoverStorage {
             }
             return url;
         } catch (HttpClientErrorException.BadRequest ex) {
-            // Cloudinary rechaza el archivo (400): es culpa de la imagen, no un fallo del servicio
+            // Cloudinary rifiuta il file (400): è colpa dell'immagine, non un guasto del servizio
             log.warn("Cloudinary ha rechazado la portada del juego {} con 400: {}", gameId, errorMessage(ex));
             throw new BadRequestException("cover.invalidType");
         } catch (RestClientException | JacksonException | IllegalArgumentException ex) {
-            // solo el tipo del error: ni la URL de configuración ni el cuerpo de la petición
-            // el código y el error.message de Cloudinary ayudan a diagnosticar; el secreto nunca se escribe
+            // solo il tipo dell'errore: né l'URL di configurazione né il corpo della richiesta
+            // il codice e l'error.message di Cloudinary aiutano a diagnosticare; il segreto non viene mai scritto
             if (ex instanceof RestClientResponseException re) {
                 log.warn("Cloudinary no ha aceptado la portada del juego {}: {} {}", gameId,
                         re.getStatusCode().value(), errorMessage(re));
@@ -145,7 +145,7 @@ public class CloudinaryCoverStorage implements CoverStorage {
         }
     }
 
-    /** El {@code error.message} del JSON de error de Cloudinary, sin el secreto por si lo repitiera. */
+    /** L'{@code error.message} del JSON di errore di Cloudinary, senza il segreto nel caso lo ripetesse. */
     private String errorMessage(RestClientResponseException ex) {
         try {
             String message = json.readTree(ex.getResponseBodyAsString()).path("error").path("message").asString("");
@@ -155,7 +155,7 @@ public class CloudinaryCoverStorage implements CoverStorage {
         }
     }
 
-    /** SHA-1 hex de {@code k1=v1&k2=v2...} (claves en orden alfabético) + el secreto. */
+    /** SHA-1 hex di {@code k1=v1&k2=v2...} (chiavi in ordine alfabetico) + il segreto. */
     static String signature(Map<String, String> params, String secret) {
         StringBuilder toSign = new StringBuilder();
         new TreeMap<>(params).forEach((k, v) -> {

@@ -5,8 +5,8 @@ import org.springframework.stereotype.Component;
 import com.capstone.steam.library.LibraryRepository;
 
 /**
- * Quién puede abrir la ficha de un juego. PUBLISHED, cualquiera; DELISTED (como en Steam), solo el admin, su developer
- * y quien lo tiene en la biblioteca; DRAFT, nadie por los endpoints públicos (el developer lo gestiona en su panel).
+ * Chi può aprire la scheda di un gioco. PUBLISHED, chiunque; DELISTED (come su Steam), solo l'admin, il suo developer
+ * e chi lo ha in libreria; DRAFT, nessuno dagli endpoint pubblici (il developer lo gestisce nel suo pannello).
  */
 @Component
 public class GameVisibility {
@@ -17,7 +17,7 @@ public class GameVisibility {
         this.libraryRepository = libraryRepository;
     }
 
-    /** {@code viewerId} es null sin sesión. */
+    /** {@code viewerId} è null senza sessione. */
     public boolean canView(Game game, Long viewerId, boolean viewerIsAdmin) {
         return switch (game.getStatus()) {
             case PUBLISHED -> true;

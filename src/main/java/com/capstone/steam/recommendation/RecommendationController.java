@@ -11,7 +11,7 @@ import com.capstone.steam.security.AppUserPrincipal;
 
 import jakarta.validation.Valid;
 
-/** Chat recomendador. {@code /api/**} ya exige sesión por defecto en SecurityConfig. */
+/** Chat di raccomandazione. {@code /api/**} richiede già la sessione per default in SecurityConfig. */
 @RestController
 public class RecommendationController {
 

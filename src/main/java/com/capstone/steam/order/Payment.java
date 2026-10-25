@@ -17,7 +17,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-/** Un intento de pago (simulado) de un pedido. */
+/** Un tentativo di pagamento (simulato) di un ordine. */
 @Entity
 @Table(name = "payments")
 public class Payment {

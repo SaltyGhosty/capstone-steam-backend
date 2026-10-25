@@ -1,6 +1,6 @@
 package com.capstone.steam.order;
 
-/** PENDING -> PAID | FAILED | CANCELLED. Solo se sale de PENDING una vez (ver OrderRepository). */
+/** PENDING -> PAID | FAILED | CANCELLED. Da PENDING si esce una sola volta (vedi OrderRepository). */
 public enum OrderStatus {
     PENDING,
     PAID,

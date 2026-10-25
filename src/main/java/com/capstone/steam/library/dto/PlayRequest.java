@@ -4,6 +4,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-/** Minutos de una sesión de juego simulada (como mucho un día). */
+/** Minuti di una sessione di gioco simulata (al massimo un giorno). */
 public record PlayRequest(@NotNull @Min(1) @Max(1440) Integer minutes) {
 }

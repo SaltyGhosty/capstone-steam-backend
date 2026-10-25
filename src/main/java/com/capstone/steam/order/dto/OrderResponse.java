@@ -12,7 +12,7 @@ import com.capstone.steam.order.Payment;
 import com.capstone.steam.order.PaymentMethod;
 import com.capstone.steam.order.PaymentStatus;
 
-/** {@code lastPayment} es null mientras el pedido no se ha intentado pagar. */
+/** {@code lastPayment} è null finché non si è tentato di pagare l'ordine. */
 public record OrderResponse(
         Long id,
         OrderStatus status,
@@ -30,7 +30,7 @@ public record OrderResponse(
         }
     }
 
-    /** {@code failureReason} se guarda como clave (payment.declined.*) y sale traducido al idioma de la petición. */
+    /** {@code failureReason} si salva come chiave (payment.declined.*) e esce tradotto nella lingua della richiesta. */
     public record PaymentInfo(PaymentMethod method, PaymentStatus status, String reference, String failureReason,
             Instant createdAt) {
 

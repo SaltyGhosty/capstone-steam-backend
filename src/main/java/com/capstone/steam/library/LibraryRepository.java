@@ -18,18 +18,18 @@ public interface LibraryRepository extends JpaRepository<LibraryEntry, Long> {
 
     boolean existsByUserIdAndGameId(Long userId, Long gameId);
 
-    /** De entre gameIds, cuáles ya tiene el usuario (checkout y carrito). */
+    /** Tra gameIds, quali l'utente possiede già (checkout e carrello). */
     @Query("select l.game.id from LibraryEntry l where l.user.id = :userId and l.game.id in :gameIds")
     Set<Long> findOwnedGameIds(Long userId, Collection<Long> gameIds);
 
-    /** Ids de todos los juegos de la biblioteca del usuario (el asistente no los recomienda). */
+    /** Id di tutti i giochi della libreria dell'utente (l'assistente non li raccomanda). */
     @Query("select l.game.id from LibraryEntry l where l.user.id = :userId")
     Set<Long> findGameIdsByUserId(Long userId);
 
     @Query("select l from LibraryEntry l join fetch l.game where l.user.id = :userId and l.game.id = :gameId")
     Optional<LibraryEntry> findByUserIdAndGameId(Long userId, Long gameId);
 
-    /** Suma minutos jugados sin leer antes la fila: dos sesiones simultáneas no se pisan. 0 = no lo tiene. */
+    /** Somma i minuti giocati senza leggere prima la riga: due sessioni simultanee non si sovrascrivono. 0 = non lo possiede. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
             update LibraryEntry l

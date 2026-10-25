@@ -10,12 +10,12 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 /**
- * Filtros opcionales del catálogo; se ligan desde la query string
- * (p. ej. {@code ?q=zelda&genres=rpg,action&maxPrice=20&onSale=true}). null = sin filtro.
+ * Filtri opzionali del catalogo; si legano dalla query string
+ * (es. {@code ?q=zelda&genres=rpg,action&maxPrice=20&onSale=true}). null = nessun filtro.
  *
- * @param genres  slugs de género; el juego debe tener AL MENOS uno
- * @param minPrice/maxPrice se aplican al precio final (con descuento)
- * @param minPositivePercent porcentaje mínimo de reseñas positivas (0-100)
+ * @param genres  slug di genere; il gioco deve averne ALMENO uno
+ * @param minPrice/maxPrice si applicano al prezzo finale (scontato)
+ * @param minPositivePercent percentuale minima di recensioni positive (0-100)
  */
 public record GameSearchCriteria(
         @Size(max = 100) String q,

@@ -37,7 +37,7 @@ public class Review {
     @Column(nullable = false)
     private boolean recommended;
 
-    /** Idioma en que está escrita: es, en o it. */
+    /** Lingua in cui è scritta: es, en o it. */
     @Column(nullable = false, length = 5)
     private String language;
 

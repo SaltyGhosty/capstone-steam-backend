@@ -18,7 +18,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
-/** Escaparate público (GET /api/games/** es permitAll en SecurityConfig). */
+/** Vetrina pubblica (GET /api/games/** è permitAll in SecurityConfig). */
 @RestController
 @RequestMapping("/api/games")
 public class CatalogController {
@@ -30,7 +30,7 @@ public class CatalogController {
     }
 
     /**
-     * Ejemplo: {@code GET /api/games?q=hollow&genres=indie,platformer&maxPrice=15&onSale=true&sort=price_asc&page=0&size=20}
+     * Esempio: {@code GET /api/games?q=hollow&genres=indie,platformer&maxPrice=15&onSale=true&sort=price_asc&page=0&size=20}
      */
     @GetMapping
     public PageResponse<GameSummaryResponse> search(

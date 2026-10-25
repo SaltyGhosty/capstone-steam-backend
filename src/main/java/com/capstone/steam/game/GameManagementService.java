@@ -19,17 +19,17 @@ import com.capstone.steam.genre.GenreService;
 import com.capstone.steam.user.UserRepository;
 
 /**
- * Gestión de juegos: el developer solo actúa sobre los suyos (403 si no es el dueño)
- * y el admin modera el estado de cualquiera.
+ * Gestione dei giochi: il developer agisce solo sui propri (403 se non è il proprietario)
+ * e l'admin modera lo stato di qualsiasi gioco.
  *
- * <p>Estados: DRAFT --publish--> PUBLISHED --unpublish--> DRAFT (developer).
- * Cualquier estado --> DELISTED y DELISTED --> PUBLISHED solo los hace un admin.
+ * <p>Stati: DRAFT --publish--> PUBLISHED --unpublish--> DRAFT (developer).
+ * Qualsiasi stato --> DELISTED e DELISTED --> PUBLISHED li fa solo un admin.
  */
 @Service
 @Transactional
 public class GameManagementService {
 
-    /** Campos por los que se pueden ordenar los listados de admin y de estudio ({@code ?sort=}). */
+    /** Campi per cui si possono ordinare gli elenchi di admin e studio ({@code ?sort=}). */
     public static final Set<String> SORTABLE = Set.of(
             "id", "title", "price", "discountPercent", "releaseDate", "status", "salesCount", "createdAt", "updatedAt");
 
@@ -44,7 +44,7 @@ public class GameManagementService {
         this.genreService = genreService;
     }
 
-    // ------------------------------ Developer ------------------------------
+    // Developer
 
     @Transactional(readOnly = true)
     public PageResponse<GameDetailResponse> listOwn(Long developerId, Pageable pageable) {
@@ -63,7 +63,7 @@ public class GameManagementService {
         return GameDetailResponse.from(gameRepository.saveAndFlush(game));
     }
 
-    /** El slug no cambia al renombrar: las URLs ya compartidas siguen funcionando. */
+    /** Lo slug non cambia al rinominare: gli URL già condivisi continuano a funzionare. */
     public GameDetailResponse update(Long developerId, Long gameId, GameRequest request) {
         Game game = findOwned(developerId, gameId);
         if (request.version() != null && !request.version().equals(game.getVersion())) {
@@ -72,7 +72,7 @@ public class GameManagementService {
         game.setTitle(request.title().trim());
         game.setPrice(request.price());
         applyChanges(game, request);
-        // flush para que la respuesta lleve la versión ya incrementada
+        // flush perché la risposta porti la versione già incrementata
         return GameDetailResponse.from(gameRepository.saveAndFlush(game));
     }
 
@@ -97,7 +97,7 @@ public class GameManagementService {
         return GameDetailResponse.from(gameRepository.saveAndFlush(game));
     }
 
-    /** Solo borradores sin ventas: lo vendido tiene que seguir en las bibliotecas y en los pedidos. */
+    /** Solo bozze senza vendite: ciò che è stato venduto deve restare nelle librerie e negli ordini. */
     public void delete(Long developerId, Long gameId) {
         Game game = findOwned(developerId, gameId);
         if (game.getStatus() != GameStatus.DRAFT || game.getSalesCount() > 0) {
@@ -106,19 +106,19 @@ public class GameManagementService {
         gameRepository.delete(game);
     }
 
-    /** Fija la portada ya subida (URL https del almacén). Sube la versión del juego. */
+    /** Imposta la copertina già caricata (URL https dello storage). Incrementa la versione del gioco. */
     public GameDetailResponse setCover(Long developerId, Long gameId, String url) {
         Game game = findOwned(developerId, gameId);
         game.setCoverUrl(url);
         return GameDetailResponse.from(gameRepository.saveAndFlush(game));
     }
 
-    /** Descuento masivo sobre todos los juegos publicados del developer (UPDATE atómico). */
+    /** Sconto massivo su tutti i giochi pubblicati del developer (UPDATE atomico). */
     public int applyDiscountToAllPublished(Long developerId, int percent) {
         return gameRepository.bulkDiscountForDeveloper(developerId, percent, GameStatus.PUBLISHED);
     }
 
-    // -------------------------------- Admin --------------------------------
+    // Admin
 
     @Transactional(readOnly = true)
     public PageResponse<GameDetailResponse> listAll(GameStatus status, Pageable pageable) {
@@ -144,7 +144,7 @@ public class GameManagementService {
         return GameDetailResponse.from(gameRepository.saveAndFlush(game));
     }
 
-    /** El admin ve cualquier juego; 404 si no existe (se usa antes de subir una portada). */
+    /** L'admin vede qualsiasi gioco; 404 se non esiste (si usa prima di caricare una copertina). */
     @Transactional(readOnly = true)
     public GameDetailResponse getAny(Long gameId) {
         return GameDetailResponse.from(
@@ -156,8 +156,6 @@ public class GameManagementService {
         game.setCoverUrl(url);
         return GameDetailResponse.from(gameRepository.saveAndFlush(game));
     }
-
-    // ------------------------------------------------------------------------
 
     private Game findOwned(Long developerId, Long gameId) {
         Game game = gameRepository.findWithDetailsById(gameId).orElseThrow(() -> NotFoundException.of("game", gameId));
@@ -188,6 +186,6 @@ public class GameManagementService {
         for (int n = 2; gameRepository.existsBySlug(slug); n++) {
             slug = base + "-" + n;
         }
-        return slug; // una carrera entre dos altas la frena el UNIQUE de la BD (-> 409)
+        return slug; // una corsa tra due creazioni la ferma lo UNIQUE del DB (-> 409)
     }
 }

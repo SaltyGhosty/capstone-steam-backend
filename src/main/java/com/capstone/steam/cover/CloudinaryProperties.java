@@ -5,17 +5,17 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Subida de portadas a Cloudinary.
+ * Caricamento delle copertine su Cloudinary.
  *
- * @param url     {@code cloudinary://<api_key>:<api_secret>@<cloud_name>}; vacía = subida desactivada.
- *                Es un secreto: no se muestra en logs ni en errores
- * @param folder  carpeta de Cloudinary donde se guardan las portadas
- * @param timeout tiempo máximo de cada petición a Cloudinary
+ * @param url     {@code cloudinary://<api_key>:<api_secret>@<cloud_name>}; vuoto = caricamento disattivato.
+ *                È un segreto: non compare in log né in errori
+ * @param folder  cartella di Cloudinary dove si salvano le copertine
+ * @param timeout tempo massimo di ogni richiesta a Cloudinary
  */
 @ConfigurationProperties("app.cloudinary")
 public record CloudinaryProperties(String url, String folder, Duration timeout) {
 
-    /** Sin el secreto en el {@code toString} (aparece en trazas y en el informe de condiciones de Spring). */
+    /** Senza il segreto nel {@code toString} (compare nelle trace e nel report delle condizioni di Spring). */
     @Override
     public String toString() {
         return "CloudinaryProperties[url=" + (url == null || url.isBlank() ? "<vacía>" : "<oculta>")

@@ -15,8 +15,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 /**
- * Integración con la tienda de Steam: importar un juego (developer) y sincronizar precios (admin).
- * Los permisos los ponen las reglas de URL: /api/developer/** y /api/admin/**.
+ * Integrazione con lo store di Steam: importare un gioco (developer) e sincronizzare i prezzi (admin).
+ * I permessi li stabiliscono le regole URL: /api/developer/** e /api/admin/**.
  */
 @RestController
 public class SteamController {

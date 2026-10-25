@@ -3,7 +3,7 @@ package com.capstone.steam.friend.dto;
 import com.capstone.steam.game.Game;
 import com.capstone.steam.library.LibraryEntry;
 
-/** Un juego de la biblioteca de otro jugador: sin precio de compra ni pedido. */
+/** Un gioco della libreria di un altro giocatore: senza prezzo d'acquisto né ordine. */
 public record ProfileGame(Long gameId, String title, String slug, String coverUrl, int playtimeMinutes) {
 
     public static ProfileGame from(LibraryEntry entry) {
