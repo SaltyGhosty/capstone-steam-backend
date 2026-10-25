@@ -9,8 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Sincronización automática: al arrancar (en Render el servidor se duerme y se despierta a menudo)
- * y luego según {@code app.steam.sync-cron}. Un fallo de Steam solo se registra en el log.
+ * Sincronizzazione automatica: all'avvio (su Render il server si addormenta e si risveglia spesso)
+ * e poi secondo {@code app.steam.sync-cron}. Un errore di Steam si registra solo nel log.
  */
 @Component
 @ConditionalOnProperty(prefix = "app.steam", name = "sync-enabled", havingValue = "true")

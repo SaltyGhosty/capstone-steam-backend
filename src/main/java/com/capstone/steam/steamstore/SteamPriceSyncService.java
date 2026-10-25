@@ -17,10 +17,10 @@ import com.capstone.steam.notification.event.SaleRecipient;
 import com.capstone.steam.wishlist.WishlistItemRepository;
 
 /**
- * Trae de Steam el precio y el descuento de los juegos enlazados (con AppID) y los guarda.
- * Si un juego publicado entra en oferta o la mejora, avisa por correo a quienes lo tienen en la wishlist.
+ * Recupera da Steam prezzo e sconto dei giochi collegati (con AppID) e li salva.
+ * Se un gioco pubblicato va in offerta o la migliora, avvisa via email chi lo ha nella wishlist.
  *
- * <p>Las llamadas a Steam van fuera de la transacción: una red lenta no retiene conexiones de la BD.
+ * <p>Le chiamate a Steam avvengono fuori dalla transazione: una rete lenta non trattiene connessioni del DB.
  */
 @Service
 public class SteamPriceSyncService {
@@ -65,7 +65,7 @@ public class SteamPriceSyncService {
         for (Game game : games) {
             SteamPrice price = prices.get(game.getSteamAppId());
             if (price == null) {
-                continue; // Steam no lo conoce o es gratuito: se deja como está
+                continue; // Steam non lo conosce o è gratuito: si lascia com'è
             }
             if (!STORE_CURRENCY.equals(price.currency())) {
                 log.warn("Steam devuelve {} para el AppID {}; la tienda solo trabaja en euros", price.currency(),

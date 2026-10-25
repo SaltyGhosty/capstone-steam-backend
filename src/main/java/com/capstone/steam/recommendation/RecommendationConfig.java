@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
-/** Cliente HTTP para OpenRouter, con tiempos máximos (un modelo lento no deja colgada la petición). */
+/** Client HTTP per OpenRouter, con tempi massimi (un modello lento non lascia appesa la richiesta). */
 @Configuration
 public class RecommendationConfig {
 

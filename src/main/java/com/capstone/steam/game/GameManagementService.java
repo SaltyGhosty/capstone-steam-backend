@@ -157,7 +157,6 @@ public class GameManagementService {
         return GameDetailResponse.from(gameRepository.saveAndFlush(game));
     }
 
-
     private Game findOwned(Long developerId, Long gameId) {
         Game game = gameRepository.findWithDetailsById(gameId).orElseThrow(() -> NotFoundException.of("game", gameId));
         if (!game.isOwnedBy(developerId)) {

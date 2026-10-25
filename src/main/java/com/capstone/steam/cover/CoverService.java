@@ -12,13 +12,13 @@ import com.capstone.steam.game.GameManagementService;
 import com.capstone.steam.game.dto.GameDetailResponse;
 
 /**
- * Sube la portada de un juego y la guarda en {@code coverUrl}. Se valida todo antes de llamar al almacén
- * (dueño, tamaño y tipo real por bytes). No es transaccional: no se retiene una transacción durante la subida.
+ * Carica la copertina di un gioco e la salva in {@code coverUrl}. Tutto si valida prima di chiamare lo storage
+ * (proprietario, dimensione e tipo reale dai byte). Non è transazionale: non si trattiene una transazione durante il caricamento.
  */
 @Service
 public class CoverService {
 
-    /** Tamaño máximo de una portada (el mismo límite que {@code spring.servlet.multipart.max-file-size}). */
+    /** Dimensione massima di una copertina (lo stesso limite di {@code spring.servlet.multipart.max-file-size}). */
     static final long MAX_BYTES = 5L * 1024 * 1024;
 
     private final CoverStorage storage;
@@ -33,14 +33,14 @@ public class CoverService {
         return storage.enabled();
     }
 
-    /** El developer sube la portada de un juego suyo (404 si no existe, 403 si es de otro). */
+    /** Il developer carica la copertina di un suo gioco (404 se non esiste, 403 se è di un altro). */
     public GameDetailResponse uploadAsDeveloper(Long developerId, Long gameId, MultipartFile file) {
-        games.getOwn(developerId, gameId); // comprueba la propiedad antes de tocar el almacén
+        games.getOwn(developerId, gameId); // verifica la proprietà prima di toccare lo storage
         String url = store(gameId, file);
         return games.setCover(developerId, gameId, url);
     }
 
-    /** El admin sube la portada de cualquier juego. */
+    /** L'admin carica la copertina di qualsiasi gioco. */
     public GameDetailResponse uploadAsAdmin(Long gameId, MultipartFile file) {
         games.getAny(gameId);
         String url = store(gameId, file);

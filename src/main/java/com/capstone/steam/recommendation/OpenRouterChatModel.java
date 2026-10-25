@@ -19,8 +19,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Cliente de {@code POST /chat/completions} de OpenRouter. La clave solo viaja en la cabecera
- * Authorization: no se escribe en logs ni en mensajes de error, y tampoco el texto de la conversación.
+ * Client di {@code POST /chat/completions} di OpenRouter. La chiave viaggia solo nell'header
+ * Authorization: non si scrive in log né in messaggi di errore, e nemmeno il testo della conversazione.
  */
 @Component
 public class OpenRouterChatModel implements ChatModel {
@@ -50,14 +50,14 @@ public class OpenRouterChatModel implements ChatModel {
         if (models.size() == 1) {
             body.put("model", models.get(0));
         } else {
-            // lista de reserva de OpenRouter: si el primero falla, prueba el siguiente
+            // elenco di riserva di OpenRouter: se il primo fallisce, prova il successivo
             body.put("models", models);
         }
         body.put("messages", chat);
         body.put("response_format", Map.of("type", "json_object"));
         body.put("temperature", 0.7);
         body.put("max_tokens", 1200);
-        // razonamiento corto y fuera de la respuesta: algunos modelos no admiten desactivarlo
+        // ragionamento breve e fuori dalla risposta: alcuni modelli non permettono di disattivarlo
         body.put("reasoning", Map.of("effort", "low", "exclude", true));
 
         long start = System.nanoTime();
@@ -80,7 +80,7 @@ public class OpenRouterChatModel implements ChatModel {
                     (System.nanoTime() - start) / 1_000_000);
             return content;
         } catch (RestClientResponseException e) {
-            // código y error.message de OpenRouter, recortado; nunca la clave ni la conversación
+            // codice e error.message di OpenRouter, troncato; mai la chiave né la conversazione
             log.warn("OpenRouter: error {} ({}, modelo={}, duracion={}ms)", e.getStatusCode().value(),
                     errorMessage(e), properties.model(), (System.nanoTime() - start) / 1_000_000);
             if (e.getStatusCode().value() == 429) {
@@ -88,7 +88,7 @@ public class OpenRouterChatModel implements ChatModel {
             }
             throw new AssistantUnavailableException(e);
         } catch (RestClientException | JacksonException | IllegalArgumentException e) {
-            // solo la clase: el mensaje podría arrastrar cabeceras o el cuerpo de la petición
+            // solo la classe: il messaggio potrebbe portarsi dietro header o il corpo della richiesta
             log.warn("OpenRouter: fallo {} (modelo={}, duracion={}ms)", e.getClass().getSimpleName(),
                     properties.model(), (System.nanoTime() - start) / 1_000_000);
             throw new AssistantUnavailableException(e);

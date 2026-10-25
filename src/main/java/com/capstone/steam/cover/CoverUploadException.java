@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 import com.capstone.steam.common.exception.ApiException;
 
-/** Cloudinary no responde o devuelve algo que no se entiende (502). */
+/** Cloudinary non risponde o restituisce qualcosa che non si capisce (502). */
 public class CoverUploadException extends ApiException {
 
     public CoverUploadException(Throwable cause) {

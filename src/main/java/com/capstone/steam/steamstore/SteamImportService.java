@@ -21,13 +21,13 @@ import com.capstone.steam.genre.Genre;
 import com.capstone.steam.genre.GenreRepository;
 
 /**
- * Alta de un juego a partir de su ficha de Steam: título, descripción en es/en/it, fecha, géneros,
- * portada y precio. Queda como borrador del developer, enlazado por AppID para sincronizar el precio.
+ * Creazione di un gioco a partire dalla sua scheda di Steam: titolo, descrizione in es/en/it, data, generi,
+ * copertina e prezzo. Resta come bozza del developer, collegato per AppID per sincronizzare il prezzo.
  */
 @Service
 public class SteamImportService {
 
-    /** Géneros de Steam (id) que existen en la tienda (slug). El resto de géneros de Steam se ignoran. */
+    /** Generi di Steam (id) che esistono nello store (slug). Gli altri generi di Steam si ignorano. */
     static final Map<String, String> GENRES = Map.of(
             "1", "action",
             "25", "adventure",
@@ -57,7 +57,7 @@ public class SteamImportService {
         if (gameRepository.existsBySteamAppId(appId)) {
             throw new ConflictException("game.steamAppIdTaken", String.valueOf(appId));
         }
-        // primero Steam (fuera de la transacción); la ficha en inglés manda en título y fecha
+        // prima Steam (fuori dalla transazione); la scheda in inglese prevale su titolo e data
         SteamApp en = steam.app(appId, "en").orElseThrow(() -> new NotFoundException("steam.notFound",
                 String.valueOf(appId)));
         SteamApp es = steam.app(appId, "es").orElse(en);
@@ -91,7 +91,7 @@ public class SteamImportService {
         });
     }
 
-    /** Portada vertical del CDN de Steam (la que usa el resto del catálogo). */
+    /** Copertina verticale della CDN di Steam (quella che usa il resto del catalogo). */
     static String coverUrl(int appId) {
         return "https://cdn.cloudflare.steamstatic.com/steam/apps/" + appId + "/library_600x900_2x.jpg";
     }

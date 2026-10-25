@@ -21,8 +21,8 @@ import com.capstone.steam.library.LibraryRepository;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Lee el catálogo publicado (sin los juegos del usuario) en una transacción corta y lo devuelve ya copiado en objetos inmutables:
- * así la llamada al modelo (lenta) no retiene ninguna conexión de la base de datos.
+ * Legge il catalogo pubblicato (senza i giochi dell'utente) in una transazione breve e lo restituisce già copiato in oggetti immutabili:
+ * così la chiamata al modello (lenta) non trattiene nessuna connessione del database.
  */
 @Component
 public class RecommendationCatalog {
@@ -31,7 +31,7 @@ public class RecommendationCatalog {
     static final int MAX_TITLE = 100;
     static final int MAX_GAMES = 200;
 
-    /** Las líneas del prompt y los juegos por id, listos para devolverse al cliente. */
+    /** Le righe del prompt e i giochi per id, pronti da restituire al client. */
     record Snapshot(List<String> lines, Map<Long, GameSummaryResponse> games) {
     }
 
@@ -47,9 +47,9 @@ public class RecommendationCatalog {
 
     @Transactional(readOnly = true)
     public Snapshot load(long userId, Locale locale) {
-        // lo que el usuario ya tiene (biblioteca) o desarrolla no se le recomienda
+        // ciò che l'utente ha già (libreria) o sviluppa non gli viene raccomandato
         Set<Long> owned = library.findGameIdsByUserId(userId);
-        // tope para que el prompt no crezca sin fin: los más reseñados primero, y a igualdad el id menor
+        // tetto perché il prompt non cresca all'infinito: prima i più recensiti e, a parità, l'id minore
         List<Game> published = games.findWithDetailsByStatusOrderByIdAsc(GameStatus.PUBLISHED).stream()
                 .filter(g -> !owned.contains(g.getId()) && !Long.valueOf(userId).equals(g.getDeveloper().getId()))
                 .sorted(Comparator.comparingInt(Game::getReviewCount).reversed().thenComparing(Game::getId))
@@ -61,7 +61,7 @@ public class RecommendationCatalog {
         return new Snapshot(lines, byId);
     }
 
-    /** Un juego como una línea JSON: Jackson escapa todo, así un título no puede abrir una línea nueva. */
+    /** Un gioco come riga JSON: Jackson fa l'escape di tutto, così un titolo non può aprire una nuova riga. */
     private String line(Game g, Locale locale) {
         Map<String, Object> fields = new LinkedHashMap<>();
         fields.put("id", g.getId());
@@ -75,8 +75,8 @@ public class RecommendationCatalog {
     }
 
     /**
-     * Texto de la tienda aplanado: sin caracteres de control ni saltos de línea, con los espacios
-     * colapsados, sin {@code <} ni {@code >} (para que no cierre el delimitador del catálogo) y cortado.
+     * Testo dello store appiattito: senza caratteri di controllo né a capo, con gli spazi
+     * compressi, senza {@code <} né {@code >} (perché non chiuda il delimitatore del catalogo) e troncato.
      */
     static String flatten(String text, int max) {
         if (text == null) {

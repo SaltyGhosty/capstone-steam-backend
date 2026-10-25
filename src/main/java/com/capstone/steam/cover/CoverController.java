@@ -15,8 +15,8 @@ import com.capstone.steam.game.dto.GameDetailResponse;
 import com.capstone.steam.security.AppUserPrincipal;
 
 /**
- * Subida de portadas. Las reglas de URL de SecurityConfig ya limitan {@code /api/developer/**}
- * a developers y {@code /api/admin/**} a admins; el estado solo pide sesión.
+ * Caricamento delle copertine. Le regole URL di SecurityConfig limitano già {@code /api/developer/**}
+ * ai developer e {@code /api/admin/**} agli admin; lo stato richiede solo la sessione.
  */
 @RestController
 public class CoverController {
@@ -38,7 +38,7 @@ public class CoverController {
         return covers.uploadAsAdmin(id, file);
     }
 
-    /** El frontend lo consulta para mostrar (o no) el botón de subir portada. */
+    /** Il frontend lo consulta per mostrare (o no) il pulsante di caricamento della copertina. */
     @GetMapping("/api/uploads/covers/status")
     public Map<String, Boolean> status() {
         return Map.of("enabled", covers.enabled());

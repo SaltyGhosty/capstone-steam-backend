@@ -1,12 +1,12 @@
 package com.capstone.steam.steamstore;
 
 /**
- * Resumen de una sincronización de precios.
+ * Riepilogo di una sincronizzazione dei prezzi.
  *
- * @param checked  juegos enlazados con Steam
- * @param updated  juegos cuyo precio o descuento ha cambiado
- * @param newSales juegos publicados que han entrado en oferta (o la han mejorado)
- * @param notified avisos enviados a wishlists
+ * @param checked  giochi collegati a Steam
+ * @param updated  giochi il cui prezzo o sconto è cambiato
+ * @param newSales giochi pubblicati che sono andati in offerta (o l'hanno migliorata)
+ * @param notified avvisi inviati alle wishlist
  */
 public record SyncResult(int checked, int updated, int newSales, int notified) {
 }

@@ -24,9 +24,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Recomienda juegos del catálogo con un modelo de lenguaje. El catálogo publicado va entero en el
- * prompt de sistema; el texto del usuario va solo en mensajes {@code user}, nunca en el sistema.
- * Lo que el modelo devuelva se trata como no fiable: solo salen juegos publicados que existen.
+ * Raccomanda giochi del catalogo con un modello linguistico. Il catalogo pubblicato va intero nel
+ * prompt di sistema; il testo dell'utente va solo in messaggi {@code user}, mai nel sistema.
+ * Ciò che il modello restituisce è trattato come non affidabile: escono solo giochi pubblicati che esistono.
  */
 @Service
 public class RecommendationService {
@@ -40,7 +40,7 @@ public class RecommendationService {
     private final ChatModel model;
     private final ChatRateLimiter limiter;
     private final JsonMapper json;
-    /** Solo para leer la respuesta del modelo: admite caracteres de control sin escapar dentro de las cadenas. */
+    /** Solo per leggere la risposta del modello: ammette caratteri di controllo non escapati dentro le stringhe. */
     private final JsonMapper lenient;
 
     public RecommendationService(RecommendationCatalog catalog, ChatModel model, ChatRateLimiter limiter, JsonMapper json) {
@@ -51,9 +51,9 @@ public class RecommendationService {
         this.lenient = json.rebuild().enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS).build();
     }
 
-    /** Sin transacción: el catálogo se lee en {@link RecommendationCatalog} y el modelo se llama después. */
+    /** Senza transazione: il catalogo si legge in {@link RecommendationCatalog} e il modello si chiama dopo. */
     public ChatResponse chat(long userId, List<ChatMessage> messages) {
-        // un mensaje mal formado se rechaza antes de contar para el límite
+        // un messaggio malformato viene rifiutato prima di contare per il limite
         if (messages.getLast().role() != Role.user) {
             throw new BadRequestException("assistant.lastMustBeUser");
         }
@@ -75,8 +75,6 @@ public class RecommendationService {
                 (System.nanoTime() - start) / 1_000_000);
         return response;
     }
-
-    // ------------------------------------------------------------------
 
     private static String systemPrompt(List<String> lines, Locale locale) {
         StringBuilder sb = new StringBuilder("""
@@ -108,14 +106,14 @@ public class RecommendationService {
         };
     }
 
-    /** Lee {@code {"reply","gameIds"}}, aunque venga entre ``` o con texto alrededor. */
+    /** Legge {@code {"reply","gameIds"}}, anche se arriva tra ``` o con testo intorno. */
     private ChatResponse parse(String raw, Map<Long, GameSummaryResponse> byId) {
         try {
             return doParse(raw, byId);
         } catch (AssistantUnavailableException e) {
             throw e;
         } catch (RuntimeException e) {
-            // nada de lo que diga el modelo puede acabar en un 500
+            // niente di ciò che dice il modello può finire in un 500
             throw new AssistantUnavailableException(e);
         }
     }
@@ -145,7 +143,7 @@ public class RecommendationService {
         return new ChatResponse(cut(reply.asString().strip()), picked);
     }
 
-    /** Como mucho 500 caracteres (lo que admite el chat al reenviar el historial): corta por un espacio y añade «…». */
+    /** Al massimo 500 caratteri (quanto ammette la chat al rinviare lo storico): taglia a uno spazio e aggiunge «…». */
     private static String cut(String reply) {
         if (reply.length() <= MAX_REPLY) {
             return reply;
@@ -165,13 +163,13 @@ public class RecommendationService {
                     return root;
                 }
             }
-            // este {…} no era la respuesta: prueba con la siguiente llave
+            // questo {…} non era la risposta: prova con la graffa successiva
             start = raw.indexOf('{', start + 1);
         }
         throw new AssistantUnavailableException();
     }
 
-    /** Lee un objeto; si falla por un salto de línea literal dentro de una cadena, lo reintenta más permisivo. */
+    /** Legge un oggetto; se fallisce per un a capo letterale dentro una stringa, riprova in modo più permissivo. */
     private JsonNode tryRead(String candidate) {
         try {
             return json.readTree(candidate);
@@ -184,7 +182,7 @@ public class RecommendationService {
         }
     }
 
-    /** Índice de la llave que cierra el objeto abierto en {@code start}, o -1 si no se cierra. */
+    /** Indice della graffa che chiude l'oggetto aperto in {@code start}, o -1 se non si chiude. */
     private static int endOfObject(String text, int start) {
         int depth = 0;
         boolean inString = false;
@@ -192,7 +190,7 @@ public class RecommendationService {
             char c = text.charAt(i);
             if (inString) {
                 if (c == '\\') {
-                    i++; // el carácter escapado no cierra la cadena
+                    i++; // il carattere escapato non chiude la stringa
                 } else if (c == '"') {
                     inString = false;
                 }

@@ -2,17 +2,17 @@ package com.capstone.steam.cover;
 
 import java.util.Optional;
 
-/** Formatos de portada admitidos. El tipo sale de los bytes del archivo, nunca de su nombre ni de su Content-Type. */
+/** Formati di copertina ammessi. Il tipo si ricava dai byte del file, mai dal nome né dal Content-Type. */
 public enum ImageType {
     JPEG, PNG, WEBP;
 
-    /** Cuántos bytes iniciales hacen falta para reconocer cualquiera de los formatos. */
+    /** Quanti byte iniziali servono per riconoscere uno qualsiasi dei formati. */
     public static final int HEADER_SIZE = 12;
 
     private static final byte[] JPEG_MAGIC = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
     private static final byte[] PNG_MAGIC = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
 
-    /** Detecta el formato por los bytes mágicos; vacío si no es JPEG, PNG ni WebP. */
+    /** Rileva il formato dai magic bytes; vuoto se non è JPEG, PNG né WebP. */
     public static Optional<ImageType> detect(byte[] head) {
         if (head == null) {
             return Optional.empty();
@@ -23,7 +23,7 @@ public enum ImageType {
         if (startsWith(head, 0, PNG_MAGIC)) {
             return Optional.of(PNG);
         }
-        // WebP: "RIFF" + 4 bytes de tamaño + "WEBP"
+        // WebP: "RIFF" + 4 byte di dimensione + "WEBP"
         if (startsWith(head, 0, ascii("RIFF")) && startsWith(head, 8, ascii("WEBP"))) {
             return Optional.of(WEBP);
         }
@@ -46,7 +46,7 @@ public enum ImageType {
         return text.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
     }
 
-    /** Content-Type con el que se manda el archivo a Cloudinary. */
+    /** Content-Type con cui si invia il file a Cloudinary. */
     public String mediaType() {
         return switch (this) {
             case JPEG -> "image/jpeg";

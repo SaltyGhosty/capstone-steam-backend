@@ -4,14 +4,14 @@ import java.util.List;
 
 import com.capstone.steam.recommendation.dto.ChatMessage;
 
-/** El modelo de lenguaje detrás del chat; detrás de una interfaz para simularlo en los tests. */
+/** Il modello linguistico dietro la chat; dietro un'interfaccia per simularlo nei test. */
 public interface ChatModel {
 
     /**
-     * Pide una respuesta al modelo.
+     * Chiede una risposta al modello.
      *
-     * @return el texto del primer {@code choice}
-     * @throws AssistantUnavailableException si no hay clave, hay error de red o de cupo, o la respuesta no sirve
+     * @return il testo del primo {@code choice}
+     * @throws AssistantUnavailableException se non c'è la chiave, c'è un errore di rete o di quota, o la risposta non serve
      */
     String complete(String system, List<ChatMessage> messages);
 }

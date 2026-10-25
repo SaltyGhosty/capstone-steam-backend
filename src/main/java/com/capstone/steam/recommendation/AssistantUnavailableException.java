@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 import com.capstone.steam.common.exception.ApiException;
 
-/** El asistente no puede contestar: sin clave, sin red, sin cupo o con una respuesta inservible (503). */
+/** L'assistente non può rispondere: senza chiave, senza rete, senza quota o con una risposta inutilizzabile (503). */
 public class AssistantUnavailableException extends ApiException {
 
     public AssistantUnavailableException() {

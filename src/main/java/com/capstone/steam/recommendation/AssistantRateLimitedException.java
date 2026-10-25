@@ -1,6 +1,6 @@
 package com.capstone.steam.recommendation;
 
-/** OpenRouter respondió 429 (sin cupo): sigue siendo un 503 para el cliente, pero activa el cortocircuito. */
+/** OpenRouter ha risposto 429 (senza quota): per il client resta un 503, ma attiva il cortocircuito. */
 public class AssistantRateLimitedException extends AssistantUnavailableException {
 
     public AssistantRateLimitedException(Throwable cause) {

@@ -7,6 +7,6 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/** Los últimos mensajes de la conversación (máximo 10); el último tiene que ser del usuario. */
+/** Gli ultimi messaggi della conversazione (massimo 10); l'ultimo deve essere dell'utente. */
 public record ChatRequest(@NotEmpty @Size(max = 10) List<@NotNull @Valid ChatMessage> messages) {
 }

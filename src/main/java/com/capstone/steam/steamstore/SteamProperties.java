@@ -5,13 +5,13 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Conexión con la API pública de la tienda de Steam (store.steampowered.com/api, sin clave).
+ * Connessione con l'API pubblica dello store di Steam (store.steampowered.com/api, senza chiave).
  *
- * @param syncEnabled sincroniza precios solo (al arrancar y según {@code syncCron}); el botón del admin funciona siempre
- * @param syncCron    cada cuánto se sincronizan los precios
- * @param country     país de la tienda, que fija la moneda (es → euros)
- * @param baseUrl     raíz de la API (se cambia en tests)
- * @param timeout     tiempo máximo de cada petición a Steam
+ * @param syncEnabled sincronizza i prezzi da solo (all'avvio e secondo {@code syncCron}); il pulsante dell'admin funziona sempre
+ * @param syncCron    ogni quanto si sincronizzano i prezzi
+ * @param country     paese dello store, che fissa la valuta (es → euro)
+ * @param baseUrl     radice dell'API (si cambia nei test)
+ * @param timeout     tempo massimo di ogni richiesta a Steam
  */
 @ConfigurationProperties("app.steam")
 public record SteamProperties(boolean syncEnabled, String syncCron, String country, String baseUrl, Duration timeout) {

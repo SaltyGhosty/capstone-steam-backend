@@ -13,20 +13,20 @@ import org.springframework.stereotype.Component;
 import com.capstone.steam.common.exception.TooManyRequestsException;
 
 /**
- * Límite por usuario: {@value #MAX_PER_WINDOW} mensajes por hora con ventana deslizante, en memoria
- * (se pierde al reiniciar, y no se comparte entre instancias: basta para una sola instancia).
- * Las entradas sin mensajes recientes se borran para que el mapa no crezca sin fin.
+ * Limite per utente: {@value #MAX_PER_WINDOW} messaggi all'ora con finestra scorrevole, in memoria
+ * (si perde al riavvio e non è condiviso tra istanze: basta per una sola istanza).
+ * Le voci senza messaggi recenti vengono cancellate perché la mappa non cresca all'infinito.
  */
 @Component
 public class ChatRateLimiter {
 
     static final int MAX_PER_WINDOW = 20;
     static final Duration WINDOW = Duration.ofHours(1);
-    /** Cada cuánto se barren los usuarios que ya no han vuelto. */
+    /** Ogni quanto si ripuliscono gli utenti che non sono tornati. */
     private static final Duration SWEEP_EVERY = Duration.ofMinutes(5);
 
     private final ConcurrentHashMap<Long, Deque<Instant>> hits = new ConcurrentHashMap<>();
-    /** Mensajes de todos los usuarios en la última hora (para el tope global). */
+    /** Messaggi di tutti gli utenti nell'ultima ora (per il tetto globale). */
     private final Deque<Instant> global = new ArrayDeque<>();
     private final Clock clock;
     private final int globalPerHour;
@@ -50,14 +50,14 @@ public class ChatRateLimiter {
         this.nextSweep = clock.instant().plus(SWEEP_EVERY);
     }
 
-    /** OpenRouter dijo 429: durante el enfriamiento no se llama al modelo. */
+    /** OpenRouter ha detto 429: durante il raffreddamento non si chiama il modello. */
     public void startCooldown() {
         cooldownUntil = clock.instant().plus(cooldown);
     }
 
     /**
-     * Anota un mensaje del usuario. Lanza 503 durante el enfriamiento o si el tope global de la hora
-     * está lleno, y 429 si el usuario ya tiene {@value #MAX_PER_WINDOW} en la última hora.
+     * Registra un messaggio dell'utente. Lancia 503 durante il raffreddamento o se il tetto globale dell'ora
+     * è pieno, e 429 se l'utente ne ha già {@value #MAX_PER_WINDOW} nell'ultima ora.
      */
     public void acquire(long userId) {
         Instant now = clock.instant();
@@ -89,7 +89,7 @@ public class ChatRateLimiter {
         }
     }
 
-    /** Usuarios con mensajes en el mapa (para los tests). */
+    /** Utenti con messaggi nella mappa (per i test). */
     int trackedUsers() {
         return hits.size();
     }

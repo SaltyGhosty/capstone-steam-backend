@@ -7,14 +7,14 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Conexión con OpenRouter (API compatible con OpenAI).
+ * Connessione con OpenRouter (API compatibile con OpenAI).
  *
- * @param apiKey        clave de OpenRouter; vacía = el asistente está desactivado
- * @param model         modelo, o varios separados por comas (el primero es el preferido y los demás, la reserva)
- * @param baseUrl       raíz de la API (se cambia en tests)
- * @param timeout       tiempo máximo de cada petición
- * @param globalPerHour tope de mensajes por hora entre todos los usuarios (por defecto 200)
- * @param cooldown      cuánto se deja de llamar al modelo tras un 429 de OpenRouter (por defecto 5 min)
+ * @param apiKey        chiave di OpenRouter; vuota = l'assistente è disattivato
+ * @param model         modello, o più modelli separati da virgole (il primo è il preferito e gli altri, la riserva)
+ * @param baseUrl       radice dell'API (si cambia nei test)
+ * @param timeout       tempo massimo di ogni richiesta
+ * @param globalPerHour tetto di messaggi all'ora tra tutti gli utenti (per default 200)
+ * @param cooldown      per quanto si smette di chiamare il modello dopo un 429 di OpenRouter (per default 5 min)
  */
 @ConfigurationProperties("app.openrouter")
 public record OpenRouterProperties(String apiKey, String model, String baseUrl, Duration timeout,
@@ -36,7 +36,7 @@ public record OpenRouterProperties(String apiKey, String model, String baseUrl, 
         return apiKey != null && !apiKey.isBlank();
     }
 
-    /** Los modelos de {@code model}: partido por comas, sin espacios sobrantes ni vacíos. */
+    /** I modelli di {@code model}: divisi per virgole, senza spazi in eccesso né voci vuote. */
     public List<String> models() {
         if (model == null) {
             return List.of();
@@ -44,7 +44,7 @@ public record OpenRouterProperties(String apiKey, String model, String baseUrl, 
         return Arrays.stream(model.split(",")).map(String::trim).filter(m -> !m.isEmpty()).toList();
     }
 
-    /** Nunca imprime la clave. */
+    /** Non stampa mai la chiave. */
     @Override
     public String toString() {
         return "OpenRouterProperties[apiKey=" + (enabled() ? "***" : "(vacía)") + ", model=" + model

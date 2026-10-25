@@ -4,11 +4,11 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Ficha de un juego en Steam, en un idioma.
+ * Scheda di un gioco su Steam, in una lingua.
  *
- * @param description descripción corta, ya en texto plano
- * @param genreIds    ids de género de Steam ("1" = Action...)
- * @param price       null si Steam no da precio (juego gratuito o aún sin precio)
+ * @param description descrizione breve, già in testo semplice
+ * @param genreIds    id di genere di Steam ("1" = Action...)
+ * @param price       null se Steam non dà un prezzo (gioco gratuito o ancora senza prezzo)
  */
 public record SteamApp(int appId, String name, String description, LocalDate releaseDate, List<String> genreIds,
         boolean free, SteamPrice price) {
