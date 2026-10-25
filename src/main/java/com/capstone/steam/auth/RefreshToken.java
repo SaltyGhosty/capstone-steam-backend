@@ -11,7 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** Refresh token guardado solo como hash. Los de una misma sesión comparten {@code familyId}. */
+/** Refresh token salvato solo come hash. Quelli di una stessa sessione condividono {@code familyId}. */
 @Entity
 @Table(name = "refresh_tokens")
 public class RefreshToken {
@@ -23,7 +23,7 @@ public class RefreshToken {
     @Column(name = "user_id", nullable = false, updatable = false)
     private Long userId;
 
-    /** SHA-256 en hex (64 caracteres) del token en claro. */
+    /** SHA-256 in hex (64 caratteri) del token in chiaro. */
     @Column(name = "token_hash", nullable = false, updatable = false, length = 64)
     private String tokenHash;
 

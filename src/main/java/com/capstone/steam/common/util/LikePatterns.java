@@ -1,14 +1,14 @@
 package com.capstone.steam.common.util;
 
-/** Ayudas para consultas LIKE con texto del usuario. */
+/** Aiuti per query LIKE con testo dell'utente. */
 public final class LikePatterns {
 
     private LikePatterns() {
     }
 
     /**
-     * Patron "contiene" para {@code like ... escape '!'}: escapa % y _ con "!" para que el texto del usuario
-     * nunca actue como comodin.
+     * Pattern "contiene" per {@code like ... escape '!'}: fa l'escape di % e _ con "!" perché il testo dell'utente
+     * non agisca mai da carattere jolly.
      */
     public static String contains(String term) {
         String escaped = term.replace("!", "!!").replace("%", "!%").replace("_", "!_");

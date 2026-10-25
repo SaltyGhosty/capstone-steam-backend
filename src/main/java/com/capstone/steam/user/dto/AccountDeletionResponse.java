@@ -2,6 +2,6 @@ package com.capstone.steam.user.dto;
 
 import java.time.Instant;
 
-/** Cuándo se eliminará la cuenta si no se recupera antes. */
+/** Quando verrà eliminato l'account se non viene recuperato prima. */
 public record AccountDeletionResponse(Instant deletionScheduledAt) {
 }

@@ -48,21 +48,21 @@ public class AuthController {
         return authService.login(request);
     }
 
-    /** Cancela la baja programada por el propio dueño y le inicia la sesión. Cuenta con el límite por IP. */
+    /** Annulla la cancellazione programmata da parte del proprietario e avvia la sessione. Conta nel limite per IP. */
     @PostMapping("/recover-account")
     public AuthResponse recoverAccount(@Valid @RequestBody RecoverAccountRequest request, HttpServletRequest http) {
         ipLimiter.checkAddress(http.getRemoteAddr());
         return authService.recoverAccount(request.login(), request.password());
     }
 
-    /** Canjea el enlace del correo: verifica el email e inicia la sesión. */
+    /** Riscatta il link dell'email: verifica l'email e avvia la sessione. */
     @PostMapping("/verify-email")
     public AuthResponse verifyEmail(@Valid @RequestBody VerifyEmailRequest request, HttpServletRequest http) {
         ipLimiter.checkAddress(http.getRemoteAddr());
         return authService.verifyEmail(request.token(), request.password());
     }
 
-    /** De qué cuenta es el enlace (si sigue vigente), para que la página pida su contraseña. Idempotente. */
+    /** A quale account appartiene il link (se è ancora valido), perché la pagina chieda la sua password. Idempotente. */
     @PostMapping("/verify-email/preview")
     public VerificationPreview previewVerification(@Valid @RequestBody VerificationPreviewRequest request,
             HttpServletRequest http) {
@@ -70,7 +70,7 @@ public class AuthController {
         return new VerificationPreview(verificationService.preview(request.token()));
     }
 
-    /** Siempre 204: no revela si el email existe ni si ya está verificado. Máximo 3 por hora y email. */
+    /** Sempre 204: non rivela se l'email esiste né se è già verificata. Massimo 3 all'ora per email. */
     @PostMapping("/resend-verification")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void resendVerification(@Valid @RequestBody ResendVerificationRequest request, HttpServletRequest http) {
@@ -78,13 +78,13 @@ public class AuthController {
         verificationService.resend(request.email());
     }
 
-    /** Canjea un refresh token por un acceso y un refresh nuevos. */
+    /** Scambia un refresh token con un nuovo access token e un nuovo refresh token. */
     @PostMapping("/refresh")
     public AuthResponse refresh(@Valid @RequestBody RefreshRequest request) {
         return authService.refresh(request.refreshToken());
     }
 
-    /** Cierra la sesión del refresh token dado; idempotente. */
+    /** Chiude la sessione del refresh token indicato; idempotente. */
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(@Valid @RequestBody RefreshRequest request) {

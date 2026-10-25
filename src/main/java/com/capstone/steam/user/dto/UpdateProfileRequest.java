@@ -5,7 +5,7 @@ import org.hibernate.validator.constraints.URL;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/** Campos null = no se modifican. */
+/** Campi null = non si modificano. */
 public record UpdateProfileRequest(
         @Size(min = 1, max = 100) String displayName,
         @URL(regexp = "(?i)^(https?://.+)?$") @Size(max = 500) String avatarUrl,

@@ -23,7 +23,7 @@ import com.capstone.steam.user.dto.UserResponse;
 
 import jakarta.validation.Valid;
 
-/** Protegido por la regla /api/admin/** de SecurityConfig (solo ADMIN). */
+/** Protetto dalla regola /api/admin/** di SecurityConfig (solo ADMIN). */
 @RestController
 @RequestMapping("/api/admin/users")
 public class AdminUserController {
@@ -48,7 +48,7 @@ public class AdminUserController {
         return userService.updateRoles(admin.getId(), id, request.roles());
     }
 
-    /** Da el email de la cuenta por verificado (soporte y seed). Idempotente. */
+    /** Segna l'email dell'account come verificata (supporto e seed). Idempotente. */
     @PostMapping("/{id}/verify-email")
     public UserResponse verifyEmail(@PathVariable Long id) {
         return userService.verifyEmail(id);
@@ -60,7 +60,7 @@ public class AdminUserController {
         return userService.setEnabled(admin.getId(), id, request.enabled());
     }
 
-    /** Programa la baja de una cuenta (14 días de margen). */
+    /** Programma la cancellazione di un account (14 giorni di margine). */
     @DeleteMapping("/{id}")
     public UserResponse scheduleDeletion(@AuthenticationPrincipal AppUserPrincipal admin, @PathVariable Long id) {
         return accountDeletionService.scheduleByAdmin(admin.getId(), id);

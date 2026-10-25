@@ -14,11 +14,11 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
- * Pool de hilos PROPIO para el correo: un SMTP lento (Gmail puede tardar segundos) nunca
- * ocupa los hilos de Tomcat ni los de otras tareas @Async.
+ * Pool di thread PROPRIO per l'email: un SMTP lento (Gmail può impiegare secondi) non
+ * occupa mai i thread di Tomcat né quelli di altri task @Async.
  *
- * <p>Saturación: con los hilos ocupados y la cola llena, CallerRunsPolicy ejecuta el envío en el
- * hilo que publicó el evento (ya después del commit). Es más lento, pero no se pierde ningún correo.
+ * <p>Saturazione: con i thread occupati e la coda piena, CallerRunsPolicy esegue l'invio nel
+ * thread che ha pubblicato l'evento (già dopo il commit). È più lento, ma nessuna email va persa.
  */
 @Configuration
 @EnableAsync
@@ -36,15 +36,15 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setMaxPoolSize(properties.maxPoolSize());
         executor.setQueueCapacity(properties.queueCapacity());
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        // al apagar la app se terminan de enviar los correos en cola (máx. 30 s)
+        // allo spegnimento dell'app si finisce di inviare le email in coda (max 30 s)
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(30);
         return executor;
     }
 
     /**
-     * Red de seguridad para métodos @Async void: sin esto, una excepción se perdería en silencio.
-     * Solo se registra el tipo de cada parámetro: los eventos de correo llevan emails.
+     * Rete di sicurezza per i metodi @Async void: senza questo, un'eccezione andrebbe persa in silenzio.
+     * Si registra solo il tipo di ogni parametro: gli eventi email contengono indirizzi email.
      */
     @Override
     public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {

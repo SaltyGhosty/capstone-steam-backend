@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.capstone.steam.user.UserRepository;
 
-/** Solo se usa en el login (AuthenticationManager). El resto de peticiones se autentican por JWT. */
+/** Usato solo al login (AuthenticationManager). Le altre richieste si autenticano tramite JWT. */
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
 

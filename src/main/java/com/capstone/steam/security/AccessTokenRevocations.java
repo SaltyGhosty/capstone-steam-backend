@@ -10,10 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Marcas de revocación de access tokens por usuario (D16). Al desactivar una cuenta o cambiar sus roles
- * se guarda el instante; todo token emitido en ese segundo o antes se rechaza, sin consultar la BD.
- * Las marcas se olvidan pasada la vida del access token (ya no puede quedar ningún token anterior válido).
- * Está en memoria: se pierde al reiniciar y no se comparte entre instancias.
+ * Marche di revoca degli access token per utente (D16). Quando si disattiva un account o ne cambiano i ruoli
+ * si salva l'istante; ogni token emesso in quel secondo o prima viene rifiutato, senza interrogare il DB.
+ * Le marche si dimenticano passata la vita dell'access token (non può più restare nessun token precedente valido).
+ * È in memoria: si perde al riavvio e non è condivisa tra istanze.
  */
 @Component
 public class AccessTokenRevocations {
@@ -37,7 +37,7 @@ public class AccessTokenRevocations {
         revokedAt.put(userId, clock.instant());
     }
 
-    /** true si hay marca del usuario y el token se emitió en el mismo segundo de la marca o antes (el iat tiene precisión de segundos). */
+    /** true se esiste una marca dell'utente e il token è stato emesso nello stesso secondo della marca o prima (l'iat ha precisione di secondi). */
     public boolean isRevoked(Long userId, Instant issuedAt) {
         Instant mark = revokedAt.get(userId);
         if (mark == null) {

@@ -9,9 +9,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Crea el primer ADMIN al arrancar (ADMIN_USERNAME / ADMIN_EMAIL / ADMIN_PASSWORD).
- * Es idempotente: si ya existe un usuario con ese email o username no hace nada.
- * Nadie puede registrarse como ADMIN por la API; los demás admins los nombra este.
+ * Crea il primo ADMIN all'avvio (ADMIN_USERNAME / ADMIN_EMAIL / ADMIN_PASSWORD).
+ * È idempotente: se esiste già un utente con quell'email o username non fa nulla.
+ * Nessuno può registrarsi come ADMIN tramite l'API; gli altri admin li nomina questo.
  */
 @Component
 public class AdminAccountInitializer implements ApplicationRunner {

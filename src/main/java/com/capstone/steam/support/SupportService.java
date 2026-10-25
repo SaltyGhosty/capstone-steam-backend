@@ -12,8 +12,8 @@ import com.capstone.steam.user.User;
 import com.capstone.steam.user.UserRepository;
 
 /**
- * Recibe el mensaje del formulario de asistencia y lo convierte en un evento de correo. No guarda nada en la base de
- * datos: el mensaje solo existe en el buzón de soporte. Sin transacción.
+ * Riceve il messaggio del form di assistenza e lo trasforma in un evento email. Non salva nulla nel
+ * database: il messaggio esiste solo nella casella del supporto. Senza transazione.
  */
 @Service
 public class SupportService {
@@ -28,7 +28,7 @@ public class SupportService {
         this.events = events;
     }
 
-    /** @param userId id de la sesión, o null si quien escribe es anónimo */
+    /** @param userId id della sessione, o null se chi scrive è anonimo */
     public void submit(Long userId, SupportRequest request) {
         User user = userId == null ? null : users.findById(userId).orElse(null);
         String email = user != null ? user.getEmail() : request.email();

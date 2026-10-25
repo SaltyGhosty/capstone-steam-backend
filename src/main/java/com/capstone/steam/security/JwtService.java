@@ -17,7 +17,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
-/** Emite y valida access tokens HS256. Claims: sub = id del usuario, username y roles. */
+/** Emette e valida access token HS256. Claims: sub = id dell'utente, username e ruoli. */
 @Service
 public class JwtService {
 
@@ -59,7 +59,7 @@ public class JwtService {
     }
 
     /**
-     * @throws JwtException si la firma no es válida, el token ha caducado o está mal formado
+     * @throws JwtException se la firma non è valida, il token è scaduto o è malformato
      */
     public AppUserPrincipal parseToken(String token) {
         Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();

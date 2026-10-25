@@ -64,8 +64,8 @@ public class AuthService {
     }
 
     /**
-     * Con la verificación de email activa crea la cuenta sin sesión y manda el enlace por correo
-     * ({@link RegisterResponse}); desactivada, la cuenta nace verificada y devuelve la sesión.
+     * Con la verifica email attiva crea l'account senza sessione e invia il link per email
+     * ({@link RegisterResponse}); se è disattivata, l'account nasce verificato e restituisce la sessione.
      */
     @Transactional
     public RegistrationResult register(RegisterRequest request) {
@@ -73,14 +73,14 @@ public class AuthService {
     }
 
     /**
-     * Nadie puede quedarse con un email o un usuario que no ha demostrado suyo:
+     * Nessuno può tenersi un'email o uno username che non ha dimostrato di possedere:
      * <ul>
-     *   <li>Una cuenta verificada o anonimizada nunca se toca (409).</li>
-     *   <li>Con el email de una cuenta <b>sin verificar</b> no se toca la fila: solo se emite otro enlace con los datos
-     *       de esta petición (límite de correos por email). Al verificar se aplican los datos del enlace pulsado.</li>
-     *   <li>Un usuario ocupado por otra cuenta sin verificar se libera solo si esa cuenta es vieja y no tiene datos.</li>
+     *   <li>Un account verificato o anonimizzato non si tocca mai (409).</li>
+     *   <li>Con l'email di un account <b>non verificato</b> non si tocca la riga: si emette solo un altro link con i dati
+     *       di questa richiesta (limite di email per indirizzo). Alla verifica si applicano i dati del link cliccato.</li>
+     *   <li>Uno username occupato da un altro account non verificato si libera solo se quell'account è vecchio e senza dati.</li>
      * </ul>
-     * Las filas implicadas se leen con bloqueo, siempre en orden de id (así dos registros cruzados no se interbloquean).
+     * Le righe coinvolte si leggono con lock, sempre in ordine di id (così due registrazioni incrociate non vanno in deadlock).
      */
     private RegisterResponse registerPendingVerification(RegisterRequest request) {
         String username = request.username().trim();
@@ -93,7 +93,7 @@ public class AuthService {
                 .sorted().toList()) {
             User locked = userRepository.findByIdForUpdate(id).orElse(null);
             if (locked == null) {
-                continue; // la borró otra petición entre la consulta y el bloqueo
+                continue; // cancellato da un'altra richiesta tra la query e il lock
             }
             if (id.equals(emailId)) {
                 byEmail = locked;
@@ -103,7 +103,7 @@ public class AuthService {
             }
         }
 
-        // una fila anonimizada cuenta como verificada aunque no lo esté: sus deleted_<id> están reservados
+        // una riga anonimizzata conta come verificata anche se non lo è: i suoi deleted_<id> sono riservati
         if (byEmail != null && (byEmail.isEmailVerified() || byEmail.isDeleted())) {
             throw new ConflictException("auth.emailTaken");
         }
@@ -114,11 +114,11 @@ public class AuthService {
         if (takesOverUsername && !verificationService.isReclaimable(byUsername)) {
             throw new ConflictException("auth.usernameTaken");
         }
-        // El cupo de correos (registro y reenvío lo comparten) solo se gasta cuando el registro se acepta
+        // La quota di email (registrazione e reinvio la condividono) si consuma solo quando la registrazione viene accettata
         verificationService.checkRateLimit(email);
         if (takesOverUsername) {
-            userRepository.delete(byUsername); // sus enlaces caen por ON DELETE CASCADE
-            userRepository.flush(); // el DELETE tiene que ir antes de reutilizar el nombre
+            userRepository.delete(byUsername); // i suoi link cadono con ON DELETE CASCADE
+            userRepository.flush(); // il DELETE deve precedere il riutilizzo del nome
         }
 
         String displayName = request.displayName() != null && !request.displayName().isBlank()
@@ -139,7 +139,7 @@ public class AuthService {
         return new RegisterResponse(user.getId(), email, true);
     }
 
-    /** Nombre visible, idioma y roles de la petición de registro. */
+    /** Nome visibile, lingua e ruoli della richiesta di registrazione. */
     private void applyRegistration(User user, RegisterRequest request) {
         if (request.displayName() != null && !request.displayName().isBlank()) {
             user.setDisplayName(request.displayName().trim());
@@ -164,16 +164,16 @@ public class AuthService {
             throw new ConflictException("auth.emailTaken");
         }
         applyRegistration(user, request);
-        user.setEmailVerified(true); // sin verificación de email, la cuenta nace verificada
+        user.setEmailVerified(true); // senza verifica email, l'account nasce verificato
         userRepository.save(user);
 
-        // El correo de bienvenida sale solo si la transacción hace commit (listener AFTER_COMMIT)
+        // L'email di benvenuto parte solo se la transazione fa commit (listener AFTER_COMMIT)
         events.publishEvent(new UserRegisteredEvent(user.getId(), user.getEmail(), user.getDisplayName(), user.getLocale(), null, username));
 
         return issueToken(user);
     }
 
-    @Transactional // guarda el refresh token
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         User user = authenticate(request.login(), request.password());
         if (user.isPendingDeletion()) {
@@ -183,9 +183,9 @@ public class AuthService {
     }
 
     /**
-     * Desde el 403 del login: con la contraseña correcta, el dueño cancela su baja y entra. Sin baja pendiente
-     * responde igual que el login (no revela más). La decisión (propia, de un admin, anonimizada) la toma
-     * {@code cancelBySelf} sobre la fila bloqueada, no la lectura de {@code authenticate}.
+     * Dal 403 del login: con la password corretta, il proprietario annulla la cancellazione ed entra. Senza cancellazione
+     * in sospeso risponde come il login (non rivela altro). La decisione (propria, di un admin, anonimizzata) la prende
+     * {@code cancelBySelf} sulla riga bloccata, non la lettura di {@code authenticate}.
      */
     @Transactional
     public AuthResponse recoverAccount(String login, String password) {
@@ -194,14 +194,14 @@ public class AuthService {
         return issueToken(user);
     }
 
-    /** Contraseña y estado de la cuenta: lo que comparten el login y la recuperación. */
+    /** Password e stato dell'account: ciò che condividono login e recupero. */
     private User authenticate(String login, String password) {
         var authentication = authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken.unauthenticated(login.trim(), password));
         var principal = (AppUserPrincipal) authentication.getPrincipal();
         User user = userRepository.findWithRolesById(principal.getId())
                 .orElseThrow(() -> NotFoundException.of("user", principal.getId()));
-        // Solo tras acertar la contraseña (y con la cuenta activa, lo comprueba Spring antes): no se revela nada más
+        // Solo dopo aver indovinato la password (e con l'account attivo, lo verifica Spring prima): non si rivela altro
         if (!user.isEmailVerified()) {
             throw new ForbiddenException("auth.emailNotVerified");
         }
@@ -214,25 +214,25 @@ public class AuthService {
         return new AccountPendingDeletionException(code, user.getDeletionScheduledAt());
     }
 
-    /** Canjea el enlace del correo con la contraseña de ese registro: verifica el email e inicia la sesión. */
-    // una cuenta desactivada o en pausa queda verificada igualmente, y la contraseña errónea tiene que contar
-    // (400 sin rollback)
+    /** Riscatta il link dell'email con la password di quella registrazione: verifica l'email e avvia la sessione. */
+    // un account disattivato o in pausa resta comunque verificato, e la password errata deve contare
+    // (400 senza rollback)
     @Transactional(noRollbackFor = {ForbiddenException.class, BadRequestException.class})
     public AuthResponse verifyEmail(String rawToken, String password) {
         User user = verificationService.verify(rawToken, password);
         if (!user.isEnabled()) {
-            throw new ForbiddenException("error.disabled"); // verificada, pero sin sesión
+            throw new ForbiddenException("error.disabled"); // verificato, ma senza sessione
         }
         if (user.isPendingDeletion()) {
-            throw pendingDeletion(user); // el mismo 403 que el login: el enlace no abre sesión durante la pausa
+            throw pendingDeletion(user); // lo stesso 403 del login: il link non apre la sessione durante la pausa
         }
         return issueToken(user);
     }
 
     /**
-     * Rota el refresh token y emite un acceso nuevo con los roles actuales del usuario.
-     * AVISO: la revocación por reutilización solo se guarda porque <b>todas</b> las transacciones de la
-     * cadena (esta y {@code RefreshTokenService.rotate}) llevan {@code noRollbackFor = UnauthorizedException.class}.
+     * Ruota il refresh token ed emette un nuovo access token con i ruoli attuali dell'utente.
+     * ATTENZIONE: la revoca per riutilizzo viene salvata solo perché <b>tutte</b> le transazioni della
+     * catena (questa e {@code RefreshTokenService.rotate}) hanno {@code noRollbackFor = UnauthorizedException.class}.
      */
     @Transactional(noRollbackFor = UnauthorizedException.class)
     public AuthResponse refresh(String refreshToken) {

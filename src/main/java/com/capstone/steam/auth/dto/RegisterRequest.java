@@ -9,7 +9,7 @@ public record RegisterRequest(
         @NotBlank
         @Size(min = 3, max = 50)
         @Pattern(regexp = "^[A-Za-z0-9_.-]+$", message = "{validation.username.pattern}")
-        // reservados para las cuentas anonimizadas (deleted_<id>): ocuparlos antes haría fallar la baja por UNIQUE
+        // riservati agli account anonimizzati (deleted_<id>): occuparli farebbe fallire la cancellazione per UNIQUE
         @Pattern(regexp = "^(?!deleted_).*$", flags = Pattern.Flag.CASE_INSENSITIVE, message = "{validation.reserved}")
         String username,
 
@@ -18,17 +18,17 @@ public record RegisterRequest(
                 message = "{validation.reserved}")
         String email,
 
-        // BCrypt solo usa los primeros 72 bytes
+        // BCrypt usa solo i primi 72 byte
         @NotBlank @Size(min = 8, max = 72)
         String password,
 
         @Size(max = 100)
         String displayName,
 
-        /** Opcional; por defecto PLAYER. */
+        /** Opzionale; di default PLAYER. */
         AccountType accountType,
 
-        /** Opcional; idioma de los correos. Null = "es". */
+        /** Opzionale; lingua delle email. Null = "es". */
         @Pattern(regexp = "^(es|en|it)$", message = "{validation.locale}")
         String locale) {
 }

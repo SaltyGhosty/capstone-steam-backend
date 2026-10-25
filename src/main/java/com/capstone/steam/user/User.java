@@ -22,9 +22,9 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 
 /**
- * {@code @DynamicUpdate}: cada UPDATE escribe solo las columnas cambiadas. Las mutaciones del admin cargan la fila
- * sin bloqueo; escribiendo la fila entera, una copia vieja desharía una baja o una anonimización confirmada entre
- * la carga y el flush.
+ * {@code @DynamicUpdate}: ogni UPDATE scrive solo le colonne modificate. Le mutazioni dell'admin caricano la riga
+ * senza lock; scrivendo la riga intera, una copia vecchia annullerebbe una cancellazione o un'anonimizzazione confermata tra
+ * il caricamento e il flush.
  */
 @Entity
 @DynamicUpdate
@@ -38,7 +38,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 50)
     private String username;
 
-    /** Siempre en minúsculas (lo normaliza el setter). */
+    /** Sempre in minuscolo (lo normalizza il setter). */
     @Column(nullable = false, unique = true)
     private String email;
 
@@ -54,19 +54,19 @@ public class User {
     @Column(nullable = false)
     private boolean enabled = true;
 
-    /** El dueño pulsó el enlace del correo (V12). Separado de {@code enabled}: pendiente no es desactivada. */
+    /** Il proprietario ha cliccato il link dell'email (V12). Separato da {@code enabled}: in sospeso non vuol dire disattivato. */
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
-    /** Idioma de los correos: es, en o it (CHECK ck_users_locale en V5). */
+    /** Lingua delle email: es, en o it (CHECK ck_users_locale in V5). */
     @Column(name = "locale", nullable = false, length = 5)
     private String locale = "es";
 
-    /** Perfil visible para cualquiera con sesión; si no, solo para los amigos (V9). */
+    /** Profilo visibile a chiunque abbia una sessione; altrimenti, solo agli amici (V9). */
     @Column(name = "profile_public", nullable = false)
     private boolean profilePublic = false;
 
-    /** Cuándo se anonimiza la cuenta; null si no hay baja programada (V13). */
+    /** Quando l'account viene anonimizzato; null se non c'è cancellazione programmata (V13). */
     @Column(name = "deletion_scheduled_at")
     private Instant deletionScheduledAt;
 
@@ -74,7 +74,7 @@ public class User {
     @Column(name = "deletion_requested_by", length = 10)
     private DeletionRequester deletionRequestedBy;
 
-    /** Cuándo se anonimizó; null mientras la cuenta siga viva. */
+    /** Quando è stato anonimizzato; null finché l'account è vivo. */
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
@@ -208,7 +208,7 @@ public class User {
         this.deletionRequestedBy = null;
     }
 
-    /** Baja programada y aún sin anonimizar. */
+    /** Cancellazione programmata e non ancora anonimizzata. */
     public boolean isPendingDeletion() {
         return deletionScheduledAt != null && deletedAt == null;
     }
@@ -218,9 +218,9 @@ public class User {
     }
 
     /**
-     * Deja la fila sin datos personales. Los nombres siguen cumpliendo NOT NULL y UNIQUE y liberan los originales.
-     * Queda verificada: los {@code deleted_<id>} están reservados y la limpieza de cuentas sin verificar no los toca.
-     * Los roles se conservan y el borrado de lo que cuelga del usuario es cosa del servicio.
+     * Lascia la riga senza dati personali. I nomi continuano a rispettare NOT NULL e UNIQUE e liberano gli originali.
+     * Resta verificato: i {@code deleted_<id>} sono riservati e la pulizia degli account non verificati non li tocca.
+     * I ruoli si conservano e la cancellazione di ciò che dipende dall'utente spetta al service.
      */
     public void anonymize(String unusablePasswordHash, Instant now) {
         this.username = "deleted_" + id;

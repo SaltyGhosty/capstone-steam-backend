@@ -1,14 +1,14 @@
-# Producción: todo llega por variables de entorno, sin valores por defecto.
-# La BD se puede dar como DB_URL (JDBC completa) o por partes (DB_HOST, DB_PORT, DB_NAME),
-# que es como la expone Render.
+# Produzione: tutto arriva da variabili d'ambiente, senza valori di default.
+# Il DB si può indicare come DB_URL (JDBC completo) o per parti (DB_HOST, DB_PORT, DB_NAME),
+# che è come lo espone Render.
 spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
 
-# Render pone un proxy delante: Tomcat toma la IP real de X-Forwarded-For (la más a la derecha que no sea un proxy
-# interno), así el límite por IP de las rutas de cuenta no ve siempre la IP del proxy ni se puede falsificar
+# Render mette un proxy davanti: Tomcat prende l'IP reale da X-Forwarded-For (il più a destra che non sia un proxy
+# interno), così il limite per IP delle rotte account non vede sempre l'IP del proxy né si può falsificare
 server:
   forward-headers-strategy: native
 

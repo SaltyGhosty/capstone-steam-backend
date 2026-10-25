@@ -3,10 +3,10 @@ package com.capstone.steam.notification.event;
 import java.math.BigDecimal;
 
 /**
- * Pago rechazado: la transacción SÍ hace commit (se guarda el pedido FAILED) y se avisa por correo.
+ * Pagamento rifiutato: la transazione FA commit (si salva l'ordine FAILED) e si avvisa per email.
  *
- * @param reason clave del motivo que da la pasarela (payment.declined.*); se traduce al idioma del correo
- * @param locale idioma del correo (es, en, it), leído del usuario dentro de la transacción
+ * @param reason chiave del motivo dato dal gateway (payment.declined.*); si traduce nella lingua dell'email
+ * @param locale lingua dell'email (es, en, it), letta dall'utente dentro la transazione
  */
 public record PaymentFailedEvent(
         Long orderId,

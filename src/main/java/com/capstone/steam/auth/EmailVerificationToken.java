@@ -11,7 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** Token de verificación de email guardado solo como hash; de un solo uso. */
+/** Token di verifica email salvato solo come hash; monouso. */
 @Entity
 @Table(name = "email_verification_tokens")
 public class EmailVerificationToken {
@@ -23,7 +23,7 @@ public class EmailVerificationToken {
     @Column(name = "user_id", nullable = false, updatable = false)
     private Long userId;
 
-    /** SHA-256 en hex (64 caracteres) del token en claro. */
+    /** SHA-256 in hex (64 caratteri) del token in chiaro. */
     @Column(name = "token_hash", nullable = false, updatable = false, length = 64)
     private String tokenHash;
 
@@ -37,7 +37,7 @@ public class EmailVerificationToken {
     @Column(name = "used_at")
     private Instant usedAt;
 
-    /** Datos del registro que generó este enlace (se aplican a la cuenta al verificar). */
+    /** Dati della registrazione che ha generato questo link (si applicano all'account alla verifica). */
     @Column(name = "username", nullable = false, updatable = false, length = 50)
     private String username;
 
@@ -63,7 +63,7 @@ public class EmailVerificationToken {
         this(userId, tokenHash, expiresAt, data, 0);
     }
 
-    /** {@code failedAttempts}: un enlace de reenvío hereda las contraseñas erróneas del registro del que sale. */
+    /** {@code failedAttempts}: un link di reinvio eredita le password errate della registrazione da cui deriva. */
     public EmailVerificationToken(Long userId, String tokenHash, Instant expiresAt, PendingRegistration data,
             int failedAttempts) {
         this.failedAttempts = failedAttempts;
@@ -77,7 +77,7 @@ public class EmailVerificationToken {
         this.developer = data.developer();
     }
 
-    /** Los datos del registro que guarda este enlace. */
+    /** I dati della registrazione che conserva questo link. */
     public PendingRegistration pending() {
         return new PendingRegistration(username, passwordHash, displayName, locale, developer);
     }

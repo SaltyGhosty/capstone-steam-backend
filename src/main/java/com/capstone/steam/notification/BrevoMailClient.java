@@ -18,12 +18,12 @@ import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Envío por la API HTTP de Brevo ({@code BREVO_API_KEY}). Render free bloquea el SMTP saliente
- * (puertos 25, 465 y 587) desde septiembre de 2025, así que en producción el correo va por HTTPS.
- * Sin clave, {@link EmailService} sigue usando el SMTP de Gmail (desarrollo en local).
+ * Invio tramite l'API HTTP di Brevo ({@code BREVO_API_KEY}). Render free blocca l'SMTP in uscita
+ * (porte 25, 465 e 587) da settembre 2025, quindi in produzione l'email passa per HTTPS.
+ * Senza chiave, {@link EmailService} continua a usare l'SMTP di Gmail (sviluppo in locale).
  *
- * <p>El remitente ({@code MAIL_FROM}) tiene que estar verificado en Brevo. La clave solo viaja en la
- * cabecera {@code api-key}: no sale en logs ni en errores.
+ * <p>Il mittente ({@code MAIL_FROM}) deve essere verificato su Brevo. La chiave viaggia solo nell'
+ * header {@code api-key}: non compare né nei log né negli errori.
  */
 @Component
 public class BrevoMailClient {
@@ -55,8 +55,8 @@ public class BrevoMailClient {
     }
 
     /**
-     * Lanza {@code RestClientException} si Brevo no acepta el correo; {@link #isRetryable} dice si merece otro intento.
-     * {@code replyTo} (opcional) es la dirección a la que responde el destinatario.
+     * Lancia {@code RestClientException} se Brevo non accetta l'email; {@link #isRetryable} dice se vale un altro tentativo.
+     * {@code replyTo} (opzionale) è l'indirizzo a cui risponde il destinatario.
      */
     public void send(String fromEmail, String fromName, String to, String subject, String html, String replyTo) {
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -78,7 +78,7 @@ public class BrevoMailClient {
                 .toBodilessEntity();
     }
 
-    /** Red caída o lenta, 429 y 5xx se reintentan; una clave o un remitente incorrectos (4xx) no cambian por esperar. */
+    /** Rete assente o lenta, 429 e 5xx si ritentano; una chiave o un mittente errati (4xx) non cambiano aspettando. */
     static boolean isRetryable(Throwable ex) {
         if (ex instanceof ResourceAccessException) {
             return true;

@@ -22,12 +22,12 @@ import com.capstone.steam.notification.event.UserRegisteredEvent;
 import com.capstone.steam.notification.event.VerificationEmailEvent;
 
 /**
- * Traduce eventos de dominio en correos.
+ * Traduce gli eventi di dominio in email.
  * <ul>
- *   <li><b>AFTER_COMMIT</b>: solo se envía si la transacción que publicó el evento hizo commit.
- *       Un registro o una compra que hace rollback no genera correo.</li>
- *   <li><b>@Async("mailExecutor")</b>: el envío va al pool dedicado; la petición HTTP responde
- *       sin esperar al SMTP.</li>
+ *   <li><b>AFTER_COMMIT</b>: si invia solo se la transazione che ha pubblicato l'evento ha fatto commit.
+ *       Una registrazione o un acquisto che fa rollback non genera email.</li>
+ *   <li><b>@Async("mailExecutor")</b>: l'invio va al pool dedicato; la richiesta HTTP risponde
+ *       senza aspettare l'SMTP.</li>
  * </ul>
  */
 @Component
@@ -36,7 +36,7 @@ public class MailListener {
     private static final Logger log = LoggerFactory.getLogger(MailListener.class);
 
     private final EmailService emailService;
-    /** Buzón de asistencia ({@code SUPPORT_EMAIL}); vacío = no se avisa a soporte. */
+    /** Casella di assistenza ({@code SUPPORT_EMAIL}); vuota = non si avvisa il supporto. */
     private final String supportAddress;
 
     public MailListener(EmailService emailService, @Value("${app.support.email:}") String supportAddress) {
@@ -51,7 +51,7 @@ public class MailListener {
                 event.username());
     }
 
-    /** Reenvío del enlace de verificación (mismo correo que la bienvenida con verificación). */
+    /** Reinvio del link di verifica (stessa email del benvenuto con verifica). */
     @Async(AsyncConfig.MAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onVerificationEmail(VerificationEmailEvent event) {
@@ -73,7 +73,7 @@ public class MailListener {
                 Messages.getOrSelf(Messages.locale(event.locale()), event.reason()), event.locale());
     }
 
-    /** Un correo por cada usuario que tiene el juego en su wishlist, en su idioma. */
+    /** Un'email per ogni utente che ha il gioco nella wishlist, nella sua lingua. */
     @Async(AsyncConfig.MAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onGameOnSale(GameOnSaleEvent event) {
@@ -94,7 +94,7 @@ public class MailListener {
         emailService.sendDeletionCancelled(event.email(), event.displayName(), event.locale());
     }
 
-    /** Va al email que la cuenta tenía antes de anonimizarse (el evento lo lleva). */
+    /** Va all'email che l'account aveva prima di essere anonimizzato (la porta l'evento). */
     @Async(AsyncConfig.MAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onAccountDeleted(AccountDeletedEvent event) {
@@ -102,8 +102,8 @@ public class MailListener {
     }
 
     /**
-     * Formulario de asistencia: aviso a soporte (con Reply-To al usuario) y acuse de recibo al usuario. El evento no
-     * nace en una transacción, así que no hay AFTER_COMMIT: se escucha directamente y el envío va al pool de correo.
+     * Form di assistenza: avviso al supporto (con Reply-To all'utente) e conferma di ricezione all'utente. L'evento non
+     * nasce in una transazione, quindi non c'è AFTER_COMMIT: si ascolta direttamente e l'invio va al pool delle email.
      */
     @Async(AsyncConfig.MAIL_EXECUTOR)
     @EventListener

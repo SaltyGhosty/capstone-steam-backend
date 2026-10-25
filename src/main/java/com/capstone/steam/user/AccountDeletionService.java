@@ -22,7 +22,7 @@ import com.capstone.steam.notification.event.AccountDeletionScheduledEvent;
 import com.capstone.steam.security.AccessTokenRevocations;
 import com.capstone.steam.user.dto.UserResponse;
 
-/** Baja de cuentas: pedirla (el dueño o un admin) y cancelarla antes de que venza el plazo. */
+/** Cancellazione degli account: richiederla (il proprietario o un admin) e annullarla prima che scada il periodo. */
 @Service
 public class AccountDeletionService {
 
@@ -52,9 +52,9 @@ public class AccountDeletionService {
     }
 
     /**
-     * El dueño pide su baja con su contraseña. Devuelve cuándo se eliminará la cuenta. La contraseña se comprueba
-     * antes de bloquear: bcrypt no retiene a los admins bloqueados, y un error de contraseña da 400 aunque sea el
-     * último admin. El estado se vuelve a mirar sobre la fila bloqueada.
+     * Il proprietario chiede la cancellazione con la sua password. Restituisce quando l'account verrà eliminato. La password si verifica
+     * prima del lock: bcrypt non trattiene gli admin bloccati, e una password errata dà 400 anche se è
+     * l'ultimo admin. Lo stato si ricontrolla sulla riga bloccata.
      */
     @Transactional
     public Instant requestOwn(Long userId, String password) {
@@ -63,13 +63,13 @@ public class AccountDeletionService {
             throw new BadRequestException("user.deletionWrongPassword");
         }
         User locked = lockAndGuard(user);
-        if (!locked.isPendingDeletion()) { // si ya estaba pendiente, se conserva la fecha original
+        if (!locked.isPendingDeletion()) { // se era già in sospeso, si conserva la data originale
             schedule(locked, DeletionRequester.SELF);
         }
         return locked.getDeletionScheduledAt();
     }
 
-    /** Un admin programa la baja de otra cuenta. Idempotente si ya estaba pendiente. */
+    /** Un admin programma la cancellazione di un altro account. Idempotente se era già in sospeso. */
     @Transactional
     public UserResponse scheduleByAdmin(Long adminId, Long userId) {
         if (adminId.equals(userId)) {
@@ -83,7 +83,7 @@ public class AccountDeletionService {
         return UserResponse.from(locked);
     }
 
-    /** Un admin cancela cualquier baja pendiente. Idempotente. */
+    /** Un admin annulla qualsiasi cancellazione in sospeso. Idempotente. */
     @Transactional
     public UserResponse cancelByAdmin(Long userId) {
         User user = lockFresh(userId);
@@ -97,10 +97,10 @@ public class AccountDeletionService {
     }
 
     /**
-     * El dueño recupera su cuenta (lo usa la recuperación desde el login). Bloquea y relee la fila por su cuenta:
-     * da igual que {@code user} se cargara antes, su estado en memoria no se usa. Sobre la fila bloqueada:
-     * anonimizada, falla como una contraseña incorrecta (401); con la baja pedida por un admin, 403 y no se
-     * cancela nada; con la baja propia, se cancela; sin baja, no hace nada.
+     * Il proprietario recupera il suo account (lo usa il recupero dal login). Blocca e rilegge la riga per conto suo:
+     * non importa che {@code user} sia stato caricato prima, il suo stato in memoria non si usa. Sulla riga bloccata:
+     * anonimizzato, fallisce come una password errata (401); con la cancellazione chiesta da un admin, 403 e non si
+     * annulla nulla; con la cancellazione propria, si annulla; senza cancellazione, non fa nulla.
      */
     @Transactional
     public void cancelBySelf(User user) {
@@ -118,8 +118,8 @@ public class AccountDeletionService {
     }
 
     /**
-     * Orden de bloqueos: si es admin, el guard primero (bloquea a los admins por id); después la fila del
-     * objetivo, y sobre ella se vuelve a comprobar el estado.
+     * Ordine dei lock: se è admin, prima la guard (blocca gli admin per id); poi la riga del
+     * bersaglio, e su di essa si ricontrolla lo stato.
      */
     private User lockAndGuard(User user) {
         if (user.hasRole(RoleName.ROLE_ADMIN)) {
@@ -133,13 +133,13 @@ public class AccountDeletionService {
     }
 
     /**
-     * Bloquea la fila y la relee de la BD. {@code findByIdForUpdate} dentro de la misma sesión devolvería la
-     * entidad ya cargada sin refrescarla, y el estado (pendiente, eliminada) sería el de antes del bloqueo.
+     * Blocca la riga e la rilegge dal DB. {@code findByIdForUpdate} nella stessa sessione restituirebbe
+     * l'entità già caricata senza aggiornarla, e lo stato (in sospeso, eliminato) sarebbe quello precedente al lock.
      */
     private User lockFresh(Long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
         entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
-        Hibernate.initialize(user.getRoles()); // el refresh deja los roles sin cargar y la respuesta los lee
+        Hibernate.initialize(user.getRoles()); // il refresh lascia i ruoli non caricati e la risposta li legge
         return user;
     }
 

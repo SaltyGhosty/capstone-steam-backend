@@ -9,8 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Limpia {@code refresh_tokens} según {@code app.auth.refresh-purge-cron}. Solo borra familias enteras
- * caducadas hace más de {@code app.auth.refresh-purge-grace}. Un fallo solo se registra en el log.
+ * Pulisce {@code refresh_tokens} secondo {@code app.auth.refresh-purge-cron}. Cancella solo famiglie intere
+ * scadute da più di {@code app.auth.refresh-purge-grace}. Un errore viene solo registrato nel log.
  */
 @Component
 class RefreshTokenPurgeScheduler {

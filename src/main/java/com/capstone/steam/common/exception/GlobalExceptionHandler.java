@@ -27,9 +27,9 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import com.capstone.steam.common.i18n.Messages;
 
 /**
- * Todos los errores de la API salen como ProblemDetail (RFC 9457).
- * Las excepciones estándar de Spring MVC las resuelve ResponseEntityExceptionHandler.
- * Los textos salen en el idioma de la petición (cabecera Accept-Language), ver {@link Messages}.
+ * Tutti gli errori dell'API escono come ProblemDetail (RFC 9457).
+ * Le eccezioni standard di Spring MVC le risolve ResponseEntityExceptionHandler.
+ * I testi escono nella lingua della richiesta (header Accept-Language), vedi {@link Messages}.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -41,7 +41,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return withCode(ex);
     }
 
-    /** 403 de una cuenta en pausa: además del código, la fecha (ISO-8601) en que se eliminará. */
+    /** 403 di un account in pausa: oltre al codice, la data (ISO-8601) in cui verrà eliminato. */
     @ExceptionHandler(AccountPendingDeletionException.class)
     ProblemDetail handlePendingDeletion(AccountPendingDeletionException ex) {
         ProblemDetail pd = withCode(ex);
@@ -49,7 +49,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return pd;
     }
 
-    /** 429 de un límite por ventana: con la cabecera Retry-After (segundos) para que el cliente sepa cuándo volver. */
+    /** 429 di un limite a finestra: con l'header Retry-After (secondi) perché il client sappia quando riprovare. */
     @ExceptionHandler(RateLimitedException.class)
     ResponseEntity<ProblemDetail> handleRateLimited(RateLimitedException ex) {
         ProblemDetail pd = problem(ex.getStatus(), ex.getLocalizedMessage());
@@ -68,18 +68,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.FORBIDDEN, Messages.get("error.disabled"));
     }
 
-    /** Denegaciones de @PreAuthorize (las de las reglas de URL las gestiona RestAccessDeniedHandler). */
+    /** Rifiuti di @PreAuthorize (quelli delle regole URL li gestisce RestAccessDeniedHandler). */
     @ExceptionHandler(AccessDeniedException.class)
     ProblemDetail handleAccessDenied(AccessDeniedException ex) {
         return problem(HttpStatus.FORBIDDEN, Messages.get("error.forbiddenAction"));
     }
 
-    /** Red de seguridad: una restricción UNIQUE/CHECK de la BD que el service no validó antes. */
+    /** Rete di sicurezza: un vincolo UNIQUE/CHECK del DB che il service non aveva validato prima. */
     @ExceptionHandler(DataIntegrityViolationException.class)
     ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
         String cause = ex.getMostSpecificCause().getMessage();
         log.warn("Violación de integridad: {}", cause);
-        // dos registros simultáneos con el mismo usuario (sin mayúsculas) se cuelan por la comprobación y los frena el índice
+        // due registrazioni simultanee con lo stesso username (senza maiuscole) superano il controllo e le ferma l'indice
         if (cause != null && cause.toLowerCase(java.util.Locale.ROOT).contains("uk_users_username_lower")) {
             ProblemDetail pd = problem(HttpStatus.CONFLICT, Messages.get("auth.usernameTaken"));
             pd.setProperty("code", "auth.usernameTaken");
@@ -88,7 +88,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.CONFLICT, Messages.get("error.dataConflict"));
     }
 
-    /** Un {@code sort} con un campo que la entidad no tiene: error del cliente, no del servidor. */
+    /** Un {@code sort} con un campo che l'entità non ha: errore del client, non del server. */
     @ExceptionHandler(PropertyReferenceException.class)
     ProblemDetail handleBadSortProperty(PropertyReferenceException ex) {
         return problem(HttpStatus.BAD_REQUEST, Messages.get("error.invalidFields"));
@@ -111,7 +111,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
-    /** Archivo por encima del límite multipart (o del que comprueba el service): 413 traducido, no la página de Tomcat. */
+    /** File oltre il limite multipart (o quello che controlla il service): 413 tradotto, non la pagina di Tomcat. */
     @Override
     protected ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {

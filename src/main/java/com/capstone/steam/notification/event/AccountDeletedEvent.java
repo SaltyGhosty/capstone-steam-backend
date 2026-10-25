@@ -1,8 +1,8 @@
 package com.capstone.steam.notification.event;
 
 /**
- * Se publica dentro de la transacción que anonimiza la cuenta, con los datos que tenía ANTES de anonimizar
- * (después el email ya no existe). El correo sale en AFTER_COMMIT. Solo datos primitivos, nunca entidades.
+ * Si pubblica dentro la transazione che anonimizza l'account, con i dati che aveva PRIMA di anonimizzare
+ * (dopo l'email non esiste più). L'email esce in AFTER_COMMIT. Solo dati primitivi, mai entità.
  */
 public record AccountDeletedEvent(String email, String displayName, String locale) {
 }

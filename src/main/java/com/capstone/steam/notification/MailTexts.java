@@ -3,38 +3,38 @@ package com.capstone.steam.notification;
 import java.util.Locale;
 
 /**
- * Textos de los correos en cada idioma que admite {@code users.locale}: es, en, it.
+ * Testi delle email in ogni lingua supportata da {@code users.locale}: es, en, it.
  *
- * <p>Un record con una constante por idioma, en lugar de {@code MessageSource} con ficheros
- * {@code .properties}: el compilador obliga a que cada idioma tenga todos los textos, no hay
- * problemas de codificación ni claves mal escritas, y las plantillas siguen siendo métodos
- * estáticos sin dependencias de Spring.
+ * <p>Un record con una costante per lingua, invece di {@code MessageSource} con file
+ * {@code .properties}: il compilatore obbliga ogni lingua ad avere tutti i testi, non ci sono
+ * problemi di codifica né chiavi scritte male, e i template restano metodi
+ * statici senza dipendenze da Spring.
  *
- * <p>Los textos son constantes nuestras y se insertan en el HTML tal cual (pueden llevar «¡», tildes
- * y apóstrofos). Los huecos {@code %s}/{@code %d} solo reciben datos ya escapados o generados por la
- * aplicación (número de pedido, importe formateado).
+ * <p>I testi sono costanti nostre e si inseriscono nell'HTML così come sono (possono contenere «¡», accenti
+ * e apostrofi). I segnaposto {@code %s}/{@code %d} ricevono solo dati già escapati o generati
+ * dall'applicazione (numero d'ordine, importo formattato).
  *
- * @param lang          valor de {@code <html lang>}
- * @param moneyLocale   formato del importe en euros (en-IE para que el inglés siga siendo €)
- * @param footer        pie común, tras el nombre de la tienda
+ * @param lang          valore di {@code <html lang>}
+ * @param moneyLocale   formato dell'importo in euro (en-IE perché l'inglese resti in €)
+ * @param footer        piè di pagina comune, dopo il nome dello shop
  */
 record MailTexts(
         String lang,
         Locale moneyLocale,
         String footer,
-        // Bienvenida
+        // Benvenuto
         String welcomeSubject,
         String welcomePreheader,
         String welcomeEyebrow,
         String welcomeHello,
         String welcomeBody,
-        // Bienvenida con verificación de email
+        // Benvenuto con verifica dell'email
         String verifySubject,
         String verifyPreheader,
         String verifyBody,
         String verifyButton,
         String verifyExpiry,
-        // Recibo
+        // Ricevuta
         String receiptSubject,
         String receiptPreheader,
         String receiptEyebrow,
@@ -42,7 +42,7 @@ record MailTexts(
         String receiptIntroOne,
         String receiptIntroMany,
         String total,
-        // Pago rechazado
+        // Pagamento rifiutato
         String failedSubject,
         String failedPreheader,
         String failedEyebrow,
@@ -50,13 +50,13 @@ record MailTexts(
         String failedHello,
         String failedIntro,
         String failedRetry,
-        // Oferta en la wishlist
+        // Offerta nella wishlist
         String saleSubject,
         String salePreheader,
         String saleEyebrow,
         String saleHeading,
         String saleBody,
-        // Baja de la cuenta: programada (por el usuario o por un admin), cancelada y eliminada
+        // Cancellazione dell'account: programmata (dall'utente o da un admin), annullata ed eliminata
         String deletionScheduledSubject,
         String deletionScheduledPreheader,
         String deletionScheduledEyebrow,
@@ -73,7 +73,7 @@ record MailTexts(
         String accountDeletedEyebrow,
         String accountDeletedHeading,
         String accountDeletedBody,
-        // Acuse de recibo del formulario de asistencia
+        // Conferma di ricezione del form di assistenza
         String supportConfirmSubject,
         String supportConfirmPreheader,
         String supportConfirmEyebrow,
@@ -256,7 +256,7 @@ record MailTexts(
             "Grazie per averci scritto. Esamineremo il tuo messaggio e ti risponderemo a questa email il prima possibile.",
             "Copia del tuo messaggio");
 
-    /** Textos del idioma dado. {@code null}, vacío o desconocido ("fr", "en-US"...) → español. */
+    /** Testi della lingua indicata. {@code null}, vuota o sconosciuta ("fr", "en-US"...) → spagnolo. */
     static MailTexts of(String locale) {
         if (locale == null) {
             return ES;

@@ -14,7 +14,7 @@ import com.capstone.steam.security.AppUserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
-/** Formulario de asistencia. Público: funciona con y sin sesión ({@code user} es null si no la hay). */
+/** Form di assistenza. Pubblico: funziona con e senza sessione ({@code user} è null se non c'è). */
 @RestController
 @RequestMapping("/api/support")
 public class SupportController {
@@ -27,7 +27,7 @@ public class SupportController {
         this.ipLimiter = ipLimiter;
     }
 
-    /** 202 sin cuerpo: el correo sale de forma asíncrona. Límite por IP y 5 por hora y email. */
+    /** 202 senza corpo: l'email parte in modo asincrono. Limite per IP e 5 all'ora per email. */
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void send(@AuthenticationPrincipal AppUserPrincipal user, @Valid @RequestBody SupportRequest request,

@@ -15,32 +15,32 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
 
     Optional<EmailVerificationToken> findByTokenHash(String tokenHash);
 
-    /** Solo el usuario dueño del enlace (para bloquear su fila antes que el enlace: orden usuario -> enlaces). */
+    /** Solo l'utente proprietario del link (per bloccare la sua riga prima del link: ordine utente -> link). */
     @Query("select t.userId from EmailVerificationToken t where t.tokenHash = :tokenHash")
     Optional<Long> findUserIdByTokenHash(String tokenHash);
 
-    /** Lee el enlace con bloqueo de escritura: dos verificaciones del mismo enlace se turnan y la segunda lo ve ya gastado. */
+    /** Legge il link con lock in scrittura: due verifiche dello stesso link si alternano e la seconda lo vede già consumato. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from EmailVerificationToken t where t.tokenHash = :tokenHash")
     Optional<EmailVerificationToken> findByTokenHashForUpdate(String tokenHash);
 
-    /** Todos los enlaces del usuario (también usados, anulados y caducados), del más reciente al más antiguo. */
+    /** Tutti i link dell'utente (anche usati, annullati e scaduti), dal più recente al più vecchio. */
     List<EmailVerificationToken> findByUserIdOrderByIdDesc(Long userId);
 
-    /** El último enlace emitido a este usuario (el reenvío copia sus datos). */
+    /** L'ultimo link emesso a questo utente (il reinvio ne copia i dati). */
     Optional<EmailVerificationToken> findFirstByUserIdOrderByIdDesc(Long userId);
 
-    /** Enlaces sin usar y aún vigentes de un usuario, del más reciente al más antiguo. */
+    /** Link non usati e ancora validi di un utente, dal più recente al più vecchio. */
     List<EmailVerificationToken> findByUserIdAndUsedAtIsNullAndExpiresAtAfterOrderByIdDesc(Long userId, Instant now);
 
-    /** Anula los enlaces aún sin usar de un usuario (al verificar con uno, los demás dejan de valer). */
+    /** Annulla i link ancora non usati di un utente (verificando con uno, gli altri smettono di valere). */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update EmailVerificationToken t set t.usedAt = :now where t.userId = :userId and t.usedAt is null")
     int invalidateActive(Long userId, Instant now);
 
     /**
-     * Cuenta una contraseña errónea en TODOS los enlaces del mismo registro (usuario + contraseña): los intentos
-     * son por registro, no por enlace, así que pedir más enlaces no da más intentos.
+     * Conta una password errata su TUTTI i link della stessa registrazione (utente + password): i tentativi
+     * sono per registrazione, non per link, quindi chiedere più link non dà più tentativi.
      */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
@@ -48,7 +48,7 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
              where t.userId = :userId and lower(t.username) = lower(:username) and t.passwordHash = :passwordHash""")
     int incrementFailedAttempts(Long userId, String username, String passwordHash);
 
-    /** Anula los enlaces del registro si ya llegó al máximo de contraseñas erróneas. */
+    /** Annulla i link della registrazione se ha già raggiunto il massimo di password errate. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
             update EmailVerificationToken t set t.usedAt = :now
@@ -56,12 +56,12 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
                and t.usedAt is null and t.failedAttempts >= :max""")
     int invalidateIfTooManyFailures(Long userId, String username, String passwordHash, Instant now, int max);
 
-    /** Al anonimizar la cuenta: se borran todos sus enlaces de verificación. */
+    /** All'anonimizzazione dell'account: si cancellano tutti i suoi link di verifica. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from EmailVerificationToken t where t.userId = :userId")
     int deleteAllByUserId(Long userId);
 
-    /** Marca el token como usado solo si seguía sin usar; de dos clics simultáneos solo uno recibe 1. */
+    /** Segna il token come usato solo se era ancora inutilizzato; di due click simultanei solo uno riceve 1. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update EmailVerificationToken t set t.usedAt = :now where t.id = :id and t.usedAt is null")
     int markUsedIfUnused(Long id, Instant now);

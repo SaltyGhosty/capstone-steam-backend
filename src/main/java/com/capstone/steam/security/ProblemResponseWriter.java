@@ -17,9 +17,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Escribe un ProblemDetail (RFC 9457) directamente en la respuesta. Lo usan los handlers
- * de seguridad, que actúan en el filtro antes de llegar a Spring MVC (@RestControllerAdvice).
- * Como aquí Spring MVC aún no ha fijado el idioma, se lee directamente de Accept-Language.
+ * Scrive un ProblemDetail (RFC 9457) direttamente nella risposta. Lo usano gli handler
+ * di sicurezza, che agiscono nel filtro prima di arrivare a Spring MVC (@RestControllerAdvice).
+ * Poiché qui Spring MVC non ha ancora fissato la lingua, la si legge direttamente da Accept-Language.
  */
 @Component
 public class ProblemResponseWriter {
@@ -30,7 +30,7 @@ public class ProblemResponseWriter {
         this.jsonMapper = jsonMapper;
     }
 
-    /** @param code clave del texto en messages*.properties */
+    /** @param code chiave del testo in messages*.properties */
     public void write(HttpServletRequest request, HttpServletResponse response, HttpStatus status, String code)
             throws IOException {
         Locale locale = request.getHeader(HttpHeaders.ACCEPT_LANGUAGE) == null ? Messages.DEFAULT : request.getLocale();

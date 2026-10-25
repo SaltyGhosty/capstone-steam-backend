@@ -1,5 +1,5 @@
 package com.capstone.steam.auth.dto;
 
-/** De qué cuenta es un enlace de verificación vigente (quien lo tiene ya es el destinatario del correo que la nombra). */
+/** A quale account appartiene un link di verifica valido (chi lo possiede è già il destinatario dell'email che lo nomina). */
 public record VerificationPreview(String username) {
 }

@@ -61,14 +61,14 @@ public class UserService {
         return UserResponse.from(user);
     }
 
-    // ---------------------------- Administración ----------------------------
+    // ---------------------------- Amministrazione ----------------------------
 
     @Transactional(readOnly = true)
     public PageResponse<UserResponse> listUsers(Pageable pageable, String q) {
-        // Los roles se cargan por lotes (hibernate.default_batch_fetch_size), no con un fetch join,
-        // para que la paginación la haga la BD y no Hibernate en memoria.
+        // I ruoli si caricano a lotti (hibernate.default_batch_fetch_size), non con un fetch join,
+        // perché la paginazione la faccia il DB e non Hibernate in memoria.
         String term = q == null ? "" : q.trim();
-        if (!term.isEmpty()) { // filtro opcional por usuario o email (lo usa el seed para encontrar una cuenta)
+        if (!term.isEmpty()) { // filtro opzionale per username o email (lo usa il seed per trovare un account)
             return PageResponse.of(userRepository.searchNotDeleted(LikePatterns.contains(term), pageable), UserResponse::from);
         }
         return PageResponse.of(userRepository.findByDeletedAtIsNull(pageable), UserResponse::from);
@@ -77,19 +77,19 @@ public class UserService {
     @Transactional
     public UserResponse updateRoles(Long adminId, Long userId, Set<RoleName> requested) {
         Set<RoleName> roles = EnumSet.copyOf(requested);
-        roles.add(RoleName.ROLE_USER); // todo usuario es al menos USER
+        roles.add(RoleName.ROLE_USER); // ogni utente è almeno USER
         if (adminId.equals(userId) && !roles.contains(RoleName.ROLE_ADMIN)) {
             throw new BadRequestException("user.cannotRemoveOwnAdmin");
         }
         User user = findLive(userId);
         if (user.hasRole(RoleName.ROLE_ADMIN) && !roles.contains(RoleName.ROLE_ADMIN)) {
-            adminGuard.requireAnotherAdmin(userId); // no se puede dejar la tienda sin administradores
+            adminGuard.requireAnotherAdmin(userId); // non si può lasciare lo shop senza amministratori
         }
         user.getRoles().clear();
         roles.forEach(name -> user.addRole(roleRepository.findByName(name).orElseThrow()));
-        // Los roles viajan en el access token: se cortan sus sesiones para que renueve con los nuevos
+        // I ruoli viaggiano nell'access token: si chiudono le sue sessioni perché rinnovi con i nuovi
         refreshTokenService.revokeAll(userId);
-        accessTokenRevocations.revokeUser(userId); // y el access token vigente deja de valer ya (D16)
+        accessTokenRevocations.revokeUser(userId); // e l'access token in corso smette subito di valere (D16)
         return UserResponse.from(user);
     }
 
@@ -110,7 +110,7 @@ public class UserService {
         return UserResponse.from(user);
     }
 
-    /** El admin da el email por verificado (soporte y seed), con los datos del último enlace. Idempotente. */
+    /** L'admin segna l'email come verificata (supporto e seed), con i dati dell'ultimo link. Idempotente. */
     @Transactional
     public UserResponse verifyEmail(Long userId) {
         return UserResponse.from(emailVerificationService.verifyByAdmin(userId));
@@ -120,7 +120,7 @@ public class UserService {
         return userRepository.findWithRolesById(userId).orElseThrow(() -> NotFoundException.of("user", userId));
     }
 
-    /** Para las mutaciones del admin: una cuenta eliminada (anonimizada) ya no existe para él. */
+    /** Per le mutazioni dell'admin: un account eliminato (anonimizzato) per lui non esiste più. */
     private User findLive(Long userId) {
         User user = findWithRoles(userId);
         if (user.isDeleted()) {

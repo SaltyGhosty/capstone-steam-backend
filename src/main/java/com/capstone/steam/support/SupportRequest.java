@@ -5,14 +5,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
- * @param email obligatorio sin sesión; con sesión se ignora y se usa el de la cuenta
+ * @param email obbligatoria senza sessione; con sessione si ignora e si usa quella dell'account
  */
 public record SupportRequest(
         @Email @Size(max = 254) String email,
         @NotBlank @Size(min = 3, max = 150) String subject,
         @NotBlank @Size(min = 10, max = 3000) String message) {
 
-    /** Quita los espacios de los bordes antes de validar; un email vacío cuenta como ausente. */
+    /** Toglie gli spazi ai bordi prima di validare; un'email vuota conta come assente. */
     public SupportRequest {
         email = email == null || email.isBlank() ? null : email.strip();
         subject = subject == null ? null : subject.strip();

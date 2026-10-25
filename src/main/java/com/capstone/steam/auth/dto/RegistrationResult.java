@@ -1,5 +1,5 @@
 package com.capstone.steam.auth.dto;
 
-/** Resultado de registrarse: la sesión (verificación desactivada) o el aviso de que falta verificar el email. */
+/** Risultato della registrazione: la sessione (verifica disattivata) o l'avviso che manca la verifica dell'email. */
 public sealed interface RegistrationResult permits AuthResponse, RegisterResponse {
 }

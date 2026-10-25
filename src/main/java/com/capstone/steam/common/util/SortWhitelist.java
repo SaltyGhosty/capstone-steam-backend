@@ -9,9 +9,9 @@ import org.springframework.data.domain.Sort;
 import com.capstone.steam.common.exception.BadRequestException;
 
 /**
- * Comprueba el {@code sort} que llega del cliente contra una lista de campos permitidos.
- * Sin esto, un campo inventado o una expresión ({@code sort=1;delete…}) llegaba a Spring Data
- * y acababa en 500; ahora es un 400 con los valores válidos.
+ * Verifica il {@code sort} che arriva dal client rispetto a una lista di campi consentiti.
+ * Senza questo, un campo inventato o un'espressione ({@code sort=1;delete…}) arrivava a Spring Data
+ * e finiva in 500; ora è un 400 con i valori validi.
  */
 public final class SortWhitelist {
 

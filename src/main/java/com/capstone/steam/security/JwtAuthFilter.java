@@ -17,10 +17,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Lee "Authorization: Bearer ..." y, si el token es válido, autentica la petición.
- * Un token inválido no corta la cadena: la petición sigue como anónima y las reglas
- * de SecurityConfig devuelven 401 si el endpoint lo requiere.
- * No es un @Component a propósito: así Spring Boot no lo registra también como filtro de servlet.
+ * Legge "Authorization: Bearer ..." e, se il token è valido, autentica la richiesta.
+ * Un token non valido non interrompe la catena: la richiesta prosegue come anonima e le regole
+ * di SecurityConfig restituiscono 401 se l'endpoint lo richiede.
+ * Non è un @Component di proposito: così Spring Boot non lo registra anche come filtro servlet.
  */
 public class JwtAuthFilter extends OncePerRequestFilter {
 
