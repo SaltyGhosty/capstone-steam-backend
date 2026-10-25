@@ -17,7 +17,7 @@ function drawCar(ctx: CanvasRenderingContext2D, car: Car, color: string) {
   ctx.fillStyle = color;
   ctx.fillRect(-CAR_RADIUS, -CAR_RADIUS * 0.65, CAR_RADIUS * 2, CAR_RADIUS * 1.3);
   ctx.fillStyle = '#080b10';
-  ctx.fillRect(CAR_RADIUS * 0.1, -CAR_RADIUS * 0.45, CAR_RADIUS * 0.55, CAR_RADIUS * 0.9); // parabrisas: marca el morro
+  ctx.fillRect(CAR_RADIUS * 0.1, -CAR_RADIUS * 0.45, CAR_RADIUS * 0.55, CAR_RADIUS * 0.9); // parabrezza: segna il muso
   ctx.restore();
 }
 
@@ -35,7 +35,7 @@ function draw(ctx: CanvasRenderingContext2D, s: MatchState) {
   ctx.arc(FIELD_W / 2, FIELD_H / 2, 46, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Porterías: la tuya (lima) a la derecha, la rival (coral) a la izquierda
+  // Porte: la tua (lime) a destra, quella rivale (corallo) a sinistra
   ctx.fillStyle = 'rgba(255,138,122,.35)';
   ctx.fillRect(0, GOAL_TOP, 8, GOAL_BOTTOM - GOAL_TOP);
   ctx.fillStyle = 'rgba(183,255,60,.35)';
@@ -52,7 +52,7 @@ function draw(ctx: CanvasRenderingContext2D, s: MatchState) {
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  // Marcador, tiempo y turbo
+  // Punteggio, tempo e turbo
   ctx.fillStyle = '#e9edf2';
   ctx.font = 'bold 22px "Space Grotesk", sans-serif';
   ctx.textAlign = 'center';

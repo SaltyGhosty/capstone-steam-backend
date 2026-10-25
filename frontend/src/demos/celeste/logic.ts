@@ -1,4 +1,4 @@
-// Lógica pura del minijuego de plataformas (sin canvas): estado + step(dt, input).
+// Logica pura del minigioco di piattaforme (senza canvas): stato + step(dt, input).
 import type { DemoInput } from '../types';
 
 export interface Rect { x: number; y: number; w: number; h: number }
@@ -6,7 +6,7 @@ export interface Rect { x: number; y: number; w: number; h: number }
 export interface Room {
   spawn: { x: number; y: number };
   solids: Rect[];
-  /** Solo la última sala tiene cumbre */
+  /** Solo l'ultima sala ha la vetta */
   goal?: Rect;
 }
 
@@ -17,15 +17,15 @@ export interface CelestePlayer {
   vy: number;
   onGround: boolean;
   canDash: boolean;
-  /** Segundos que quedan de impulso */
+  /** Secondi di scatto rimasti */
   dashT: number;
   dashDx: number;
   dashDy: number;
-  /** Margen para saltar justo después de dejar el borde */
+  /** Margine per saltare subito dopo aver lasciato il bordo */
   coyote: number;
-  /** Margen para saltar si se pulsa un instante antes de aterrizar */
+  /** Margine per saltare se si preme un istante prima di atterrare */
   jumpBuffer: number;
-  /** Teclas del fotograma anterior: saltar e impulsar piden una pulsación nueva */
+  /** Tasti del frame precedente: saltare e scattare richiedono una nuova pressione */
   prevAction: boolean;
   prevSecondary: boolean;
   facing: 1 | -1;
@@ -49,21 +49,21 @@ const MAX_FALL = 560;
 const MOVE_SPEED = 150;
 const GROUND_ACCEL = 1500;
 const AIR_ACCEL = 900;
-const JUMP_SPEED = 460; // sube unos 75 px
+const JUMP_SPEED = 460; // sale di circa 75 px
 const COYOTE = 0.08;
 const JUMP_BUFFER = 0.1;
 const DASH_SPEED = 380;
-const DASH_TIME = 0.14; // unos 53 px
+const DASH_TIME = 0.14; // circa 53 px
 const FALL_LIMIT = HEIGHT + 20;
 const EXIT_TOP = -8;
 
 const plat = (x: number, y: number, w: number, h = 12): Rect => ({ x, y, w, h });
 const START = { x: 20, y: 284 };
 
-/** Tres pantallas de 640×360. Un salto sube ~75 px y recorre ~99 px; con el impulso se suman ~53 px. */
+/** Tre schermate da 640×360. Un salto sale ~75 px e percorre ~99 px; con lo scatto si sommano ~53 px. */
 export const CELESTE_ROOMS: Room[] = [
   {
-    // Sala 0: solo saltos, en zigzag hacia arriba; se sale por el borde superior
+    // Sala 0: solo salti, a zigzag verso l'alto; si esce dal bordo superiore
     spawn: START,
     solids: [
       plat(0, 300, 100, 60), plat(140, 268, 70), plat(250, 236, 70), plat(360, 204, 70),
@@ -71,7 +71,7 @@ export const CELESTE_ROOMS: Room[] = [
     ],
   },
   {
-    // Sala 1: un hueco que pide impulso y una salida alta que también
+    // Sala 1: un vuoto che richiede lo scatto e un'uscita alta che lo richiede pure
     spawn: START,
     solids: [
       plat(0, 300, 90, 60), plat(220, 300, 80, 60), plat(350, 262, 70), plat(470, 226, 70),
@@ -79,7 +79,7 @@ export const CELESTE_ROOMS: Room[] = [
     ],
   },
   {
-    // Sala 2: la cumbre, con tres saltos largos que se ayudan con el impulso
+    // Sala 2: la vetta, con tre salti lunghi aiutati dallo scatto
     spawn: START,
     solids: [
       plat(0, 300, 80, 60), plat(200, 290, 60), plat(330, 250, 50), plat(470, 230, 50),
@@ -104,7 +104,7 @@ export function createCeleste(): CelesteState {
 const hits = (p: { x: number; y: number }, r: Rect) =>
   p.x < r.x + r.w && p.x + PLAYER_W > r.x && p.y < r.y + r.h && p.y + PLAYER_H > r.y;
 
-/** Mueve en pasos de 4 px como máximo: ni con un dt grande se atraviesa una plataforma. */
+/** Muove a passi di 4 px al massimo: nemmeno con un dt grande si attraversa una piattaforma. */
 function moveAxis(p: CelestePlayer, axis: 'x' | 'y', delta: number, solids: Rect[]): boolean {
   const steps = Math.max(1, Math.ceil(Math.abs(delta) / 4));
   const each = delta / steps;
@@ -137,7 +137,7 @@ export function stepCeleste(state: CelesteState, dt: number, input: DemoInput): 
   p.prevAction = input.action;
   p.prevSecondary = input.secondary;
 
-  // Impulso: una vez por salto, solo en el aire
+  // Scatto: una volta per salto, solo in aria
   if (dashPressed && p.canDash && !p.onGround && p.dashT <= 0) {
     let dx = dir;
     let dy = (input.down ? 1 : 0) - (input.up ? 1 : 0);
@@ -166,7 +166,7 @@ export function stepCeleste(state: CelesteState, dt: number, input: DemoInput): 
       p.jumpBuffer = 0;
       p.onGround = false;
     }
-    // Soltar el salto lo corta: se controla la altura
+    // Rilasciare il salto lo interrompe: si controlla l'altezza
     const gravity = p.vy < 0 && !input.action ? GRAVITY * 2 : GRAVITY;
     p.vy = Math.min(p.vy + gravity * dt, MAX_FALL);
   }

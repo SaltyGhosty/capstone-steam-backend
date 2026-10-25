@@ -1,13 +1,13 @@
 import type { ComponentType } from 'react';
 import type { MessageKey } from '@/i18n/messages';
 
-/** Estado del teclado que lee cada minijuego (el bucle lo consulta en cada fotograma). */
+/** Stato della tastiera che legge ogni minigioco (il loop lo consulta a ogni frame). */
 export interface DemoInput {
   left: boolean;
   right: boolean;
   up: boolean;
   down: boolean;
-  /** Espacio */
+  /** Spazio */
   action: boolean;
   /** X o Shift */
   secondary: boolean;

@@ -22,10 +22,10 @@ const RANK_LABEL: Record<number, string> = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' 
 const rankLabel = (card: Card) => RANK_LABEL[card.rank] ?? String(card.rank);
 const isRed = (card: Card) => card.suit === '♥' || card.suit === '♦';
 
-/** Un tiempo para ver la última jugada antes de enseñar la pantalla final */
+/** Un po' di tempo per vedere l'ultima giocata prima di mostrare la schermata finale */
 const FINISH_DELAY_MS = 1100;
 
-/** Se juega con DOM (botones), así vale con ratón, teclado y toque. */
+/** Si gioca con il DOM (pulsanti), quindi vale con mouse, tastiera e touch. */
 export default function BalatroDemo({ paused, onFinish }: DemoGameProps) {
   const { t } = useI18n();
   const [round, setRound] = useState(() => createRound(Math.floor(Math.random() * 2 ** 31)));
