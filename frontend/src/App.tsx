@@ -16,6 +16,7 @@ import GameDetail from '@/pages/GameDetail';
 import { OrderDetail, OrderList } from '@/pages/Orders';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
+import Support from '@/pages/Support';
 
 function NotFound() {
   const { t } = useI18n();
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="register" element={<Register />} />
         <Route path="check-email" element={<CheckEmail />} />
         <Route path="verify-email" element={<VerifyEmail />} />
+        <Route path="support" element={<Support />} />
 
         <Route path="library" element={<RequireAuth><Library /></RequireAuth>} />
         <Route path="wishlist" element={<RequireAuth><Wishlist /></RequireAuth>} />

@@ -33,6 +33,7 @@ const GITHUB_URL = 'https://github.com/SaltyGhosty/capstone-steam-backend';
 const LINKEDIN_URL = import.meta.env.VITE_LINKEDIN_URL || 'https://www.linkedin.com/';
 
 function Footer() {
+  const { t } = useI18n();
   return (
     <footer className="site-footer">
       <Brand className="footer-brand" />
@@ -40,6 +41,7 @@ function Footer() {
         <a href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
         <a href={LINKEDIN_URL} target="_blank" rel="noreferrer">LinkedIn</a>
         <a href={API_DOCS_URL} target="_blank" rel="noreferrer">API Docs</a>
+        <Link to="/support">{t('nav.support')}</Link>
       </nav>
       <p>Capstone Project · EPICODE FS0226IT</p>
     </footer>
@@ -152,6 +154,7 @@ export default function Layout() {
                     {isPlayer && <Link to="/friends" role="menuitem"><Icon name="users" size={16} /> {t('nav.friends')}{friendCount && <span className="nav-count">{friendCount}</span>}</Link>}
                     <Link to="/settings" role="menuitem"><Icon name="settings" size={16} /> {t('nav.settings')}</Link>
                     <Link to="/orders" role="menuitem"><Icon name="receipt" size={16} /> {t('nav.myOrders')}</Link>
+                    <Link to="/support" role="menuitem"><Icon name="chat" size={16} /> {t('nav.support')}</Link>
                     <button onClick={logout} role="menuitem"><Icon name="logout" size={16} /> {t('nav.logout')}</button>
                   </div>
                 )}

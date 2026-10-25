@@ -69,6 +69,12 @@ export const assistantApi = {
     api<ChatResponse>('/api/recommendations/chat', { method: 'POST', body: { messages } }),
 };
 
+export const supportApi = {
+  /** 202 sin cuerpo. Sin sesión hace falta el email; con sesión el backend usa el de la cuenta. */
+  send: (body: { email?: string; subject: string; message: string }) =>
+    api<void>('/api/support', { method: 'POST', body }),
+};
+
 export const catalogApi = {
   search: (q: CatalogQuery = {}) =>
     api<PageResponse<GameSummary>>('/api/games', { query: { ...q } }),
