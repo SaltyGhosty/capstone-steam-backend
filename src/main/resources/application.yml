@@ -37,7 +37,7 @@ spring:
         max-page-size: 100
   flyway:
     enabled: true
-    # V1-V3 sono SQL portabile; V4 ha una variante per motore ({vendor} = postgresql | h2)
+    # V1-V3 sono SQL portabile; V4 ha una variante per motore ({vendor} = postgresql)
     locations: classpath:db/migration/common,classpath:db/migration/{vendor}
   mail:
     host: smtp.gmail.com
