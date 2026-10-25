@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
@@ -15,11 +16,12 @@ import com.capstone.steam.game.GameRepository;
 import com.capstone.steam.game.GameStatus;
 import com.capstone.steam.game.dto.GameSummaryResponse;
 import com.capstone.steam.genre.Genre;
+import com.capstone.steam.library.LibraryRepository;
 
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Lee el catálogo publicado en una transacción corta y lo devuelve ya copiado en objetos inmutables:
+ * Lee el catálogo publicado (sin los juegos del usuario) en una transacción corta y lo devuelve ya copiado en objetos inmutables:
  * así la llamada al modelo (lenta) no retiene ninguna conexión de la base de datos.
  */
 @Component
@@ -34,17 +36,22 @@ public class RecommendationCatalog {
     }
 
     private final GameRepository games;
+    private final LibraryRepository library;
     private final JsonMapper json;
 
-    public RecommendationCatalog(GameRepository games, JsonMapper json) {
+    public RecommendationCatalog(GameRepository games, LibraryRepository library, JsonMapper json) {
         this.games = games;
+        this.library = library;
         this.json = json;
     }
 
     @Transactional(readOnly = true)
-    public Snapshot load(Locale locale) {
+    public Snapshot load(long userId, Locale locale) {
+        // lo que el usuario ya tiene (biblioteca) o desarrolla no se le recomienda
+        Set<Long> owned = library.findGameIdsByUserId(userId);
         // tope para que el prompt no crezca sin fin: los más reseñados primero, y a igualdad el id menor
         List<Game> published = games.findWithDetailsByStatusOrderByIdAsc(GameStatus.PUBLISHED).stream()
+                .filter(g -> !owned.contains(g.getId()) && !Long.valueOf(userId).equals(g.getDeveloper().getId()))
                 .sorted(Comparator.comparingInt(Game::getReviewCount).reversed().thenComparing(Game::getId))
                 .limit(MAX_GAMES)
                 .toList();

@@ -36,6 +36,7 @@ import com.capstone.steam.game.Game;
 import com.capstone.steam.game.GameRepository;
 import com.capstone.steam.game.GameStatus;
 import com.capstone.steam.genre.Genre;
+import com.capstone.steam.library.LibraryRepository;
 import com.capstone.steam.recommendation.dto.ChatMessage;
 import com.capstone.steam.recommendation.dto.ChatMessage.Role;
 import com.capstone.steam.recommendation.dto.ChatResponse;
@@ -47,6 +48,7 @@ import tools.jackson.databind.json.JsonMapper;
 class RecommendationServiceTest {
 
     @Mock private GameRepository games;
+    @Mock private LibraryRepository library;
     @Mock private ChatModel model;
 
     private RecommendationService service;
@@ -55,7 +57,7 @@ class RecommendationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RecommendationService(new RecommendationCatalog(games, JsonMapper.builder().build()), model, new ChatRateLimiter(Clock.systemUTC()),
+        service = new RecommendationService(new RecommendationCatalog(games, library, JsonMapper.builder().build()), model, new ChatRateLimiter(Clock.systemUTC()),
                 JsonMapper.builder().build());
         User dev = new User("estudio", "e@test.com", "hash");
         Genre action = new Genre("Acción", "accion");
@@ -94,6 +96,31 @@ class RecommendationServiceTest {
     private ChatResponse ask(String modelAnswer) {
         when(model.complete(anyString(), any())).thenReturn(modelAnswer);
         return service.chat(7L, user("algo oscuro"));
+    }
+
+    @Test
+    void aGameTheUserOwnsIsNeitherInThePromptNorInTheAnswer() {
+        when(library.findGameIdsByUserId(7L)).thenReturn(Set.of(1L));
+        org.mockito.ArgumentCaptor<String> prompt = org.mockito.ArgumentCaptor.forClass(String.class);
+        when(model.complete(prompt.capture(), any())).thenReturn("{\"reply\":\"a\",\"gameIds\":[1,3]}");
+
+        ChatResponse response = service.chat(7L, user("algo oscuro"));
+
+        assertThat(prompt.getValue()).doesNotContain("Hades").contains("Celeste").contains("already owns");
+        assertThat(response.games()).extracting("id").containsExactly(3L);
+    }
+
+    @Test
+    void theGamesTheUserDevelopsAreExcludedToo() {
+        // el desarrollador de «Hades» es quien pregunta
+        ReflectionTestUtils.setField(hades.getDeveloper(), "id", 7L);
+        org.mockito.ArgumentCaptor<String> prompt = org.mockito.ArgumentCaptor.forClass(String.class);
+        when(model.complete(prompt.capture(), any())).thenReturn("{\"reply\":\"a\",\"gameIds\":[1]}");
+
+        ChatResponse response = service.chat(7L, user("algo oscuro"));
+
+        assertThat(prompt.getValue()).doesNotContain("Hades");
+        assertThat(response.games()).isEmpty();
     }
 
     @Test
@@ -250,7 +277,7 @@ class RecommendationServiceTest {
             @Override public Clock withZone(ZoneId zone) { return this; }
             @Override public Instant instant() { return now[0]; }
         };
-        RecommendationService timed = new RecommendationService(new RecommendationCatalog(games, JsonMapper.builder().build()),
+        RecommendationService timed = new RecommendationService(new RecommendationCatalog(games, library, JsonMapper.builder().build()),
                 model, new ChatRateLimiter(clock), JsonMapper.builder().build());
         when(model.complete(anyString(), any())).thenThrow(new AssistantRateLimitedException(null))
                 .thenReturn("{\"reply\":\"ok\",\"gameIds\":[]}");
@@ -286,7 +313,7 @@ class RecommendationServiceTest {
     void anUnexpectedExceptionWhileParsingIsUnavailableNotA500() {
         JsonMapper broken = org.mockito.Mockito.spy(JsonMapper.builder().build());
         org.mockito.Mockito.doThrow(new IllegalStateException("inesperado")).when(broken).readTree(anyString());
-        RecommendationService fragile = new RecommendationService(new RecommendationCatalog(games, JsonMapper.builder().build()), model, new ChatRateLimiter(Clock.systemUTC()), broken);
+        RecommendationService fragile = new RecommendationService(new RecommendationCatalog(games, library, JsonMapper.builder().build()), model, new ChatRateLimiter(Clock.systemUTC()), broken);
         when(model.complete(anyString(), any())).thenReturn("{\"reply\":\"a\",\"gameIds\":[]}");
 
         assertThatThrownBy(() -> fragile.chat(7L, user("hola"))).isInstanceOf(AssistantUnavailableException.class);

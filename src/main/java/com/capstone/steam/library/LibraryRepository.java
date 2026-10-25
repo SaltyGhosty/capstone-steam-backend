@@ -22,6 +22,10 @@ public interface LibraryRepository extends JpaRepository<LibraryEntry, Long> {
     @Query("select l.game.id from LibraryEntry l where l.user.id = :userId and l.game.id in :gameIds")
     Set<Long> findOwnedGameIds(Long userId, Collection<Long> gameIds);
 
+    /** Ids de todos los juegos de la biblioteca del usuario (el asistente no los recomienda). */
+    @Query("select l.game.id from LibraryEntry l where l.user.id = :userId")
+    Set<Long> findGameIdsByUserId(Long userId);
+
     @Query("select l from LibraryEntry l join fetch l.game where l.user.id = :userId and l.game.id = :gameId")
     Optional<LibraryEntry> findByUserIdAndGameId(Long userId, Long gameId);
 
