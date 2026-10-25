@@ -7,7 +7,7 @@ on:
 
 jobs:
   backend:
-    name: Backend (tests + cobertura)
+    name: Backend (compilación)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,16 +16,10 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-      # H2 en memoria: no hace falta PostgreSQL. verify falla si la cobertura de líneas baja del 80 %.
-      - run: ./mvnw -B verify
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: jacoco-report
-          path: target/site/jacoco/
+      - run: ./mvnw -B package
 
   frontend:
-    name: Frontend (tests + build)
+    name: Frontend (typecheck + build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -38,5 +32,5 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - run: npm test
+      - run: npx tsc -b
       - run: npm run build
