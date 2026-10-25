@@ -5,7 +5,7 @@ import java.util.function.Function;
 
 import org.springframework.data.domain.Page;
 
-/** Página estable para el frontend (no se serializa PageImpl de Spring Data directamente). */
+/** Pagina stabile per il frontend (non si serializza direttamente il PageImpl di Spring Data). */
 public record PageResponse<T>(
         List<T> content,
         int page,

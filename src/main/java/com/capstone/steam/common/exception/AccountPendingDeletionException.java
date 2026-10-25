@@ -10,8 +10,8 @@ import java.util.TimeZone;
 import com.capstone.steam.common.i18n.Messages;
 
 /**
- * 403 del login de una cuenta con la baja programada. Lleva el instante de la eliminación: el texto lo muestra
- * como fecha corta en el idioma de la petición (zona Europe/Rome) y el handler lo añade al ProblemDetail.
+ * 403 del login di un account con cancellazione programmata. Porta l'istante dell'eliminazione: il testo lo mostra
+ * come data breve nella lingua della richiesta (fuso Europe/Rome) e l'handler lo aggiunge al ProblemDetail.
  */
 public class AccountPendingDeletionException extends ForbiddenException {
 
@@ -29,7 +29,7 @@ public class AccountPendingDeletionException extends ForbiddenException {
         return scheduledAt;
     }
 
-    /** La fecha ya formateada en el idioma de la petición (MessageFormat no sabe de zonas ni de Instant). */
+    /** La data già formattata nella lingua della richiesta (MessageFormat non conosce fusi orari né Instant). */
     @Override
     public String getLocalizedMessage() {
         return Messages.get(getCode(), format(scheduledAt, Messages.currentLocale()));

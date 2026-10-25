@@ -14,7 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    /** Login con username o email; carga los roles en la misma query. */
+    /** Login con username o email; carica i ruoli nella stessa query. */
     @EntityGraph(attributePaths = "roles")
     @Query("select u from User u where lower(u.username) = lower(:login) or u.email = lower(:login)")
     Optional<User> findByLogin(String login);
@@ -30,9 +30,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findWithRolesByUsernameIgnoreCase(String username);
 
     /**
-     * Búsqueda de jugadores (activos y sin rol DEVELOPER ni ADMIN) por username o nombre visible.
-     * {@code pattern} ya viene con los comodines {@code %} y con los {@code %}/{@code _} del usuario
-     * escapados con {@code !}; va siempre como parámetro, nunca concatenado.
+     * Ricerca di giocatori (attivi e senza ruolo DEVELOPER né ADMIN) per username o nome visibile.
+     * {@code pattern} arriva già con i caratteri jolly {@code %} e con i {@code %}/{@code _} dell'utente
+     * escapati con {@code !}; va sempre come parametro, mai concatenato.
      */
     @Query("""
             select u from User u
@@ -48,10 +48,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
-    /** Listado del panel: sin las cuentas ya anonimizadas. */
+    /** Elenco del pannello: senza gli account già anonimizzati. */
     org.springframework.data.domain.Page<User> findByDeletedAtIsNull(Pageable pageable);
 
-    /** {@code pattern} viene de {@code LikePatterns.contains}. */
+    /** {@code pattern} proviene da {@code LikePatterns.contains}. */
     @Query("""
             select u from User u
              where u.deletedAt is null
@@ -59,21 +59,21 @@ public interface UserRepository extends JpaRepository<User, Long> {
                     or lower(u.email) like lower(:pattern) escape '!')""")
     org.springframework.data.domain.Page<User> searchNotDeleted(String pattern, Pageable pageable);
 
-    /** Ids por email y por usuario, sin cargar la fila: así se pueden bloquear en orden de id (sin interbloqueos). */
+    /** Id per email e per username, senza caricare la riga: così si possono bloccare in ordine di id (senza deadlock). */
     @Query("select u.id from User u where u.email = :email")
     Optional<Long> findIdByEmail(String email);
 
     @Query("select u.id from User u where lower(u.username) = lower(:username)")
     Optional<Long> findIdByUsernameIgnoreCase(String username);
 
-    /** Lee la fila con bloqueo de escritura: registro y verificación no se pisan sobre la misma cuenta. */
+    /** Legge la riga con lock in scrittura: registrazione e verifica non si pestano i piedi sullo stesso account. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.id = :id")
     Optional<User> findByIdForUpdate(Long id);
 
     /**
-     * Los administradores que cuentan (activos, sin baja programada ni anonimizados), bloqueados por id
-     * ascendente: dos peticiones que quitan admins a la vez se serializan sin interbloqueos.
+     * Gli amministratori che contano (attivi, senza cancellazione programmata né anonimizzati), bloccati per id
+     * crescente: due richieste che tolgono admin contemporaneamente si serializzano senza deadlock.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -83,14 +83,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
              order by u.id""")
     List<User> lockCountingAdmins();
 
-    /** Cuántos administradores que cuentan hay sin contar a {@code excludeId}; sin bloqueo (ver {@code AdminGuard}). */
+    /** Quanti amministratori che contano ci sono senza contare {@code excludeId}; senza lock (vedi {@code AdminGuard}). */
     @Query("""
             select count(u) from User u
              where u.enabled = true and u.deletionScheduledAt is null and u.deletedAt is null and u.id <> :excludeId
                and exists (select r.id from u.roles r where r.name = com.capstone.steam.user.RoleName.ROLE_ADMIN)""")
     long countCountingAdminsExcluding(Long excludeId);
 
-    /** Las cuentas cuyo plazo ya venció y siguen sin anonimizar, por id (la tarea programada las recorre en ese orden). */
+    /** Gli account il cui periodo è scaduto e ancora non anonimizzati, per id (il task programmato li scorre in quest'ordine). */
     @Query("""
             select u.id from User u
              where u.deletionScheduledAt <= :now and u.deletedAt is null

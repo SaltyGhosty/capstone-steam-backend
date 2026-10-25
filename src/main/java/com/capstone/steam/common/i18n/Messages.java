@@ -8,14 +8,14 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ResourceBundleMessageSource;
 
 /**
- * Textos de la API (errores, motivos de pago) en es, en e it, leídos de {@code messages*.properties}.
+ * Testi dell'API (errori, motivi di pagamento) in es, en e it, letti da {@code messages*.properties}.
  *
- * <p>{@code messages.properties} es el español y hace de respaldo para cualquier otro idioma.
- * El idioma de cada petición lo fija Spring MVC a partir de la cabecera {@code Accept-Language}
- * ({@link LocaleContextHolder}); sin cabecera, español.
+ * <p>{@code messages.properties} è lo spagnolo e fa da fallback per qualsiasi altra lingua.
+ * La lingua di ogni richiesta la fissa Spring MVC a partire dall'header {@code Accept-Language}
+ * ({@link LocaleContextHolder}); senza header, spagnolo.
  *
- * <p>Los textos siempre pasan por {@code MessageFormat}: los huecos son {@code {0}}, {@code {1}}…
- * y en los ficheros se usa el apóstrofo tipográfico (’) para no tener que escapar {@code '}.
+ * <p>I testi passano sempre per {@code MessageFormat}: i segnaposto sono {@code {0}}, {@code {1}}…
+ * e nei file si usa l'apostrofo tipografico (’) per non dover fare l'escape di {@code '}.
  */
 public final class Messages {
 
@@ -33,14 +33,14 @@ public final class Messages {
     private Messages() {
     }
 
-    /** Texto en el idioma de la petición actual. */
+    /** Testo nella lingua della richiesta corrente. */
     public static String get(String code, Object... args) {
         return get(currentLocale(), code, args);
     }
 
     /**
-     * Idioma de la petición actual. Fuera de una petición (tareas programadas, tests unitarios) es el español:
-     * {@link LocaleContextHolder#getLocale()} daría el del sistema, que en el runner del CI es el inglés.
+     * Lingua della richiesta corrente. Fuori da una richiesta (task programmati, unit test) è lo spagnolo:
+     * {@link LocaleContextHolder#getLocale()} darebbe quella di sistema, che nel runner della CI è l'inglese.
      */
     public static Locale currentLocale() {
         LocaleContext context = LocaleContextHolder.getLocaleContext();
@@ -52,7 +52,7 @@ public final class Messages {
         return SOURCE.getMessage(code, args, locale);
     }
 
-    /** Como {@link #get(Locale, String, Object...)}, pero si {@code code} no es una clave devuelve el texto tal cual. */
+    /** Come {@link #get(Locale, String, Object...)}, ma se {@code code} non è una chiave restituisce il testo così com'è. */
     public static String getOrSelf(Locale locale, String code) {
         if (code == null) {
             return null;
@@ -60,16 +60,16 @@ public final class Messages {
         try {
             return SOURCE.getMessage(code, null, locale);
         } catch (NoSuchMessageException e) {
-            return code; // datos antiguos guardados ya como texto
+            return code; // dati vecchi salvati già come testo
         }
     }
 
-    /** Si existe la clave devuelve su texto; si no, {@code fallback}. */
+    /** Se la chiave esiste restituisce il suo testo; altrimenti {@code fallback}. */
     public static String getOrDefault(Locale locale, String code, String fallback) {
         return SOURCE.getMessage(code, null, fallback, locale);
     }
 
-    /** "es", "en" o "it" de las preferencias de un usuario → Locale. */
+    /** "es", "en" o "it" dalle preferenze di un utente → Locale. */
     public static Locale locale(String tag) {
         return tag == null || tag.isBlank() ? DEFAULT : Locale.forLanguageTag(tag);
     }

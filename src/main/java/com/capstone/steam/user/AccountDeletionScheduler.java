@@ -11,9 +11,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Anonimiza las cuentas cuyo plazo de baja ya venció: según {@code app.account.deletion-cron} y también al
- * arrancar (Render free duerme y el cron puede no tocar nunca con el servidor despierto). Elimina tarde si hace
- * falta, nunca antes de la fecha. Un fallo en una cuenta solo se registra y sigue con las demás.
+ * Anonimizza gli account il cui periodo di cancellazione è scaduto: secondo {@code app.account.deletion-cron} e anche
+ * all'avvio (Render free va in sleep e il cron può non scattare mai con il server sveglio). Elimina in ritardo se serve,
+ * mai prima della data. Un errore su un account viene solo registrato e si prosegue con gli altri.
  */
 @Component
 class AccountDeletionScheduler {
@@ -41,8 +41,8 @@ class AccountDeletionScheduler {
     }
 
     /**
-     * Devuelve cuántas cuentas se anonimizaron de verdad: una que se recuperó entre la consulta y el bloqueo no
-     * cuenta.
+     * Restituisce quanti account sono stati davvero anonimizzati: uno recuperato tra la query e il lock non
+     * conta.
      */
     int runDue() {
         List<Long> due = userRepository.findIdsDueForDeletion(clock.instant());
@@ -60,7 +60,7 @@ class AccountDeletionScheduler {
         return done;
     }
 
-    /** Ni el cron ni el arranque deben caerse por un fallo de la consulta. */
+    /** Né il cron né l'avvio devono cadere per un errore della query. */
     private void runSafely() {
         try {
             runDue();

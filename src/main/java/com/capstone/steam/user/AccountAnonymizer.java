@@ -24,8 +24,8 @@ import com.capstone.steam.review.ReviewRepository;
 import com.capstone.steam.wishlist.WishlistItemRepository;
 
 /**
- * Anonimiza una cuenta cuyo plazo de baja ya venció. Una transacción propia por cuenta (REQUIRES_NEW): si una
- * falla, las demás siguen. Orden de bloqueos: primero la fila del usuario y después sus reseñas y los juegos.
+ * Anonimizza un account il cui periodo di cancellazione è scaduto. Una transazione propria per account (REQUIRES_NEW): se una
+ * fallisce, le altre proseguono. Ordine dei lock: prima la riga dell'utente e poi le sue recensioni e i giochi.
  */
 @Service
 public class AccountAnonymizer {
@@ -64,11 +64,11 @@ public class AccountAnonymizer {
         this.clock = clock;
     }
 
-    /** Devuelve si la anonimizó: {@code false} si ya no tocaba (recuperada, ya eliminada o aún no vence). */
+    /** Restituisce se l'ha anonimizzato: {@code false} se non toccava più (recuperato, già eliminato o non ancora scaduto). */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean anonymize(Long userId) {
-        // Contexto de persistencia nuevo: el bloqueo relee la fila. Se vuelve a comprobar sobre la fila bloqueada:
-        // la cuenta pudo recuperarse o anonimizarse entre que la tarea la listó y ahora.
+        // Nuovo contesto di persistenza: il lock rilegge la riga. Si ricontrolla sulla riga bloccata:
+        // l'account può essere stato recuperato o anonimizzato tra il momento in cui il task l'ha elencato e adesso.
         User user = userRepository.findByIdForUpdate(userId).orElse(null);
         if (user == null || user.isDeleted() || !user.isPendingDeletion()
                 || user.getDeletionScheduledAt().isAfter(clock.instant())) {
@@ -87,14 +87,14 @@ public class AccountAnonymizer {
         verificationTokenRepository.deleteAllByUserId(userId);
         retireStudioGames(userId);
 
-        // Los borrados masivos vacían el contexto: se vuelve a leer la fila (ya bloqueada por esta transacción).
+        // Le cancellazioni di massa svuotano il contesto: si rilegge la riga (già bloccata da questa transazione).
         User fresh = userRepository.findByIdForUpdate(userId).orElseThrow();
         fresh.anonymize(passwordEncoder.encode(UUID.randomUUID().toString()), clock.instant());
         events.publishEvent(new AccountDeletedEvent(email, displayName, locale));
         return true;
     }
 
-    /** Como {@code ReviewService.delete}: reseña bloqueada, su voto sale del contador del juego y se borra. */
+    /** Come {@code ReviewService.delete}: recensione bloccata, il suo voto esce dal contatore del gioco e viene cancellata. */
     private void deleteReviews(Long userId) {
         List<Long> reviewIds = reviewRepository.findByUserId(userId).stream().map(Review::getId).toList();
         for (Long reviewId : reviewIds) {
@@ -107,7 +107,7 @@ public class AccountAnonymizer {
         }
     }
 
-    /** PUBLISHED pasa a DELISTED; el DRAFT se borra salvo que algo lo referencie (entonces también DELISTED). */
+    /** PUBLISHED passa a DELISTED; il DRAFT si cancella a meno che qualcosa lo referenzi (allora anche DELISTED). */
     private void retireStudioGames(Long userId) {
         for (Game game : gameRepository.findByDeveloperId(userId)) {
             if (game.getStatus() == GameStatus.DRAFT && !gameRepository.isReferenced(game.getId())) {

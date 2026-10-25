@@ -6,7 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.capstone.steam.common.exception.ConflictException;
 
-/** Regla del último administrador: la tienda nunca se queda sin un admin activo. */
+/** Regola dell'ultimo amministratore: lo shop non resta mai senza un admin attivo. */
 @Component
 public class AdminGuard {
 
@@ -17,19 +17,19 @@ public class AdminGuard {
     }
 
     /**
-     * Bloquea a los administradores que cuentan y falla con 409 si, sin {@code leavingUserId}, no queda ninguno.
-     * Va dentro de la transacción del cambio: el bloqueo se mantiene hasta el commit.
+     * Blocca gli amministratori che contano e fallisce con 409 se, senza {@code leavingUserId}, non ne resta nessuno.
+     * Va dentro la transazione della modifica: il lock si mantiene fino al commit.
      * <p>
-     * Orden de bloqueos: el que llama debe invocarlo ANTES de bloquear cualquier otra fila de usuario en la misma
-     * transacción. El guard bloquea a los admins por id ascendente; bloquear antes a un admin objetivo y luego el
-     * conjunto podría provocar un interbloqueo.
+     * Ordine dei lock: chi lo chiama deve invocarlo PRIMA di bloccare qualsiasi altra riga di utente nella stessa
+     * transazione. La guard blocca gli admin per id crescente; bloccare prima un admin bersaglio e poi
+     * l'insieme potrebbe causare un deadlock.
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public void requireAnotherAdmin(Long leavingUserId) {
-        userRepository.lockCountingAdmins(); // solo toma los bloqueos (por id); su resultado no decide nada
-        // Se recuenta con una consulta nueva (y por tanto con foto nueva) ya con los bloqueos: en PostgreSQL, tras
-        // esperar el bloqueo, la primera consulta no revalida el rol (user_roles) que la otra transacción acaba
-        // de quitar, y dos cambios de rol a la vez podrían dejar la tienda sin administradores.
+        userRepository.lockCountingAdmins(); // prende solo i lock (per id); il suo risultato non decide nulla
+        // Si riconta con una query nuova (quindi con snapshot nuovo) già con i lock: in PostgreSQL, dopo
+        // aver atteso il lock, la prima query non rivalida il ruolo (user_roles) che l'altra transazione ha appena
+        // tolto, e due cambi di ruolo contemporanei potrebbero lasciare lo shop senza amministratori.
         if (userRepository.countCountingAdminsExcluding(leavingUserId) == 0) {
             throw new ConflictException("user.lastAdmin");
         }

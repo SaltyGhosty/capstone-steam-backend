@@ -39,7 +39,7 @@ public class UserController {
         return userService.updateProfile(principal.getId(), request);
     }
 
-    /** Pide la baja de la propia cuenta: queda en pausa 14 días y luego se anonimiza. */
+    /** Chiede la cancellazione del proprio account: resta in pausa 14 giorni e poi viene anonimizzato. */
     @PostMapping("/deletion")
     public AccountDeletionResponse requestDeletion(@AuthenticationPrincipal AppUserPrincipal principal,
             @Valid @RequestBody DeletionRequest request) {

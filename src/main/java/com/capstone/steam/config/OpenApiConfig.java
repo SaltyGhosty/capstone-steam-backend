@@ -10,8 +10,8 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 
 /**
- * Swagger UI en /swagger-ui.html. El botón "Authorize" acepta el accessToken de /api/auth/login
- * (sin el prefijo "Bearer"); los endpoints públicos funcionan igual sin token.
+ * Swagger UI su /swagger-ui.html. Il pulsante "Authorize" accetta l'accessToken di /api/auth/login
+ * (senza il prefisso "Bearer"); gli endpoint pubblici funzionano uguale senza token.
  */
 @Configuration
 public class OpenApiConfig {

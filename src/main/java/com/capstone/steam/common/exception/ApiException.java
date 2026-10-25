@@ -5,9 +5,9 @@ import org.springframework.http.HttpStatus;
 import com.capstone.steam.common.i18n.Messages;
 
 /**
- * Excepción de dominio que se traduce a un ProblemDetail con su status HTTP.
- * Lleva la clave del texto (messages*.properties) y sus argumentos: el handler la traduce
- * al idioma de la petición. {@link #getMessage()} devuelve el texto en español (logs y tests).
+ * Eccezione di dominio che si traduce in un ProblemDetail con il suo status HTTP.
+ * Porta la chiave del testo (messages*.properties) e i suoi argomenti: l'handler la traduce
+ * nella lingua della richiesta. {@link #getMessage()} restituisce il testo in spagnolo (log e test).
  */
 public abstract class ApiException extends RuntimeException {
 
@@ -22,7 +22,7 @@ public abstract class ApiException extends RuntimeException {
         this.args = args;
     }
 
-    /** Clave del texto (messages*.properties); el frontend la usa para distinguir errores del mismo status. */
+    /** Chiave del testo (messages*.properties); il frontend la usa per distinguere errori con lo stesso status. */
     public String getCode() {
         return code;
     }
@@ -31,7 +31,7 @@ public abstract class ApiException extends RuntimeException {
         return status;
     }
 
-    /** El texto en el idioma de la petición actual. */
+    /** Il testo nella lingua della richiesta corrente. */
     @Override
     public String getLocalizedMessage() {
         return Messages.get(code, args);

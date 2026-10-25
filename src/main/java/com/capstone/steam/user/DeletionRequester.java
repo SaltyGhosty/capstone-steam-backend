@@ -1,6 +1,6 @@
 package com.capstone.steam.user;
 
-/** Quién pidió la baja de la cuenta (V13): el propio usuario o un administrador. */
+/** Chi ha chiesto la cancellazione dell'account (V13): l'utente stesso o un amministratore. */
 public enum DeletionRequester {
     SELF, ADMIN
 }

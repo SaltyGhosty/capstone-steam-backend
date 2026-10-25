@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public class TooManyRequestsException extends ApiException {
 
-    /** @param code clave de messages*.properties */
+    /** @param code chiave di messages*.properties */
     public TooManyRequestsException(String code, Object... args) {
         super(HttpStatus.TOO_MANY_REQUESTS, code, args);
     }

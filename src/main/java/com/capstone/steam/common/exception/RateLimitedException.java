@@ -1,6 +1,6 @@
 package com.capstone.steam.common.exception;
 
-/** 429 de un límite por ventana: lleva los segundos que faltan para poder reintentar (cabecera {@code Retry-After}). */
+/** 429 di un limite a finestra: porta i secondi che mancano per poter riprovare (header {@code Retry-After}). */
 public class RateLimitedException extends TooManyRequestsException {
 
     private final long retryAfterSeconds;
