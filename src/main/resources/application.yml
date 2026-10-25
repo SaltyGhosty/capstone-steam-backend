@@ -107,6 +107,9 @@ app:
     username: ${ADMIN_USERNAME:admin}
     email: ${ADMIN_EMAIL:admin@capstone-steam.local}
     password: ${ADMIN_PASSWORD:}
+  support:
+    # buzón que recibe el formulario de asistencia; por defecto el mismo remitente de los correos
+    email: ${SUPPORT_EMAIL:${MAIL_FROM:${MAIL_USERNAME:}}}
   mail:
     from: ${MAIL_FROM:${MAIL_USERNAME:no-reply@capstone-steam.local}}
     from-name: ${MAIL_FROM_NAME:ARCADE} # nombre visible del remitente y marca de los correos

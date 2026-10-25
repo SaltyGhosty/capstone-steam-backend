@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
@@ -48,6 +49,25 @@ class BrevoMailClientTest {
 
         new BrevoMailClient(builder.build(), "xkeysib-1", URL)
                 .send("tienda@gmail.com", "ARCADE", "ana@gmail.com", "Hola", "<p>¡Hola!</p>");
+
+        server.verify();
+    }
+
+    @Test
+    void replyToGoesInTheJsonOnlyWhenGiven() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo(URL))
+                .andExpect(content().json("""
+                        {"to":[{"email":"soporte@gmail.com"}],"replyTo":{"email":"ana@gmail.com"}}"""))
+                .andRespond(withStatus(HttpStatus.CREATED).contentType(MediaType.APPLICATION_JSON).body("{}"));
+        server.expect(requestTo(URL))
+                .andExpect(jsonPath("$.replyTo").doesNotExist())
+                .andRespond(withStatus(HttpStatus.CREATED).contentType(MediaType.APPLICATION_JSON).body("{}"));
+        BrevoMailClient client = new BrevoMailClient(builder.build(), "xkeysib-1", URL);
+
+        client.send("tienda@gmail.com", "ARCADE", "soporte@gmail.com", "Hola", "<p>x</p>", "ana@gmail.com");
+        client.send("tienda@gmail.com", "ARCADE", "ana@gmail.com", "Hola", "<p>x</p>");
 
         server.verify();
     }

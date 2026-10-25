@@ -72,7 +72,13 @@ record MailTexts(
         String accountDeletedPreheader,
         String accountDeletedEyebrow,
         String accountDeletedHeading,
-        String accountDeletedBody) {
+        String accountDeletedBody,
+        // Acuse de recibo del formulario de asistencia
+        String supportConfirmSubject,
+        String supportConfirmPreheader,
+        String supportConfirmEyebrow,
+        String supportConfirmBody,
+        String supportConfirmCopy) {
 
     static final MailTexts ES = new MailTexts(
             "es",
@@ -126,7 +132,12 @@ record MailTexts(
             "Cuenta eliminada",
             "Hasta pronto",
             "Tu cuenta y tus datos personales se han eliminado. Conservamos los pedidos por obligación legal, sin "
-                    + "datos que te identifiquen.");
+                    + "datos que te identifiquen.",
+            "Hemos recibido tu mensaje",
+            "Te responderemos lo antes posible.",
+            "Asistencia",
+            "Gracias por escribirnos. Revisaremos tu mensaje y te contestaremos a este email lo antes posible.",
+            "Copia de tu mensaje");
 
     static final MailTexts EN = new MailTexts(
             "en",
@@ -179,7 +190,12 @@ record MailTexts(
             "Account deleted",
             "See you soon",
             "Your account and personal data have been deleted. We keep orders as required by law, without any data "
-                    + "that identifies you.");
+                    + "that identifies you.",
+            "We have received your message",
+            "We will get back to you as soon as possible.",
+            "Support",
+            "Thanks for writing to us. We will review your message and reply to this email as soon as possible.",
+            "A copy of your message");
 
     static final MailTexts IT = new MailTexts(
             "it",
@@ -233,7 +249,12 @@ record MailTexts(
             "Account eliminato",
             "A presto",
             "Il tuo account e i tuoi dati personali sono stati eliminati. Conserviamo gli ordini per obbligo di legge, "
-                    + "senza dati che ti identifichino.");
+                    + "senza dati che ti identifichino.",
+            "Abbiamo ricevuto il tuo messaggio",
+            "Ti risponderemo il prima possibile.",
+            "Assistenza",
+            "Grazie per averci scritto. Esamineremo il tuo messaggio e ti risponderemo a questa email il prima possibile.",
+            "Copia del tuo messaggio");
 
     /** Textos del idioma dado. {@code null}, vacío o desconocido ("fr", "en-US"...) → español. */
     static MailTexts of(String locale) {

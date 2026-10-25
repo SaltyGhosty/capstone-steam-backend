@@ -26,6 +26,31 @@ class EmailTemplatesI18nTest {
             new OrderPaidEvent.Line("Celeste", null, new BigDecimal("15.00")),
             new OrderPaidEvent.Line("Hades", null, new BigDecimal("1219.50")));
 
+    // ------------------------------------------------------------------ asistencia
+
+    @ParameterizedTest
+    @CsvSource({
+            "es, Hemos recibido tu mensaje, Copia de tu mensaje",
+            "en, We have received your message, A copy of your message",
+            "it, Abbiamo ricevuto il tuo messaggio, Copia del tuo messaggio",
+            "fr, Hemos recibido tu mensaje, Copia de tu mensaje"})
+    void supportConfirmationInEachLanguageWithAnEscapedCopyAndNoStoreButtons(String locale, String subject, String copy) {
+        Email email = EmailTemplates.supportConfirmation(BRAND, "<i>Ana</i>", locale, "Asunto <script>");
+
+        assertThat(email.subject()).isEqualTo(subject);
+        assertThat(email.html()).contains(copy, "Asunto &lt;script&gt;", "&lt;i&gt;Ana&lt;/i&gt;")
+                .doesNotContain("<script>", "<i>Ana</i>", "href=\"https://arcade.test/");
+    }
+
+    @Test
+    void supportRequestEscapesEverythingTheUserTyped() {
+        Email email = EmailTemplates.supportRequest(BRAND, "a@b.com", "<b>X</b>", "u<s>", "es", "s", "<img src=x onerror=1>\nlinea 2");
+
+        assertThat(email.subject()).isEqualTo("[Asistenza ARCADE] s");
+        assertThat(email.html()).contains("&lt;b&gt;X&lt;/b&gt;", "u&lt;s&gt;", "&lt;img src=x onerror=1&gt;", "es", "a@b.com")
+                .doesNotContain("<b>X</b>", "<img", "<s>");
+    }
+
     // ------------------------------------------------------------------ bienvenida
 
     @Test

@@ -1,5 +1,9 @@
 package com.capstone.steam.notification;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -13,6 +17,7 @@ import com.capstone.steam.notification.event.AccountDeletionScheduledEvent;
 import com.capstone.steam.notification.event.GameOnSaleEvent;
 import com.capstone.steam.notification.event.OrderPaidEvent;
 import com.capstone.steam.notification.event.PaymentFailedEvent;
+import com.capstone.steam.notification.event.SupportRequestEvent;
 import com.capstone.steam.notification.event.UserRegisteredEvent;
 import com.capstone.steam.notification.event.VerificationEmailEvent;
 
@@ -28,10 +33,15 @@ import com.capstone.steam.notification.event.VerificationEmailEvent;
 @Component
 public class MailListener {
 
-    private final EmailService emailService;
+    private static final Logger log = LoggerFactory.getLogger(MailListener.class);
 
-    public MailListener(EmailService emailService) {
+    private final EmailService emailService;
+    /** Buzón de asistencia ({@code SUPPORT_EMAIL}); vacío = no se avisa a soporte. */
+    private final String supportAddress;
+
+    public MailListener(EmailService emailService, @Value("${app.support.email:}") String supportAddress) {
         this.emailService = emailService;
+        this.supportAddress = supportAddress == null ? "" : supportAddress.trim();
     }
 
     @Async(AsyncConfig.MAIL_EXECUTOR)
@@ -89,5 +99,21 @@ public class MailListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onAccountDeleted(AccountDeletedEvent event) {
         emailService.sendAccountDeleted(event.email(), event.displayName(), event.locale());
+    }
+
+    /**
+     * Formulario de asistencia: aviso a soporte (con Reply-To al usuario) y acuse de recibo al usuario. El evento no
+     * nace en una transacción, así que no hay AFTER_COMMIT: se escucha directamente y el envío va al pool de correo.
+     */
+    @Async(AsyncConfig.MAIL_EXECUTOR)
+    @EventListener
+    public void onSupportRequest(SupportRequestEvent event) {
+        if (supportAddress.isEmpty()) {
+            log.warn("Mensaje de asistencia sin SUPPORT_EMAIL (ni MAIL_FROM ni MAIL_USERNAME): no se avisa a soporte");
+        } else {
+            emailService.sendSupportRequest(supportAddress, event.fromEmail(), event.displayName(), event.username(),
+                    event.subject(), event.message(), event.locale());
+        }
+        emailService.sendSupportConfirmation(event.fromEmail(), event.displayName(), event.subject(), event.locale());
     }
 }

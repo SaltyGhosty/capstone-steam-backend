@@ -2,6 +2,7 @@ package com.capstone.steam.notification;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -49,13 +50,24 @@ public class BrevoMailClient {
         return !apiKey.isEmpty();
     }
 
-    /** Lanza {@code RestClientException} si Brevo no acepta el correo; {@link #isRetryable} dice si merece otro intento. */
     public void send(String fromEmail, String fromName, String to, String subject, String html) {
-        String body = json.writeValueAsString(Map.of(
-                "sender", Map.of("name", fromName, "email", fromEmail),
-                "to", List.of(Map.of("email", to)),
-                "subject", subject,
-                "htmlContent", html));
+        send(fromEmail, fromName, to, subject, html, null);
+    }
+
+    /**
+     * Lanza {@code RestClientException} si Brevo no acepta el correo; {@link #isRetryable} dice si merece otro intento.
+     * {@code replyTo} (opcional) es la dirección a la que responde el destinatario.
+     */
+    public void send(String fromEmail, String fromName, String to, String subject, String html, String replyTo) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("sender", Map.of("name", fromName, "email", fromEmail));
+        payload.put("to", List.of(Map.of("email", to)));
+        if (replyTo != null && !replyTo.isBlank()) {
+            payload.put("replyTo", Map.of("email", replyTo));
+        }
+        payload.put("subject", subject);
+        payload.put("htmlContent", html);
+        String body = json.writeValueAsString(payload);
         http.post()
                 .uri(url)
                 .header("api-key", apiKey)

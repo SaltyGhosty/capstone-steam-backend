@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -67,6 +68,44 @@ class EmailServiceTest {
         verifyNoInteractions(mailSender);
         assertThat(EmailService.isReservedDomain("player@test.com")).isFalse(); // test.com es un dominio real
         assertThat(EmailService.isReservedDomain("sin-arroba")).isTrue();
+    }
+
+    @Test
+    void supportRequestGoesToTheSupportAddressWithReplyToTheUser() throws Exception {
+        var service = new EmailService(mailSender, "tienda@capstone.test", "ARCADE", STORE, "smtp-user@gmail.com");
+
+        service.sendSupportRequest("soporte@arcade-shop.com", "ana@gmail.com", "Ana", "ana", "No carga <b>mi</b> biblioteca",
+                "Hola,\nno me carga.", "it");
+
+        MimeMessage message = sentMessage();
+        assertThat(message.getSubject()).isEqualTo("[Asistenza ARCADE] No carga <b>mi</b> biblioteca");
+        assertThat(((InternetAddress) message.getAllRecipients()[0]).getAddress()).isEqualTo("soporte@arcade-shop.com");
+        assertThat(((InternetAddress) message.getReplyTo()[0]).getAddress()).isEqualTo("ana@gmail.com");
+        String html = (String) message.getContent();
+        assertThat(html).contains("ana@gmail.com", "@ana", "white-space:pre-wrap", "Hola,\nno me carga.")
+                .doesNotContain("<b>mi</b>");
+    }
+
+    @Test
+    void supportSubjectCannotInjectHeaders() throws Exception {
+        var service = new EmailService(mailSender, "tienda@capstone.test", "ARCADE", STORE, "smtp-user@gmail.com");
+
+        service.sendSupportRequest("soporte@arcade-shop.com", "ana@gmail.com", null, null, "Hola\r\nBcc: x@y.com",
+                "mensaje de prueba", "es");
+
+        assertThat(sentMessage().getSubject()).isEqualTo("[Asistenza ARCADE] Hola Bcc: x@y.com");
+    }
+
+    @Test
+    void supportConfirmationIsInTheUsersLanguageAndHasNoReplyTo() throws Exception {
+        var service = new EmailService(mailSender, "tienda@capstone.test", "ARCADE", STORE, "smtp-user@gmail.com");
+
+        service.sendSupportConfirmation("ana@gmail.com", "Ana", "Mi asunto", "en");
+
+        MimeMessage message = sentMessage();
+        assertThat(message.getSubject()).isEqualTo("We have received your message");
+        assertThat(message.getReplyTo()[0]).isEqualTo(message.getFrom()[0]); // sin Reply-To propio, JavaMail devuelve el remitente
+        assertThat((String) message.getContent()).contains("Mi asunto");
     }
 
     @Test
@@ -404,13 +443,22 @@ class EmailServiceTest {
     }
 
     @Test
+    void supportRequestViaBrevoCarriesTheReplyTo() {
+        brevoService("user@gmail.com").sendSupportRequest("soporte@arcade-shop.com", "ana@gmail.com", "Ana", "ana",
+                "Asunto", "Mensaje de prueba", "es");
+
+        verify(brevo).send(eq("tienda@gmail.com"), eq("ARCADE"), eq("soporte@arcade-shop.com"),
+                eq("[Asistenza ARCADE] Asunto"), any(), eq("ana@gmail.com"));
+    }
+
+    @Test
     void withABrevoKeyTheMailGoesThroughTheApiNotSmtp() {
         brevoService("user@gmail.com").sendWelcome("ana@test.com", "Ana", "it", TOKEN, "ana");
 
         ArgumentCaptor<String> html = ArgumentCaptor.forClass(String.class);
         verify(brevo).send(eq("tienda@gmail.com"), eq("ARCADE"),
                 eq("ana@test.com"),
-                eq("Benvenuto su ARCADE! Conferma la tua email"), html.capture());
+                eq("Benvenuto su ARCADE! Conferma la tua email"), html.capture(), isNull());
         assertThat(html.getValue()).contains("/verify-email?token=" + TOKEN);
         verifyNoInteractions(mailSender);
     }
@@ -419,30 +467,30 @@ class EmailServiceTest {
     void brevoAloneEnablesMailEvenWithoutGmailCredentials() {
         brevoService("").sendPurchaseReceipt("ana@test.com", "Ana", 7L, new BigDecimal("9.99"), List.of(), "es");
 
-        verify(brevo).send(any(), any(), any(), any(), any());
+        verify(brevo).send(any(), any(), any(), any(), any(), any());
     }
 
     @Test
     void brevoNetworkErrorsAreRetriedButARejectedKeyIsNot() {
         doThrow(new ResourceAccessException("timeout")).doNothing()
-                .when(brevo).send(any(), any(), any(), any(), any());
+                .when(brevo).send(any(), any(), any(), any(), any(), any());
         var service = brevoService("user@gmail.com");
 
         service.sendWelcome("ana@test.com", "Ana", "es", null, null);
-        verify(brevo, times(2)).send(any(), any(), any(), any(), any());
+        verify(brevo, times(2)).send(any(), any(), any(), any(), any(), any());
         assertThat(pauses).containsExactly(Duration.ofSeconds(2));
 
         doThrow(HttpClientErrorException.create(HttpStatus.UNAUTHORIZED, "", null, null, null))
-                .when(brevo).send(any(), any(), any(), any(), any());
+                .when(brevo).send(any(), any(), any(), any(), any(), any());
         assertThatCode(() -> service.sendWelcome("ana@test.com", "Ana", "es", null, null)).doesNotThrowAnyException();
-        verify(brevo, times(3)).send(any(), any(), any(), any(), any());
+        verify(brevo, times(3)).send(any(), any(), any(), any(), any(), any());
     }
 
     @Test
     void brevoAlsoSkipsReservedDomains() {
         brevoService("user@gmail.com").sendWelcome("demo_player@demo.capstone-steam.local", "Demo", "es", null, null);
 
-        verify(brevo, never()).send(any(), any(), any(), any(), any());
+        verify(brevo, never()).send(any(), any(), any(), any(), any(), any());
     }
 
     @Test

@@ -194,6 +194,44 @@ final class EmailTemplates {
         return new Email(t.accountDeletedSubject(), layout(brand, t, t.accountDeletedPreheader(), body));
     }
 
+    /**
+     * Aviso para el equipo de asistencia. Todo lo que escribió el usuario sale escapado; el mensaje conserva sus saltos
+     * de línea ({@code pre-wrap}). El asunto se aplana a una línea: un salto de línea en una cabecera inyectaría otras.
+     */
+    static Email supportRequest(Brand brand, String fromEmail, String displayName, String username, String locale,
+            String subject, String message) {
+        MailTexts t = MailTexts.of("it"); // el equipo de asistencia trabaja en italiano
+        String who = displayName == null || displayName.isBlank() ? "-" : esc(displayName.trim());
+        if (username != null && !username.isBlank()) {
+            who += " (@" + esc(username) + ")";
+        }
+        String body = eyebrow("Assistenza", ACCENT)
+                + heading(esc(oneLine(subject)))
+                + paragraph("<strong>Utente:</strong> " + who + "<br><strong>Email:</strong> " + esc(fromEmail)
+                        + "<br><strong>Lingua:</strong> " + esc(locale == null ? "es" : locale))
+                + "<div style=\"margin:18px 0 0;padding:14px 16px;background:" + BG + ";border:1px solid " + LINE
+                + ";border-radius:9px;font:400 15px/1.6 " + FONT + ";color:" + TEXT + ";white-space:pre-wrap;"
+                + "word-break:break-word;\">" + esc(message) + "</div>";
+        return new Email("[Asistenza " + brand.name() + "] " + oneLine(subject), layout(brand, t,
+                "Nuova richiesta di assistenza", body,
+                "Messaggio inviato dal modulo di assistenza. Rispondi a questa email per scrivere all'utente."));
+    }
+
+    /** Acuse de recibo al usuario, con una copia del asunto. Sin botones: no hay nada que pulsar. */
+    static Email supportConfirmation(Brand brand, String displayName, String locale, String subject) {
+        MailTexts t = MailTexts.of(locale);
+        String body = eyebrow(t.supportConfirmEyebrow(), ACCENT)
+                + heading(esc(t.supportConfirmSubject()))
+                + paragraph(greeting(t.failedHello(), displayName, ".") + " " + esc(t.supportConfirmBody()))
+                + paragraph("<strong>" + esc(t.supportConfirmCopy()) + ":</strong><br>" + esc(oneLine(subject)));
+        return new Email(t.supportConfirmSubject(), layout(brand, t, t.supportConfirmPreheader(), body));
+    }
+
+    /** Texto en una sola línea: los caracteres de control (saltos de línea incluidos) pasan a un espacio. */
+    private static String oneLine(String text) {
+        return text == null ? "" : text.replaceAll("[\\p{Cntrl}]+", " ").strip();
+    }
+
     // ------------------------------------------------------------------
     // Piezas
     // ------------------------------------------------------------------
@@ -299,6 +337,10 @@ final class EmailTemplates {
      * asunto en la bandeja de entrada; dentro del correo va oculta.
      */
     private static String layout(Brand brand, MailTexts t, String preheader, String body) {
+        return layout(brand, t, preheader, body, t.footer());
+    }
+
+    private static String layout(Brand brand, MailTexts t, String preheader, String body, String footer) {
         return """
                 <!doctype html>
                 <html lang="%s">
@@ -322,7 +364,7 @@ final class EmailTemplates {
                 </body>
                 </html>
                 """.formatted(t.lang(), BG, esc(preheader), BG, logo(brand), PANEL, LINE, body, FONT, FAINT, esc(brand.name()),
-                        t.footer());
+                        footer);
     }
 
     /** Importe en euros con el formato del idioma: «39,99 €» (es), «€39.99» (en), «39,99 €» (it). */

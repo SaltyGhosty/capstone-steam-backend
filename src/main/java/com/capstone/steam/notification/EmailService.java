@@ -153,7 +153,23 @@ public class EmailService {
         send(to, EmailTemplates.accountDeleted(brand, displayName, locale));
     }
 
+    /** Aviso a soporte: va a la dirección de asistencia y al responder se escribe al usuario ({@code replyTo}). */
+    public void sendSupportRequest(String supportAddress, String fromEmail, String displayName, String username,
+            String subject, String message, String locale) {
+        send(supportAddress, EmailTemplates.supportRequest(brand, fromEmail, displayName, username, locale, subject,
+                message), fromEmail);
+    }
+
+    /** Acuse de recibo al usuario, en su idioma, con una copia del asunto. */
+    public void sendSupportConfirmation(String to, String displayName, String subject, String locale) {
+        send(to, EmailTemplates.supportConfirmation(brand, displayName, locale, subject));
+    }
+
     private void send(String to, Email email) {
+        send(to, email, null);
+    }
+
+    private void send(String to, Email email, String replyTo) {
         String masked = maskEmail(to);
         if (!enabled) {
             log.info("[correo desactivado] para={} asunto=\"{}\"", masked, email.subject());
@@ -166,12 +182,15 @@ public class EmailService {
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
                 if (brevo != null) {
-                    brevo.send(from, brand.name(), to, email.subject(), email.html());
+                    brevo.send(from, brand.name(), to, email.subject(), email.html(), replyTo);
                 } else {
                     MimeMessage message = mailSender.createMimeMessage();
                     MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
                     helper.setFrom(from, brand.name());
                     helper.setTo(to);
+                    if (replyTo != null) {
+                        helper.setReplyTo(replyTo);
+                    }
                     helper.setSubject(email.subject());
                     helper.setText(email.html(), true);
                     mailSender.send(message);
