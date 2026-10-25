@@ -212,7 +212,7 @@ final class EmailTemplates {
                 + "<div style=\"margin:18px 0 0;padding:14px 16px;background:" + BG + ";border:1px solid " + LINE
                 + ";border-radius:9px;font:400 15px/1.6 " + FONT + ";color:" + TEXT + ";white-space:pre-wrap;"
                 + "word-break:break-word;\">" + esc(message) + "</div>";
-        return new Email("[Asistenza " + brand.name() + "] " + oneLine(subject), layout(brand, t,
+        return new Email("[Assistenza " + brand.name() + "] " + oneLine(subject), layout(brand, t,
                 "Nuova richiesta di assistenza", body,
                 "Messaggio inviato dal modulo di assistenza. Rispondi a questa email per scrivere all'utente."));
     }

@@ -46,7 +46,7 @@ class EmailTemplatesI18nTest {
     void supportRequestEscapesEverythingTheUserTyped() {
         Email email = EmailTemplates.supportRequest(BRAND, "a@b.com", "<b>X</b>", "u<s>", "es", "s", "<img src=x onerror=1>\nlinea 2");
 
-        assertThat(email.subject()).isEqualTo("[Asistenza ARCADE] s");
+        assertThat(email.subject()).isEqualTo("[Assistenza ARCADE] s");
         assertThat(email.html()).contains("&lt;b&gt;X&lt;/b&gt;", "u&lt;s&gt;", "&lt;img src=x onerror=1&gt;", "es", "a@b.com")
                 .doesNotContain("<b>X</b>", "<img", "<s>");
     }

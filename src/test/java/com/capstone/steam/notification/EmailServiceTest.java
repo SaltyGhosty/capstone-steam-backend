@@ -78,7 +78,7 @@ class EmailServiceTest {
                 "Hola,\nno me carga.", "it");
 
         MimeMessage message = sentMessage();
-        assertThat(message.getSubject()).isEqualTo("[Asistenza ARCADE] No carga <b>mi</b> biblioteca");
+        assertThat(message.getSubject()).isEqualTo("[Assistenza ARCADE] No carga <b>mi</b> biblioteca");
         assertThat(((InternetAddress) message.getAllRecipients()[0]).getAddress()).isEqualTo("soporte@arcade-shop.com");
         assertThat(((InternetAddress) message.getReplyTo()[0]).getAddress()).isEqualTo("ana@gmail.com");
         String html = (String) message.getContent();
@@ -93,7 +93,7 @@ class EmailServiceTest {
         service.sendSupportRequest("soporte@arcade-shop.com", "ana@gmail.com", null, null, "Hola\r\nBcc: x@y.com",
                 "mensaje de prueba", "es");
 
-        assertThat(sentMessage().getSubject()).isEqualTo("[Asistenza ARCADE] Hola Bcc: x@y.com");
+        assertThat(sentMessage().getSubject()).isEqualTo("[Assistenza ARCADE] Hola Bcc: x@y.com");
     }
 
     @Test
@@ -448,7 +448,7 @@ class EmailServiceTest {
                 "Asunto", "Mensaje de prueba", "es");
 
         verify(brevo).send(eq("tienda@gmail.com"), eq("ARCADE"), eq("soporte@arcade-shop.com"),
-                eq("[Asistenza ARCADE] Asunto"), any(), eq("ana@gmail.com"));
+                eq("[Assistenza ARCADE] Asunto"), any(), eq("ana@gmail.com"));
     }
 
     @Test

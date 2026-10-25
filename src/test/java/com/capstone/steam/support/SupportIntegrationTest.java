@@ -81,7 +81,7 @@ class SupportIntegrationTest {
 
         await().atMost(Duration.ofSeconds(5)).until(() -> sent.size() == 2);
         assertThat(sent).contains(
-                "soporte@arcade-test.com|[Asistenza ARCADE] Biblioteca vacía|" + email,
+                "soporte@arcade-test.com|[Assistenza ARCADE] Biblioteca vacía|" + email,
                 email + "|We have received your message|");
     }
 
@@ -97,9 +97,9 @@ class SupportIntegrationTest {
 
         // el registro también manda su correo de bienvenida: se cuentan solo los de asistencia
         await().atMost(Duration.ofSeconds(5)).until(() -> sent.stream()
-                .filter(line -> line.contains("Asistenza") || line.contains("Hemos recibido")).count() == 4);
+                .filter(line -> line.contains("Assistenza") || line.contains("Hemos recibido")).count() == 4);
         String account = username + "@test.com";
-        assertThat(sent).contains("soporte@arcade-test.com|[Asistenza ARCADE] Hola soporte|" + account,
+        assertThat(sent).contains("soporte@arcade-test.com|[Assistenza ARCADE] Hola soporte|" + account,
                 account + "|Hemos recibido tu mensaje|")
                 .noneMatch(line -> line.contains("otro@gmail.com"));
     }
