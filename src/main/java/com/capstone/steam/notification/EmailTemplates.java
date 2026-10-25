@@ -18,19 +18,19 @@ import com.capstone.steam.notification.event.OrderPaidEvent;
 import com.capstone.steam.user.DeletionRequester;
 
 /**
- * Plantillas HTML de los correos, con el aspecto de la tienda (paleta de
- * {@code frontend/src/index.css}). Todo valor que viene del usuario se escapa
- * (un displayName "&lt;script&gt;" no debe inyectar HTML en el correo).
+ * Template HTML delle email, con l'aspetto dello shop (palette di
+ * {@code frontend/src/index.css}). Ogni valore che viene dall'utente viene escapato
+ * (un displayName "&lt;script&gt;" non deve iniettare HTML nell'email).
  *
- * <p>El HTML usa tablas y estilos en línea, sin hojas de estilo: es lo único que Gmail, Outlook
- * y el resto de clientes de correo muestran igual.
+ * <p>L'HTML usa tabelle e stili inline, senza fogli di stile: è l'unica cosa che Gmail, Outlook
+ * e gli altri client di posta mostrano allo stesso modo.
  *
- * <p>Los textos salen en el idioma del destinatario ({@link MailTexts}); un idioma desconocido cae en
- * español.
+ * <p>I testi escono nella lingua del destinatario ({@link MailTexts}); una lingua sconosciuta ricade
+ * sullo spagnolo.
  *
- * <p>Las portadas del recibo de compra son la única imagen externa. Solo se enlazan si la URL es
- * http(s) y van con {@code alt}, ancho y alto fijos en atributos: si el cliente bloquea las
- * imágenes, el correo se sigue leyendo bien y las filas no se descuadran.
+ * <p>Le copertine della ricevuta d'acquisto sono l'unica immagine esterna. Si collegano solo se l'URL è
+ * https e con {@code alt}, larghezza e altezza fisse negli attributi: se il client blocca le
+ * immagini, l'email si legge bene lo stesso e le righe non si sfasano.
  */
 final class EmailTemplates {
 
@@ -44,7 +44,7 @@ final class EmailTemplates {
     private static final String ACCENT_INK = "#0b0f08";
     private static final String DANGER = "#ff7b72";
     private static final String FONT = "Inter,'Segoe UI',Helvetica,Arial,sans-serif";
-    /** Zona en la que se da la fecha de la baja: la de la tienda. */
+    /** Fuso in cui si indica la data della cancellazione: quello dello shop. */
     private static final ZoneId MAIL_ZONE = ZoneId.of("Europe/Rome");
 
     private EmailTemplates() {
@@ -54,10 +54,10 @@ final class EmailTemplates {
     }
 
     /**
-     * Quién firma el correo y adónde llevan sus botones.
+     * Chi firma l'email e dove portano i suoi pulsanti.
      *
-     * @param name     nombre de la tienda; es también el nombre visible del remitente
-     * @param storeUrl URL del frontend sin barra final, o {@code null} si no se conoce (sin botones)
+     * @param name     nome dello shop; è anche il nome visibile del mittente
+     * @param storeUrl URL del frontend senza slash finale, o {@code null} se non è nota (senza pulsanti)
      */
     record Brand(String name, String storeUrl) {
 
@@ -67,8 +67,8 @@ final class EmailTemplates {
     }
 
     /**
-     * Bienvenida. Con {@code verificationToken} es también la confirmación del email (botón a
-     * {@code /verify-email}); sin él (verificación desactivada) es la bienvenida de siempre.
+     * Benvenuto. Con {@code verificationToken} è anche la conferma dell'email (pulsante verso
+     * {@code /verify-email}); senza (verifica disattivata) è il benvenuto di sempre.
      */
     static Email welcome(Brand brand, String displayName, String locale, String verificationToken, String username) {
         MailTexts t = MailTexts.of(locale);
@@ -87,7 +87,7 @@ final class EmailTemplates {
         return new Email(t.welcomeSubject().formatted(brand.name()), layout(brand, t, t.welcomePreheader(), body));
     }
 
-    /** Ruta del enlace de verificación; el token va codificado para URL. */
+    /** Percorso del link di verifica; il token è codificato per URL. */
     static String verificationPath(String token) {
         return "/verify-email?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
     }
@@ -113,7 +113,7 @@ final class EmailTemplates {
                 layout(brand, t, t.receiptPreheader().formatted(orderId, money(total, t)), body));
     }
 
-    /** {@code reason} llega ya traducido al idioma del correo y se muestra escapado. */
+    /** {@code reason} arriva già tradotto nella lingua dell'email e si mostra escapato. */
     static Email paymentFailed(Brand brand, String displayName, Long orderId, BigDecimal total, String reason,
             String locale) {
         MailTexts t = MailTexts.of(locale);
@@ -131,7 +131,7 @@ final class EmailTemplates {
                 layout(brand, t, t.failedPreheader().formatted(orderId), body));
     }
 
-    /** Aviso de oferta de un juego de la wishlist: portada, título y precio antes y ahora. */
+    /** Avviso di offerta di un gioco della wishlist: copertina, titolo e prezzo prima e adesso. */
     static Email gameOnSale(Brand brand, String displayName, String title, String coverUrl,
             BigDecimal price, BigDecimal finalPrice, int discountPercent, String locale) {
         MailTexts t = MailTexts.of(locale);
@@ -160,9 +160,9 @@ final class EmailTemplates {
 
 
     /**
-     * Baja programada. Si la pidió el propio usuario, el correo explica cómo recuperar la cuenta; si la programó un
-     * admin, pide contestar al correo (no hay botón de recuperación: la cuenta no se recupera iniciando sesión).
-     * La fecha va en formato largo del idioma del correo, en la zona de la tienda (Europe/Rome).
+     * Cancellazione programmata. Se l'ha chiesta l'utente stesso, l'email spiega come recuperare l'account; se l'ha programmata un
+     * admin, chiede di rispondere all'email (non c'è pulsante di recupero: l'account non si recupera accedendo).
+     * La data è in formato lungo nella lingua dell'email, nel fuso dello shop (Europe/Rome).
      */
     static Email deletionScheduled(Brand brand, String displayName, String locale, Instant scheduledAt,
             DeletionRequester requestedBy) {
@@ -176,7 +176,7 @@ final class EmailTemplates {
         return new Email(t.deletionScheduledSubject(), layout(brand, t, t.deletionScheduledPreheader(), body));
     }
 
-    /** La baja pendiente se canceló (por un admin o por el propio usuario al recuperar la cuenta). */
+    /** La cancellazione in sospeso è stata annullata (da un admin o dall'utente stesso recuperando l'account). */
     static Email deletionCancelled(Brand brand, String displayName, String locale) {
         MailTexts t = MailTexts.of(locale);
         String body = eyebrow(t.deletionCancelledEyebrow(), ACCENT)
@@ -185,7 +185,7 @@ final class EmailTemplates {
         return new Email(t.deletionCancelledSubject(), layout(brand, t, t.deletionCancelledPreheader(), body));
     }
 
-    /** La cuenta ya está anonimizada; el correo va al email que tenía antes de anonimizar. */
+    /** L'account è già anonimizzato; l'email va all'indirizzo che aveva prima dell'anonimizzazione. */
     static Email accountDeleted(Brand brand, String displayName, String locale) {
         MailTexts t = MailTexts.of(locale);
         String body = eyebrow(t.accountDeletedEyebrow(), MUTED)
@@ -195,12 +195,12 @@ final class EmailTemplates {
     }
 
     /**
-     * Aviso para el equipo de asistencia. Todo lo que escribió el usuario sale escapado; el mensaje conserva sus saltos
-     * de línea ({@code pre-wrap}). El asunto se aplana a una línea: un salto de línea en una cabecera inyectaría otras.
+     * Avviso per il team di assistenza. Tutto ciò che ha scritto l'utente esce escapato; il messaggio conserva gli a capo
+     * ({@code pre-wrap}). L'oggetto viene appiattito su una riga: un a capo in un header ne inietterebbe altri.
      */
     static Email supportRequest(Brand brand, String fromEmail, String displayName, String username, String locale,
             String subject, String message) {
-        MailTexts t = MailTexts.of("it"); // el equipo de asistencia trabaja en italiano
+        MailTexts t = MailTexts.of("it"); // il team di assistenza lavora in italiano
         String who = displayName == null || displayName.isBlank() ? "-" : esc(displayName.trim());
         if (username != null && !username.isBlank()) {
             who += " (@" + esc(username) + ")";
@@ -217,7 +217,7 @@ final class EmailTemplates {
                 "Messaggio inviato dal modulo di assistenza. Rispondi a questa email per scrivere all'utente."));
     }
 
-    /** Acuse de recibo al usuario, con una copia del asunto. Sin botones: no hay nada que pulsar. */
+    /** Conferma di ricezione all'utente, con una copia dell'oggetto. Senza pulsanti: non c'è nulla da cliccare. */
     static Email supportConfirmation(Brand brand, String displayName, String locale, String subject) {
         MailTexts t = MailTexts.of(locale);
         String body = eyebrow(t.supportConfirmEyebrow(), ACCENT)
@@ -227,21 +227,19 @@ final class EmailTemplates {
         return new Email(t.supportConfirmSubject(), layout(brand, t, t.supportConfirmPreheader(), body));
     }
 
-    /** Texto en una sola línea: los caracteres de control (saltos de línea incluidos) pasan a un espacio. */
+    /** Testo su una sola riga: i caratteri di controllo (a capo inclusi) diventano uno spazio. */
     private static String oneLine(String text) {
         return text == null ? "" : text.replaceAll("[\\p{Cntrl}]+", " ").strip();
     }
 
-    // ------------------------------------------------------------------
-    // Piezas
-    // ------------------------------------------------------------------
+    // Componenti
 
     private static final int THUMB_WIDTH = 64;
-    private static final int THUMB_HEIGHT = 36; // 16:9, como las portadas de la tienda
+    private static final int THUMB_HEIGHT = 36; // 16:9, come le copertine dello shop
 
     /**
-     * Fila del recibo: miniatura, título y precio pagado. La celda de la miniatura tiene ancho fijo
-     * y existe siempre, así las filas sin portada (o con la imagen bloqueada) no se descuadran.
+     * Riga della ricevuta: miniatura, titolo e prezzo pagato. La cella della miniatura ha larghezza fissa
+     * ed esiste sempre, così le righe senza copertina (o con l'immagine bloccata) non si sfasano.
      */
     private static String receiptRow(OrderPaidEvent.Line line, MailTexts t) {
         String cover = safeImageUrl(line.coverUrl());
@@ -264,9 +262,9 @@ final class EmailTemplates {
     }
 
     /**
-     * La portada la escribe un developer y llega al correo de otro usuario: solo se acepta una URL
-     * https. Sin TLS, la petición de la imagen viaja en claro. Cualquier otra cosa ({@code http:},
-     * {@code javascript:}, {@code data:}, rutas relativas...) se descarta.
+     * La copertina la scrive un developer e arriva nell'email di un altro utente: si accetta solo una URL
+     * https. Senza TLS, la richiesta dell'immagine viaggia in chiaro. Qualsiasi altra cosa ({@code http:},
+     * {@code javascript:}, {@code data:}, percorsi relativi...) viene scartata.
      */
     static String safeImageUrl(String url) {
         if (url == null || url.isBlank()) {
@@ -276,7 +274,7 @@ final class EmailTemplates {
         return trimmed.toLowerCase(Locale.ROOT).startsWith("https://") ? trimmed : null;
     }
 
-    /** "¡Hola, Ana!" o, si el usuario no tiene nombre visible, "¡Hola!". El nombre sale escapado. */
+    /** "¡Hola, Ana!" o, se l'utente non ha nome visibile, "¡Hola!". Il nome esce escapato. */
     private static String greeting(String opening, String displayName, String closing) {
         boolean anonymous = displayName == null || displayName.isBlank();
         return opening + (anonymous ? "" : ", " + esc(displayName.trim())) + closing;
@@ -288,14 +286,14 @@ final class EmailTemplates {
                 """.formatted(FONT, color, esc(text));
     }
 
-    /** {@code html} ya debe venir escapado. */
+    /** {@code html} deve già arrivare escapato. */
     private static String heading(String html) {
         return """
                 <h1 style="margin:0 0 14px;font:800 26px/1.2 %s;color:%s;">%s</h1>
                 """.formatted(FONT, TEXT, html);
     }
 
-    /** {@code html} ya debe venir escapado. */
+    /** {@code html} deve già arrivare escapato. */
     private static String paragraph(String html) {
         return """
                 <p style="margin:14px 0 0;font:400 15px/1.6 %s;color:%s;">%s</p>
@@ -333,8 +331,8 @@ final class EmailTemplates {
     }
 
     /**
-     * Marco común. {@code preheader} es la línea que los clientes de correo enseñan junto al
-     * asunto en la bandeja de entrada; dentro del correo va oculta.
+     * Cornice comune. {@code preheader} è la riga che i client di posta mostrano accanto all'
+     * oggetto nella posta in arrivo; dentro l'email è nascosta.
      */
     private static String layout(Brand brand, MailTexts t, String preheader, String body) {
         return layout(brand, t, preheader, body, t.footer());
@@ -367,7 +365,7 @@ final class EmailTemplates {
                         footer);
     }
 
-    /** Importe en euros con el formato del idioma: «39,99 €» (es), «€39.99» (en), «39,99 €» (it). */
+    /** Importo in euro nel formato della lingua: «39,99 €» (es), «€39.99» (en), «39,99 €» (it). */
     static String money(BigDecimal amount, MailTexts texts) {
         return NumberFormat.getCurrencyInstance(texts.moneyLocale()).format(amount);
     }

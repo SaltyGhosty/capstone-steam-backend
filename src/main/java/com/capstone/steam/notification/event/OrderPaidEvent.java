@@ -4,11 +4,11 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Pedido pagado: dispara el recibo por correo tras el commit.
+ * Ordine pagato: fa partire la ricevuta per email dopo il commit.
  *
- * <p>Las líneas se construyen dentro de la transacción del pago: los {@code Game} son LAZY y el
- * listener corre AFTER_COMMIT en otro hilo, ya sin sesión de Hibernate. Por lo mismo, {@code locale}
- * (idioma del correo: es, en, it) se lee del usuario antes de publicar.
+ * <p>Le righe si costruiscono dentro la transazione del pagamento: i {@code Game} sono LAZY e il
+ * listener gira AFTER_COMMIT in un altro thread, ormai senza sessione Hibernate. Per lo stesso motivo, {@code locale}
+ * (lingua dell'email: es, en, it) si legge dall'utente prima di pubblicare.
  */
 public record OrderPaidEvent(
         Long orderId,
@@ -20,11 +20,11 @@ public record OrderPaidEvent(
         String locale) {
 
     /**
-     * Una línea del recibo.
+     * Una riga della ricevuta.
      *
-     * @param title     título del juego
-     * @param coverUrl  portada tal como la guardó el developer (puede ser {@code null}; la plantilla la valida)
-     * @param unitPrice precio pagado, con el descuento ya aplicado ({@code OrderItem.unitPrice})
+     * @param title     titolo del gioco
+     * @param coverUrl  copertina così come l'ha salvata il developer (può essere {@code null}; il template la valida)
+     * @param unitPrice prezzo pagato, con lo sconto già applicato ({@code OrderItem.unitPrice})
      */
     public record Line(String title, String coverUrl, BigDecimal unitPrice) {
     }

@@ -1,13 +1,13 @@
 package com.capstone.steam.notification.event;
 
 /**
- * Se publica dentro de la transacción de registro; el listener de correo (bloque 7)
- * lo consume en AFTER_COMMIT. Solo datos primitivos, nunca entidades.
+ * Si pubblica dentro la transazione di registrazione; il listener delle email
+ * la consuma in AFTER_COMMIT. Solo dati primitivi, mai entità.
  *
- * @param locale            idioma del correo (es, en, it), leído de {@code User} dentro de la transacción
- * @param verificationToken token de verificación en claro para el enlace del correo; {@code null} si la
- *                          verificación de email está desactivada (sale la bienvenida de siempre)
- * @param username          la cuenta que se va a confirmar (el correo de verificación la nombra)
+ * @param locale            lingua dell'email (es, en, it), letta da {@code User} dentro la transazione
+ * @param verificationToken token di verifica in chiaro per il link dell'email; {@code null} se la
+ *                          verifica dell'email è disattivata (esce il benvenuto di sempre)
+ * @param username          l'account da confermare (l'email di verifica lo nomina)
  */
 public record UserRegisteredEvent(Long userId, String email, String displayName, String locale,
         String verificationToken, String username) {

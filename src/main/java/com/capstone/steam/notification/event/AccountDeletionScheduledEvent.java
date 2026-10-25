@@ -5,11 +5,11 @@ import java.time.Instant;
 import com.capstone.steam.user.DeletionRequester;
 
 /**
- * Se publica dentro de la transacción que programa la baja; el listener de correo lo consume en AFTER_COMMIT.
- * Solo datos primitivos, nunca entidades.
+ * Si pubblica dentro la transazione che programma la cancellazione; il listener delle email la consuma in AFTER_COMMIT.
+ * Solo dati primitivi, mai entità.
  *
- * @param scheduledAt cuándo se anonimizará la cuenta
- * @param requestedBy quién pidió la baja (decide si el correo ofrece recuperarla)
+ * @param scheduledAt quando l'account verrà anonimizzato
+ * @param requestedBy chi ha chiesto la cancellazione (decide se l'email offre di recuperarlo)
  */
 public record AccountDeletionScheduledEvent(String email, String displayName, String locale, Instant scheduledAt,
         DeletionRequester requestedBy) {

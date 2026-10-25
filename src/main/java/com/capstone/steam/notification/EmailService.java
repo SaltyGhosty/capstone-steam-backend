@@ -30,18 +30,18 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 /**
- * Envío por la API HTTP de Brevo ({@code BREVO_API_KEY}, la de producción: Render free bloquea el SMTP)
- * o, sin esa clave, por SMTP (Gmail). Nunca lanza excepciones: un correo que falla se registra en el log
- * y no afecta a la operación de negocio, que ya hizo commit.
+ * Invio tramite l'API HTTP di Brevo ({@code BREVO_API_KEY}, quella di produzione: Render free blocca l'SMTP)
+ * o, senza quella chiave, tramite SMTP (Gmail). Non lancia mai eccezioni: un'email che fallisce viene registrata nel log
+ * e non influisce sull'operazione di business, che ha già fatto commit.
  *
- * <p>Sin {@code BREVO_API_KEY} ni {@code MAIL_USERNAME}, el correo queda desactivado y solo se
- * registra en el log, para poder desarrollar sin cuenta de correo.
+ * <p>Senza {@code BREVO_API_KEY} né {@code MAIL_USERNAME}, l'email resta disattivata e viene solo
+ * registrata nel log, per poter sviluppare senza un account email.
  *
- * <p>El correo llega con nombre de remitente ({@code MAIL_FROM_NAME}, por defecto «ARCADE») y sus
- * botones apuntan al frontend ({@code FRONTEND_URL}; si falta, el primer origen de
+ * <p>L'email arriva con il nome del mittente ({@code MAIL_FROM_NAME}, di default «ARCADE») e i suoi
+ * pulsanti puntano al frontend ({@code FRONTEND_URL}; se manca, la prima origine di
  * {@code CORS_ALLOWED_ORIGINS}).
  *
- * <p>Cada correo sale en el idioma del destinatario ({@code users.locale}, que viaja en el evento).
+ * <p>Ogni email esce nella lingua del destinatario ({@code users.locale}, che viaggia nell'evento).
  */
 @Service
 public class EmailService {
@@ -53,20 +53,20 @@ public class EmailService {
     private static final List<String> RESERVED_DOMAINS = List.of("example.com", "example.net", "example.org");
 
     private final JavaMailSender mailSender;
-    /** null si no hay {@code BREVO_API_KEY}: entonces se usa el SMTP. */
+    /** null se non c'è {@code BREVO_API_KEY}: allora si usa l'SMTP. */
     private final BrevoMailClient brevo;
     private final String from;
     private final Brand brand;
     private final boolean enabled;
 
-    /** Pausa entre intentos; en los tests se sustituye para no esperar de verdad. */
+    /** Pausa tra i tentativi; nei test viene sostituita per non aspettare davvero. */
     @FunctionalInterface
     interface Sleeper {
         void sleep(Duration duration) throws InterruptedException;
     }
 
     private static final int MAX_ATTEMPTS = 3;
-    /** Pausa antes del 2.º y del 3.º intento. */
+    /** Pausa prima del 2º e del 3º tentativo. */
     private static final List<Duration> RETRY_PAUSES = List.of(Duration.ofSeconds(2), Duration.ofSeconds(6));
 
     private final Sleeper sleeper;
@@ -80,7 +80,7 @@ public class EmailService {
         this(mailSender, brevo, from, fromName, storeUrl, smtpUsername, Thread::sleep);
     }
 
-    /** Solo SMTP (tests). */
+    /** Solo SMTP (test). */
     public EmailService(JavaMailSender mailSender, String from, String fromName, String storeUrl, String smtpUsername) {
         this(mailSender, null, from, fromName, storeUrl, smtpUsername, Thread::sleep);
     }
@@ -95,9 +95,9 @@ public class EmailService {
         this.sleeper = sleeper;
         this.mailSender = mailSender;
         this.brevo = brevo != null && brevo.enabled() ? brevo : null;
-        this.from = from == null || from.isBlank() ? smtpUsername : from.trim(); // MAIL_FROM= vacío o con espacios en .env
+        this.from = from == null || from.isBlank() ? smtpUsername : from.trim(); // MAIL_FROM= vuoto o con spazi nel .env
         this.brand = new Brand(
-                fromName == null || fromName.isBlank() ? DEFAULT_FROM_NAME : fromName.trim(), // MAIL_FROM_NAME= vacío
+                fromName == null || fromName.isBlank() ? DEFAULT_FROM_NAME : fromName.trim(), // MAIL_FROM_NAME= vuoto
                 firstUrl(storeUrl));
         this.enabled = this.brevo != null || !smtpUsername.isBlank();
         if (this.brevo != null) {
@@ -107,17 +107,17 @@ public class EmailService {
         }
     }
 
-    /** {@code locale}: es, en o it (el de {@code users.locale}); cualquier otro valor, o null, sale en español. */
+    /** {@code locale}: es, en o it (quello di {@code users.locale}); qualsiasi altro valore, o null, esce in spagnolo. */
     public void sendWelcome(String to, String displayName, String locale, String verificationToken,
             String username) {
         if (verificationToken != null && !enabled) {
-            // Solo con el correo desactivado (desarrollo) el enlace sale en el log, para poder verificarse
+            // Solo con l'email disattivata (sviluppo) il link esce nel log, per poterlo verificare
             String path = EmailTemplates.verificationPath(verificationToken);
             log.info("[correo desactivado] enlace de verificación para {}: {}", maskEmail(to),
                     brand.storeUrl() == null ? path : brand.link(path));
         }
         if (verificationToken != null && brand.storeUrl() == null) {
-            // sin FRONTEND_URL ni un origen http en CORS el correo sale sin botón y no se puede verificar
+            // senza FRONTEND_URL né un'origine http in CORS l'email esce senza pulsante e non si può verificare
             log.warn("El correo de verificación para {} sale sin enlace: falta FRONTEND_URL (o un origen http en CORS_ALLOWED_ORIGINS)",
                     maskEmail(to));
         }
@@ -153,14 +153,14 @@ public class EmailService {
         send(to, EmailTemplates.accountDeleted(brand, displayName, locale));
     }
 
-    /** Aviso a soporte: va a la dirección de asistencia y al responder se escribe al usuario ({@code replyTo}). */
+    /** Avviso al supporto: va all'indirizzo di assistenza e rispondendo si scrive all'utente ({@code replyTo}). */
     public void sendSupportRequest(String supportAddress, String fromEmail, String displayName, String username,
             String subject, String message, String locale) {
         send(supportAddress, EmailTemplates.supportRequest(brand, fromEmail, displayName, username, locale, subject,
                 message), fromEmail);
     }
 
-    /** Acuse de recibo al usuario, en su idioma, con una copia del asunto. */
+    /** Conferma di ricezione all'utente, nella sua lingua, con una copia dell'oggetto. */
     public void sendSupportConfirmation(String to, String displayName, String subject, String locale) {
         send(to, EmailTemplates.supportConfirmation(brand, displayName, locale, subject));
     }
@@ -198,7 +198,7 @@ public class EmailService {
                 log.info("Correo enviado: para={} asunto=\"{}\"", masked, email.subject());
                 return;
             } catch (MailException | MessagingException | UnsupportedEncodingException | RestClientException ex) {
-                // el servidor suele repetir la dirección en su error ("Invalid Addresses: ...")
+                // il server spesso ripete l'indirizzo nel suo errore ("Invalid Addresses: ...")
                 String reason = ex.getMessage() == null ? null : ex.getMessage().replace(to, masked);
                 boolean retryable = brevo != null ? BrevoMailClient.isRetryable(ex) : isConnectionFailure(ex);
                 if (attempt < MAX_ATTEMPTS && retryable) {
@@ -220,15 +220,15 @@ public class EmailService {
     }
 
     /**
-     * Fallo de red al hablar con el SMTP (conexión rechazada o agotada): merece reintento.
-     * Las credenciales o el destinatario incorrectos no cambian por esperar, no se reintentan.
+     * Errore di rete parlando con l'SMTP (connessione rifiutata o scaduta): vale un nuovo tentativo.
+     * Credenziali o destinatario errati non cambiano aspettando, quindi non si ritentano.
      */
     static boolean isConnectionFailure(Throwable ex) {
         if (!(ex instanceof MailSendException)) {
             return false;
         }
         for (Throwable cause = ex; cause != null; cause = cause.getCause() == cause ? null : cause.getCause()) {
-            // MailConnectException es de la implementación de Jakarta Mail (solo en runtime): se compara por nombre
+            // MailConnectException appartiene all'implementazione di Jakarta Mail (solo a runtime): si confronta per nome
             if (cause.getClass().getSimpleName().equals("MailConnectException") || cause instanceof ConnectException
                     || cause instanceof SocketTimeoutException) {
                 return true;
@@ -238,8 +238,8 @@ public class EmailService {
     }
 
     /**
-     * El email del destinatario es un dato personal: en el log solo sale la primera letra y el
-     * dominio ("l***@gmail.com"). Sin arroba o vacío, "***".
+     * L'email del destinatario è un dato personale: nel log compaiono solo la prima lettera e il
+     * dominio ("l***@gmail.com"). Senza chiocciola o vuota, "***".
      */
     static String maskEmail(String email) {
         int at = email == null ? -1 : email.lastIndexOf('@');
@@ -247,8 +247,8 @@ public class EmailService {
     }
 
     /**
-     * Dominios que nunca reciben correo (RFC 2606 y 6761): las cuentas del catálogo demo usan
-     * {@code @demo.capstone-steam.local}. Enviarles nada solo genera rebotes en el buzón de Gmail.
+     * Domini che non ricevono mai email (RFC 2606 e 6761): gli account del catalogo demo usano
+     * {@code @demo.capstone-steam.local}. Inviare loro qualcosa genera solo rimbalzi nella casella Gmail.
      */
     static boolean isReservedDomain(String to) {
         int at = to == null ? -1 : to.lastIndexOf('@');
@@ -261,8 +261,8 @@ public class EmailService {
     }
 
     /**
-     * Primera URL http(s) de una lista separada por comas (el formato de {@code CORS_ALLOWED_ORIGINS}),
-     * sin barra final. {@code null} si no hay ninguna: los correos salen entonces sin botones.
+     * Prima URL http(s) di una lista separata da virgole (il formato di {@code CORS_ALLOWED_ORIGINS}),
+     * senza slash finale. {@code null} se non ce n'è nessuna: allora le email escono senza pulsanti.
      */
     static String firstUrl(String value) {
         if (value == null) {
