@@ -1,6 +1,6 @@
-// Idioma de la interfaz (es/en/it). Se elige con las banderas de la cabecera, también sin sesión,
-// y se recuerda en localStorage. El idioma actual vive además en una variable del módulo para que
-// los helpers que no son componentes (format.ts, avisos del StoreContext) traduzcan igual.
+// Lingua dell'interfaccia (es/en/it). Si sceglie con le bandiere dell'header, anche senza sessione,
+// e viene ricordata in localStorage. La lingua corrente vive anche in una variabile del modulo perché
+// gli helper che non sono componenti (format.ts, avvisi dello StoreContext) traducano allo stesso modo.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Locale } from '@/api/types';
 import { detectLocale } from '@/lib/locale';
@@ -16,13 +16,13 @@ const INTL_LOCALE: Record<Locale, string> = { es: 'es-ES', en: 'en-GB', it: 'it-
 let current: Locale = 'es';
 
 export const getLang = () => current;
-/** Fija el idioma sin pasar por React (lo usan los tests para volver al español). */
+/** Imposta la lingua senza passare da React (la usano i test per tornare allo spagnolo). */
 export const setActiveLang = (lang: Locale) => {
   current = lang;
 };
 export const intlLocale = () => INTL_LOCALE[current];
 
-/** Traduce una clave al idioma actual. Con {count}, elige la variante _one u _other si existe. */
+/** Traduce una chiave nella lingua corrente. Con {count}, sceglie la variante _one o _other se esiste. */
 export function t(key: TranslationKey, vars?: Vars): string {
   const dict = MESSAGES[current] as Record<string, string>;
   let text = dict[key];
@@ -64,11 +64,11 @@ export function I18nProvider({ children, initial }: { children: ReactNode; initi
     try {
       localStorage.setItem(LANG_KEY, next);
     } catch {
-      // almacenamiento bloqueado: el idioma dura lo que la pestaña
+      // storage bloccato: la lingua dura quanto la scheda
     }
   }, []);
 
-  // t cambia de identidad con el idioma para que los componentes memorizados se actualicen
+  // t cambia identità con la lingua così i componenti memoizzati si aggiornano
   const value = useMemo<I18nValue>(() => ({ lang, setLang, t: (key, vars) => t(key, vars) }), [lang, setLang]);
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

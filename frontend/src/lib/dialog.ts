@@ -2,7 +2,7 @@ import type { KeyboardEvent } from 'react';
 
 const FOCUSABLE = 'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/** onKeyDown de un diálogo modal: Tab y Mayús+Tab dan la vuelta dentro sin salir a la página de fondo. */
+/** onKeyDown di un dialog modale: Tab e Maiusc+Tab girano al suo interno senza uscire sulla pagina di sfondo. */
 export function trapTab(e: KeyboardEvent<HTMLElement>) {
   if (e.key !== 'Tab') return;
   const items = [...e.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE)];

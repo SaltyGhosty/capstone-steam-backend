@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState, type DependencyList } from 'react';
 import { useI18n } from '@/i18n';
 
 /**
- * Carga datos al montar (y cuando cambian las deps o el idioma, porque la API responde en el idioma
- * de la interfaz). Ignora respuestas de peticiones ya obsoletas.
+  * Carica dati al mount (e quando cambiano le deps o la lingua, perché l'API risponde nella lingua
+  * dell'interfaccia). Ignora le risposte di richieste ormai obsolete.
  */
 export function useAsync<T>(loader: () => Promise<T>, deps: DependencyList) {
   const [data, setData] = useState<T | null>(null);

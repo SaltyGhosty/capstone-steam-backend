@@ -1,6 +1,6 @@
 import { intlLocale, t } from '@/i18n';
 
-// Los formateadores de Intl se crean una vez por idioma
+// I formatter di Intl si creano una sola volta per lingua
 const cache = new Map<string, { money: Intl.NumberFormat; date: Intl.DateTimeFormat; dateTime: Intl.DateTimeFormat }>();
 function formatters() {
   const locale = intlLocale();
@@ -37,9 +37,9 @@ export function initials(name: string) {
     .join('');
 }
 
-// Las portadas se guardan en vertical. Para el hero y las ofertas se pide la versión apaisada:
-// en Steam, la imagen "library_hero" del mismo juego; en Unsplash y picsum, un recorte por URL.
-// Cualquier otra URL se usa tal cual y la recorta el CSS (background-size: cover).
+// Le copertine sono salvate in verticale. Per hero e offerte si chiede la versione orizzontale:
+// su Steam, l'immagine "library_hero" dello stesso gioco; su Unsplash e picsum, un ritaglio via URL.
+// Qualsiasi altro URL si usa così com'è e lo ritaglia il CSS (background-size: cover).
 export function wideImage(url: string | null | undefined, width = 1800, height = 800) {
   if (!url) return '';
   const steam = url.match(/^(https:\/\/[^/]*steamstatic\.com\/steam\/apps\/\d+)\/library_600x900(_2x)?\.jpg/);
@@ -55,14 +55,14 @@ export function wideImage(url: string | null | undefined, width = 1800, height =
   return picsum ? `${picsum[1]}/${width}/${height}` : url;
 }
 
-// Tarjetas y líneas del carrito son apaisadas (≈1,6:1): en Steam hay una cápsula con ese formato.
+// Le card e le righe del carrello sono orizzontali (≈1,6:1): su Steam c'è una capsule con quel formato.
 export function cardImage(url: string | null | undefined) {
   if (!url) return '';
   const steam = url.match(/^(https:\/\/[^/]*steamstatic\.com\/steam\/apps\/\d+)\/library_600x900(_2x)?\.jpg/);
   return steam ? `${steam[1]}/capsule_616x353.jpg` : url;
 }
 
-/** Los géneros de serie se traducen por su slug; los que cree un admin se muestran con su nombre. */
+/** I generi di serie si traducono tramite lo slug; quelli creati da un admin si mostrano col loro nome. */
 export function genreName(genre: { name: string; slug?: string }) {
   const key = `genre.${genre.slug}`;
   const translated = t(key as Parameters<typeof t>[0]);

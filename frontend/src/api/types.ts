@@ -1,5 +1,5 @@
-// Tipos que reflejan los DTOs del backend (com.capstone.steam.*.dto).
-// Los BigDecimal llegan como number en el JSON; las fechas, como string ISO.
+// Tipi che rispecchiano i DTO del backend (com.capstone.steam.*.dto).
+// I BigDecimal arrivano come number nel JSON; le date come stringhe ISO.
 
 export type Role = 'ROLE_USER' | 'ROLE_DEVELOPER' | 'ROLE_ADMIN';
 export type GameStatus = 'DRAFT' | 'PUBLISHED' | 'DELISTED';
@@ -7,11 +7,11 @@ export type OrderStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
 export type PaymentMethod = 'CREDIT_CARD' | 'PAYPAL' | 'WALLET';
 export type PaymentStatus = 'INITIATED' | 'SUCCEEDED' | 'FAILED';
 export type AccountType = 'PLAYER' | 'DEVELOPER';
-/** Etiqueta de valoración de un juego, con las reglas de Steam (NONE = menos de 10 reseñas). */
+/** Etichetta di valutazione di un gioco, con le regole di Steam (NONE = meno di 10 recensioni). */
 export type ReviewScore =
   | 'OVERWHELMINGLY_POSITIVE' | 'VERY_POSITIVE' | 'POSITIVE' | 'MOSTLY_POSITIVE' | 'MIXED'
   | 'MOSTLY_NEGATIVE' | 'NEGATIVE' | 'VERY_NEGATIVE' | 'OVERWHELMINGLY_NEGATIVE' | 'NONE';
-/** Idioma de los correos del usuario (la interfaz se elige aparte, con las banderas). */
+/** Lingua delle email dell'utente (l'interfaccia si sceglie a parte, con le bandiere). */
 export type Locale = 'es' | 'en' | 'it';
 
 export interface PageResponse<T> {
@@ -34,9 +34,9 @@ export interface User {
   createdAt: string;
   locale: Locale;
   profilePublic: boolean;
-  /** false hasta que el dueño pulsa el enlace del correo (sin verificar no puede iniciar sesión). */
+  /** false finché il titolare non clicca il link dell'email (senza verifica non può accedere). */
   emailVerified: boolean;
-  /** Fecha en que se anonimizará la cuenta si está en pausa; null si no hay baja pendiente. */
+  /** Data in cui l'account verrà anonimizzato se è in pausa; null se non c'è cancellazione in sospeso. */
   deletionScheduledAt: string | null;
   deletionRequestedBy: 'SELF' | 'ADMIN' | null;
 }
@@ -50,7 +50,7 @@ export interface RegisterRequest {
   locale?: Locale;
 }
 
-/** Campos omitidos = no se modifican */
+/** Campi omessi = non vengono modificati */
 export interface UpdateProfileRequest {
   displayName?: string;
   avatarUrl?: string;
@@ -58,7 +58,7 @@ export interface UpdateProfileRequest {
   profilePublic?: boolean;
 }
 
-/** Registro con verificación de email: cuenta creada pero sin sesión hasta pulsar el enlace del correo. */
+/** Registrazione con verifica email: account creato ma senza sessione finché non si clicca il link dell'email. */
 export interface RegisterResponse {
   id: number;
   email: string;
@@ -92,7 +92,7 @@ export interface GameSummary {
   positivePercent: number;
   reviewScore: ReviewScore;
   genres: Genre[];
-  /** null si el estudio eliminó su cuenta */
+  /** null se lo studio ha eliminato il suo account */
   developerName: string | null;
   developerDeleted: boolean;
 }
@@ -101,12 +101,12 @@ export interface GameDetail {
   id: number;
   title: string;
   slug: string;
-  /** En el idioma de la interfaz (la española si falta la traducción) */
+  /** Nella lingua dell'interfaccia (quella spagnola se manca la traduzione) */
   description: string | null;
-  /** Las tres versiones tal cual, para el formulario del developer */
+  /** Le tre versioni così come sono, per il form dello sviluppatore */
   descriptions: { es: string | null; en: string | null; it: string | null };
   coverUrl: string | null;
-  /** AppID de la tienda de Steam; si lo tiene, precio y descuento vienen de Steam */
+  /** AppID dello store di Steam; se presente, prezzo e sconto vengono da Steam */
   steamAppId: number | null;
   priceSyncedAt: string | null;
   price: number;
@@ -195,7 +195,7 @@ export interface Review {
   gameId: number;
   recommended: boolean;
   body: string | null;
-  /** Idioma en que está escrita */
+  /** Lingua in cui è scritta */
   language: Locale;
   author: { id: number; displayName: string };
   createdAt: string;
@@ -206,7 +206,7 @@ export interface ReviewRequest {
   gameId?: number;
   recommended: boolean;
   body?: string;
-  /** Idioma de la interfaz al escribirla */
+  /** Lingua dell'interfaccia al momento della scrittura */
   language: Locale;
 }
 
@@ -249,7 +249,7 @@ export interface CatalogQuery {
   size?: number;
 }
 
-/** Resultado de sincronizar los precios con Steam. */
+/** Risultato della sincronizzazione dei prezzi con Steam. */
 export interface SteamSyncResult {
   checked: number;
   updated: number;
@@ -257,7 +257,6 @@ export interface SteamSyncResult {
   notified: number;
 }
 
-// ---- Amigos y perfil (Bloque E) ----
 export type Relation = 'SELF' | 'FRIENDS' | 'REQUEST_SENT' | 'REQUEST_RECEIVED' | 'NONE';
 export type FriendshipStatus = 'PENDING' | 'ACCEPTED';
 
@@ -276,11 +275,11 @@ export interface SearchHit {
 export interface FriendResponse {
   user: UserCard;
   since: string | null;
-  /** Mensajes de este amigo que aún no he leído. */
+  /** Messaggi di questo amico che non ho ancora letto. */
   unreadMessages: number;
 }
 
-/** `user` es la otra persona, no quien consulta. */
+/** `user` è l'altra persona, non chi consulta. */
 export interface FriendRequest {
   id: number;
   user: UserCard;
@@ -293,7 +292,7 @@ export interface FriendRequests {
   outgoing: FriendRequest[];
 }
 
-/** Solicitud recibida pendiente, en la consulta de actividad. */
+/** Richiesta ricevuta in sospeso, nella consultazione dell'attività. */
 export interface ActivityRequest {
   id: number;
   username: string;
@@ -301,7 +300,7 @@ export interface ActivityRequest {
   createdAt: string;
 }
 
-/** Mensajes sin leer de un remitente. */
+/** Messaggi non letti di un mittente. */
 export interface ActivityUnread {
   username: string;
   displayName: string | null;
@@ -309,7 +308,7 @@ export interface ActivityUnread {
   lastMessageAt: string;
 }
 
-/** `total` = solicitudes recibidas + mensajes sin leer: es el número de «Amigos». */
+/** `total` = richieste ricevute + messaggi non letti: è il numero di «Amici». */
 export interface FriendActivity {
   incomingRequests: ActivityRequest[];
   unread: ActivityUnread[];
@@ -326,7 +325,7 @@ export interface Conversation {
   lastMessageAt: string | null;
 }
 
-/** `mine`: lo escribí yo. */
+/** `mine`: l'ho scritto io. */
 export interface ChatMessageItem {
   id: number;
   mine: boolean;
@@ -342,7 +341,7 @@ export interface ProfileGame {
   playtimeMinutes: number;
 }
 
-/** `library` y `friends` son null si `visible` es false. */
+/** `library` e `friends` sono null se `visible` è false. */
 export interface PublicProfile {
   user: UserCard;
   memberSince: string;
@@ -354,7 +353,7 @@ export interface PublicProfile {
   friends: FriendResponse[] | null;
 }
 
-/** Un mensaje del chat del asistente; role en minúscula, como en el backend. */
+/** Un messaggio della chat dell'assistente; role in minuscolo, come nel backend. */
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
