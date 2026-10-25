@@ -13,7 +13,7 @@ import com.capstone.steam.notification.event.SaleRecipient;
 
 public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long> {
 
-    /** A quién avisar cuando un juego entra en oferta: quienes lo tienen en la wishlist y siguen activos. */
+    /** Chi avvisare quando un gioco va in offerta: chi lo ha nella wishlist e resta attivo. */
     @Query("""
             select new com.capstone.steam.notification.event.SaleRecipient(u.email, u.displayName, u.locale)
             from WishlistItem w join w.user u
@@ -30,12 +30,12 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
     @Query("delete from WishlistItem w where w.user.id = :userId and w.game.id = :gameId")
     int deleteByUserIdAndGameId(Long userId, Long gameId);
 
-    /** Al anonimizar la cuenta: se vacía la wishlist entera. */
+    /** All'anonimizzazione dell'account: si svuota l'intera wishlist. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from WishlistItem w where w.user.id = :userId")
     int deleteAllByUserId(Long userId);
 
-    /** Tras una compra, los juegos comprados salen de la wishlist. */
+    /** Dopo un acquisto, i giochi acquistati escono dalla wishlist. */
     @Modifying
     @Query("delete from WishlistItem w where w.user.id = :userId and w.game.id in :gameIds")
     int deleteByUserIdAndGameIdIn(Long userId, Collection<Long> gameIds);

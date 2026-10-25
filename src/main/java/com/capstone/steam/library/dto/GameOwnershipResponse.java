@@ -1,6 +1,6 @@
 package com.capstone.steam.library.dto;
 
-/** Estado del usuario respecto a un juego: lo usa la ficha del juego para pintar sus botones. */
+/** Stato dell'utente rispetto a un gioco: lo usa la scheda del gioco per disegnare i suoi pulsanti. */
 public record GameOwnershipResponse(
         Long gameId,
         boolean owned,

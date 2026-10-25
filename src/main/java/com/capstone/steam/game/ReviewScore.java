@@ -1,6 +1,6 @@
 package com.capstone.steam.game;
 
-/** Etiqueta de valoración de un juego, con las reglas de Steam. */
+/** Etichetta di valutazione di un gioco, con le regole di Steam. */
 public enum ReviewScore {
     OVERWHELMINGLY_POSITIVE,
     VERY_POSITIVE,
@@ -13,7 +13,7 @@ public enum ReviewScore {
     OVERWHELMINGLY_NEGATIVE,
     NONE;
 
-    /** Reseñas mínimas para que un juego tenga puntuación. */
+    /** Recensioni minime perché un gioco abbia un punteggio. */
     public static final int MIN_REVIEWS = 10;
 
     public static ReviewScore of(int positive, int total) {

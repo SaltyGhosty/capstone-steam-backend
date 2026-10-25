@@ -21,12 +21,12 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             countQuery = "select count(r) from Review r where r.game.id = :gameId and r.language = :language")
     Page<Review> findByGameIdAndLanguage(Long gameId, String language, Pageable pageable);
 
-    /** Lee la reseña bloqueándola: update y delete leen el voto que luego usan para el delta. */
+    /** Legge la recensione bloccandola: update e delete leggono il voto che poi usano per il delta. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from Review r where r.id = :id")
     Optional<Review> findByIdForUpdate(Long id);
 
-    /** Las reseñas de un usuario (al anonimizar su cuenta; cada una se relee con bloqueo antes de borrarla). */
+    /** Le recensioni di un utente (all'anonimizzazione dell'account; ognuna si rilegge con lock prima di eliminarla). */
     List<Review> findByUserId(Long userId);
 
     Optional<Review> findByUserIdAndGameId(Long userId, Long gameId);

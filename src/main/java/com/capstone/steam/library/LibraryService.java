@@ -61,19 +61,19 @@ public class LibraryService {
                 reviewRepository.existsByUserIdAndGameId(userId, gameId));
     }
 
-    /** Sesión de juego simulada (no hay cliente real): suma minutos con un UPDATE atómico. */
+    /** Sessione di gioco simulata (non c'è un client reale): somma minuti con un UPDATE atomico. */
     @Transactional
     public LibraryEntryResponse play(Long userId, Long gameId, int minutes) {
         if (libraryRepository.addPlaytime(userId, gameId, minutes) == 0) {
             throw new NotFoundException("library.notOwned");
         }
-        // clearAutomatically separó las entidades: se vuelve a leer la fila ya actualizada
+        // clearAutomatically ha staccato le entità: si rilegge la riga già aggiornata
         return libraryRepository.findByUserIdAndGameId(userId, gameId)
                 .map(LibraryEntryResponse::from)
                 .orElseThrow();
     }
 
-    /** Alta manual (regalo/soporte) por un admin: sin pedido asociado. Una cuenta eliminada, 404. */
+    /** Inserimento manuale (regalo/supporto) da parte di un admin: senza ordine associato. Un account eliminato, 404. */
     @Transactional
     public LibraryEntryResponse grant(Long userId, Long gameId) {
         User user = userRepository.findById(userId).filter(u -> !u.isDeleted())
@@ -83,7 +83,7 @@ public class LibraryService {
             throw new ConflictException("library.userHasGame");
         }
         LibraryEntry entry = libraryRepository.saveAndFlush(new LibraryEntry(user, game, null));
-        // igual que tras una compra: ya no tiene sentido en el carrito ni en la wishlist
+        // come dopo un acquisto: non ha più senso nel carrello né nella wishlist
         cartItemRepository.deleteByUserIdAndGameId(userId, gameId);
         wishlistRepository.deleteByUserIdAndGameIdIn(userId, List.of(gameId));
         return LibraryEntryResponse.from(entry);

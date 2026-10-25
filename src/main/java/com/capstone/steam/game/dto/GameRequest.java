@@ -16,8 +16,8 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 /**
- * Alta y edición (PUT, reemplazo completo) de un juego por su developer.
- * {@code version}: opcional en el PUT; si se envía y no coincide con la actual -> 409.
+ * Creazione e modifica (PUT, sostituzione completa) di un gioco da parte del suo developer.
+ * {@code version}: opzionale nel PUT; se viene inviata e non coincide con quella attuale -> 409.
  */
 public record GameRequest(
         @NotBlank @Size(max = 150) String title,

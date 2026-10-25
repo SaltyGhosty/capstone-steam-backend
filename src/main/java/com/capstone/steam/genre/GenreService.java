@@ -54,7 +54,7 @@ public class GenreService {
         return GenreResponse.from(genre);
     }
 
-    /** Borra el género; sus asociaciones con juegos caen por ON DELETE CASCADE. */
+    /** Elimina il genere; le sue associazioni con i giochi cadono per ON DELETE CASCADE. */
     @Transactional
     public void delete(Long id) {
         if (!genreRepository.existsById(id)) {
@@ -63,7 +63,7 @@ public class GenreService {
         genreRepository.deleteById(id);
     }
 
-    /** Para asignar géneros a un juego: todos los ids deben existir. */
+    /** Per assegnare generi a un gioco: tutti gli id devono esistere. */
     @Transactional(readOnly = true)
     public Set<Genre> resolve(Collection<Long> ids) {
         if (ids == null || ids.isEmpty()) {

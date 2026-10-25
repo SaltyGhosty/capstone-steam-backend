@@ -17,7 +17,7 @@ import com.capstone.steam.genre.dto.GenreResponse;
 
 import jakarta.validation.Valid;
 
-/** GET público; escritura solo ADMIN (regla /api/admin/** de SecurityConfig). */
+/** GET pubblico; scrittura solo ADMIN (regola /api/admin/** di SecurityConfig). */
 @RestController
 public class GenreController {
 

@@ -34,7 +34,7 @@ public class LibraryEntry {
     @JoinColumn(name = "game_id", nullable = false)
     private Game game;
 
-    /** Pedido con el que se adquirió; null si fue un alta manual (p. ej. regalo de un admin). */
+    /** Ordine con cui è stato acquisito; null se è un inserimento manuale (es. regalo di un admin). */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
     private Order order;

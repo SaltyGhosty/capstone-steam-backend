@@ -5,7 +5,7 @@ import java.util.stream.Collectors;
 
 import com.capstone.steam.common.exception.BadRequestException;
 
-/** Ordenaciones del catálogo; el valor de la query string es {@code param}. */
+/** Ordinamenti del catalogo; il valore della query string è {@code param}. */
 public enum GameSort {
     NEWEST("newest"),
     PRICE_ASC("price_asc"),

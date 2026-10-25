@@ -7,8 +7,8 @@ import com.capstone.steam.cart.CartItem;
 import com.capstone.steam.game.Game;
 
 /**
- * @param available false si el juego dejó de estar publicado después de añadirlo:
- *                  se muestra, pero no cuenta en el total ni se podrá comprar
+ * @param available false se il gioco non è più pubblicato dopo essere stato aggiunto:
+ *                  viene mostrato, ma non conta nel totale e non sarà acquistabile
  */
 public record CartItemResponse(
         Long gameId,

@@ -25,7 +25,7 @@ import com.capstone.steam.security.AppUserPrincipal;
 
 import jakarta.validation.Valid;
 
-/** Panel del developer (regla /api/developer/** -> ROLE_DEVELOPER). */
+/** Pannello del developer (regola /api/developer/** -> ROLE_DEVELOPER). */
 @RestController
 @RequestMapping("/api/developer/games")
 public class DeveloperGameController {

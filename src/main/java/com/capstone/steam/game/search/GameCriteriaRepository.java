@@ -27,12 +27,12 @@ import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 
 /**
- * Búsqueda del catálogo con Criteria API: los predicados se construyen solo para
- * los filtros presentes. Siempre filtra por juegos PUBLISHED.
+ * Ricerca nel catalogo con Criteria API: i predicati si costruiscono solo per
+ * i filtri presenti. Filtra sempre per giochi PUBLISHED.
  *
- * <p>Se ejecutan dos queries (página + count) con los mismos predicados. Los géneros
- * y el developer de la página se cargan después por lotes (default_batch_fetch_size),
- * así que no hay fetch join sobre colecciones ni paginación en memoria.
+ * <p>Si eseguono due query (pagina + count) con gli stessi predicati. I generi
+ * e il developer della pagina si caricano poi in blocco (default_batch_fetch_size),
+ * quindi niente fetch join su collezioni né paginazione in memoria.
  */
 @Repository
 public class GameCriteriaRepository {
@@ -72,13 +72,13 @@ public class GameCriteriaRepository {
         predicates.add(cb.equal(game.get("status"), GameStatus.PUBLISHED));
 
         if (c.q() != null && !c.q().isBlank()) {
-            // lower(title) LIKE '%q%': en PostgreSQL lo acelera el índice GIN de trigramas (V4)
+            // lower(title) LIKE '%q%': su PostgreSQL lo accelera l'indice GIN di trigrammi (V4)
             String pattern = "%" + escapeLike(c.q().trim().toLowerCase(Locale.ROOT)) + "%";
             predicates.add(cb.like(cb.lower(game.get("title")), pattern, '\\'));
         }
 
         if (c.genres() != null && !c.genres().isEmpty()) {
-            // Subquery en vez de join: sin filas duplicadas, sin DISTINCT y la paginación sigue en la BD
+            // Subquery invece di join: niente righe duplicate, niente DISTINCT e la paginazione resta nel DB
             Subquery<Long> withGenre = query.subquery(Long.class);
             Root<Game> sub = withGenre.from(Game.class);
             Join<Game, Genre> genre = sub.join("genres");
@@ -86,7 +86,7 @@ public class GameCriteriaRepository {
             predicates.add(game.get("id").in(withGenre));
         }
 
-        // precio_final * 100 = price * (100 - discount): se compara sin dividir para no redondear en SQL
+        // prezzo_finale * 100 = price * (100 - discount): si confronta senza dividere per non arrotondare in SQL
         Expression<Number> finalPriceTimes100 = finalPriceTimes100(cb, game);
         if (c.minPrice() != null) {
             predicates.add(cb.ge(finalPriceTimes100, c.minPrice().multiply(HUNDRED)));
@@ -111,8 +111,8 @@ public class GameCriteriaRepository {
         }
 
         if (c.minPositivePercent() != null) {
-            // Con menos de 10 reseñas no hay puntuación y el juego no pasa el filtro.
-            // positivas / total >= min / 100  <=>  positivas * 100 >= min * total (sin división: nunca divide entre 0)
+            // Con meno di 10 recensioni non c'è punteggio e il gioco non passa il filtro.
+            // positive / totale >= min / 100  <=>  positive * 100 >= min * totale (senza divisione: mai divide per 0)
             predicates.add(cb.ge(game.<Integer>get("reviewCount"), ReviewScore.MIN_REVIEWS));
             predicates.add(cb.ge(cb.prod(game.<Number>get("positiveCount"), cb.literal(100)),
                     cb.prod(game.<Number>get("reviewCount"), cb.literal(c.minPositivePercent()))));
@@ -131,11 +131,11 @@ public class GameCriteriaRepository {
             case PRICE_ASC -> orders.add(cb.asc(finalPriceTimes100(cb, game)));
             case PRICE_DESC -> orders.add(cb.desc(finalPriceTimes100(cb, game)));
             case TOP_RATED -> {
-                // % positivo = positivas * 1.0 / nullif(total, 0): los juegos sin reseñas (NULL) van al final
+                // % positiva = positive * 1.0 / nullif(totale, 0): i giochi senza recensioni (NULL) vanno in fondo
                 Expression<Number> positiveRatio = cb.quot(
                         cb.prod(game.<Number>get("positiveCount"), cb.literal(BigDecimal.ONE)),
                         cb.nullif(game.<Integer>get("reviewCount"), 0));
-                // primero los juegos con puntuación (10+ reseñas): 1 reseña al 100 % no supera a 30 al 95 %
+                // prima i giochi con punteggio (10+ recensioni): 1 recensione al 100 % non batte 30 al 95 %
                 orders.add(cb.asc(cb.<Integer>selectCase()
                         .when(cb.ge(game.<Integer>get("reviewCount"), ReviewScore.MIN_REVIEWS), 0)
                         .otherwise(1)));
@@ -146,13 +146,13 @@ public class GameCriteriaRepository {
             case BEST_SELLING -> orders.add(cb.desc(game.get("salesCount")));
             case TITLE -> orders.add(cb.asc(cb.lower(game.get("title"))));
         }
-        orders.add(cb.asc(game.get("id"))); // desempate estable para la paginación
+        orders.add(cb.asc(game.get("id"))); // spareggio stabile per la paginazione
         return orders;
     }
 
     /**
-     * ORDER BY (CASE WHEN x IS NULL THEN 1 ELSE 0 END): manda los NULL al final.
-     * Portable; el Nulls.LAST de JPA 3.2 no se traduce a SQL de forma fiable en todos los dialectos.
+     * ORDER BY (CASE WHEN x IS NULL THEN 1 ELSE 0 END): manda i NULL in fondo.
+     * Portabile; il Nulls.LAST di JPA 3.2 non si traduce in SQL in modo affidabile in tutti i dialetti.
      */
     private static Order nullsLast(CriteriaBuilder cb, Expression<?> expression) {
         return cb.asc(cb.<Integer>selectCase().when(cb.isNull(expression), 1).otherwise(0));

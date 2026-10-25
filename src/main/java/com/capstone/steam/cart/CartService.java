@@ -30,7 +30,7 @@ public class CartService {
                 .toList());
     }
 
-    /** Idempotente: añadir un juego que ya está en el carrito no hace nada. */
+    /** Idempotente: aggiungere un gioco già nel carrello non fa nulla. */
     @Transactional
     public CartResponse addItem(Long userId, Long gameId) {
         Game game = storefrontRules.requireAcquirable(userId, gameId);
@@ -40,7 +40,7 @@ public class CartService {
         return getCart(userId);
     }
 
-    /** Idempotente: quitar un juego que no está en el carrito no es un error. */
+    /** Idempotente: togliere un gioco che non è nel carrello non è un errore. */
     @Transactional
     public CartResponse removeItem(Long userId, Long gameId) {
         cartItemRepository.deleteByUserIdAndGameId(userId, gameId);

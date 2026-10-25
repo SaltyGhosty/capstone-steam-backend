@@ -13,7 +13,7 @@ import com.capstone.steam.game.search.GameCriteriaRepository;
 import com.capstone.steam.game.search.GameSearchCriteria;
 import com.capstone.steam.game.search.GameSort;
 
-/** Lectura pública del escaparate: el catálogo solo trae PUBLISHED; la ficha de un DELISTED la ven sus dueños. */
+/** Lettura pubblica della vetrina: il catalogo contiene solo PUBLISHED; la scheda di un DELISTED la vedono i suoi proprietari. */
 @Service
 @Transactional(readOnly = true)
 public class CatalogService {
@@ -38,7 +38,7 @@ public class CatalogService {
         return PageResponse.of(result, GameSummaryResponse::from);
     }
 
-    /** {@code viewerId} es null sin sesión; quien no puede verla recibe el mismo 404 que si no existiera. */
+    /** {@code viewerId} è null senza sessione; chi non può vederla riceve lo stesso 404 che se non esistesse. */
     public GameDetailResponse getBySlug(String slug, Long viewerId, boolean viewerIsAdmin) {
         return gameRepository.findBySlug(slug)
                 .filter(game -> gameVisibility.canView(game, viewerId, viewerIsAdmin))

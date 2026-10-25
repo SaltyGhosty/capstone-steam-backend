@@ -6,7 +6,7 @@ import java.time.Instant;
 import com.capstone.steam.game.Game;
 import com.capstone.steam.wishlist.WishlistItem;
 
-/** {@code onSale} permite al frontend destacar los juegos deseados que están rebajados. */
+/** {@code onSale} permette al frontend di evidenziare i giochi desiderati che sono in sconto. */
 public record WishlistItemResponse(
         Long gameId,
         String title,

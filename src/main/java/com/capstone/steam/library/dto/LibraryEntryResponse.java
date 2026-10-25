@@ -5,8 +5,8 @@ import java.time.Instant;
 import com.capstone.steam.game.Game;
 import com.capstone.steam.library.LibraryEntry;
 
-/** {@code orderId} es null si el juego se añadió sin compra (regalo de un admin). {@code developerName} es null
- * si el estudio está eliminado ({@code developerDeleted}). */
+/** {@code orderId} è null se il gioco è stato aggiunto senza acquisto (regalo di un admin). {@code developerName} è null
+ * se lo studio è eliminato ({@code developerDeleted}). */
 public record LibraryEntryResponse(
         Long gameId,
         String title,
