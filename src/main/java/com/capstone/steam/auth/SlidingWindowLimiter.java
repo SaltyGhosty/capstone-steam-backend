@@ -10,11 +10,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.capstone.steam.common.exception.RateLimitedException;
 
 /**
- * Límite de {@code max} peticiones por clave dentro de una ventana deslizante, en memoria (se pierde al reiniciar
- * y no se comparte entre instancias: basta para una). Las entradas sin intentos recientes se barren para que el
- * mapa no crezca sin fin, y con {@code maxEntries} claves distintas se rechazan las claves nuevas (429) en vez
- * de sacar las existentes: así llenar el mapa no borra el límite de otra clave. Ese tope se protege con un
- * límite por IP delante.
+ * Limite di {@code max} richieste per chiave all'interno di una finestra scorrevole, in memoria (si perde al riavvio
+ * e non è condiviso tra istanze: basta per una). Le voci senza tentativi recenti vengono ripulite perché la
+ * mappa non cresca senza fine, e con {@code maxEntries} chiavi distinte le chiavi nuove vengono rifiutate (429) invece
+ * di scalzare quelle esistenti: così riempire la mappa non cancella il limite di un'altra chiave. Questo tetto è protetto da un
+ * limite per IP davanti.
  */
 public class SlidingWindowLimiter {
 
@@ -28,14 +28,14 @@ public class SlidingWindowLimiter {
     private final String errorCode;
     private final boolean exactRetryAfter;
     private volatile Instant nextSweep;
-    /** Último barrido completo hecho por tener el mapa lleno: como mucho uno por segundo. */
+    /** Ultima pulizia completa fatta perché la mappa era piena: al massimo una al secondo. */
     private volatile Instant lastFullSweep = Instant.MIN;
     private final java.util.concurrent.atomic.AtomicInteger fullSweeps = new java.util.concurrent.atomic.AtomicInteger();
 
     /**
-     * @param errorCode       clave del texto 429 en messages*.properties
-     * @param exactRetryAfter {@code true}: Retry-After es el tiempo real hasta que caduque el intento más antiguo;
-     *                        {@code false}: siempre la ventana entera (no delata la hora de la última actividad)
+     * @param errorCode       chiave del testo 429 in messages*.properties
+     * @param exactRetryAfter {@code true}: Retry-After è il tempo reale fino alla scadenza del tentativo più vecchio;
+     *                        {@code false}: sempre l'intera finestra (non rivela l'ora dell'ultima attività)
      */
     protected SlidingWindowLimiter(Clock clock, int max, Duration window, int maxEntries, String errorCode,
             boolean exactRetryAfter) {
@@ -48,13 +48,13 @@ public class SlidingWindowLimiter {
         this.nextSweep = clock.instant().plus(SWEEP_EVERY);
     }
 
-    /** Anota un intento de la clave; lanza 429 si ya tiene {@code max} en la ventana o si el mapa está lleno. */
+    /** Registra un tentativo della chiave; lancia 429 se ne ha già {@code max} nella finestra o se la mappa è piena. */
     public void check(String key) {
         Instant now = clock.instant();
         sweepIfDue(now);
         if (hits.size() >= maxEntries && !hits.containsKey(key)) {
-            // lleno: un barrido completo recorre todo el mapa, así que se hace como mucho una vez por segundo
-            // (un atacante no puede forzar uno por petición)
+            // pieno: una pulizia completa scorre tutta la mappa, quindi si fa al massimo una volta al secondo
+            // (un attaccante non può forzarne una per richiesta)
             if (Duration.between(lastFullSweep, now).compareTo(Duration.ofSeconds(1)) >= 0) {
                 lastFullSweep = now;
                 fullSweeps.incrementAndGet();
@@ -73,8 +73,8 @@ public class SlidingWindowLimiter {
                 q.addLast(now);
                 allowed[0] = true;
             } else {
-                // cuando caduque el intento más antiguo de la ventana vuelve a haber hueco
-                if (exactRetryAfter && !q.isEmpty()) { // con max = 0 la cola está vacía: se queda la ventana entera
+                // quando scade il tentativo più vecchio della finestra c'è di nuovo posto
+                if (exactRetryAfter && !q.isEmpty()) { // con max = 0 la coda è vuota: resta l'intera finestra
                     retryAfter[0] = Duration.between(now, q.peekFirst().plus(window)).toSeconds() + 1;
                 }
             }
@@ -85,17 +85,14 @@ public class SlidingWindowLimiter {
         }
     }
 
-    /** Vacía el estado (para los tests). */
     void clear() {
         hits.clear();
     }
 
-    /** Barridos completos hechos por tener el mapa lleno (para los tests). */
     int fullSweeps() {
         return fullSweeps.get();
     }
 
-    /** Claves con intentos en el mapa (para los tests). */
     int trackedKeys() {
         return hits.size();
     }

@@ -1,5 +1,5 @@
 package com.capstone.steam.auth.dto;
 
-/** Cuenta creada pero sin sesión: hay que pulsar el enlace del correo. El {@code id} lo usan el seed y Postman. */
+/** Account creato ma senza sessione: bisogna cliccare il link dell'email. L'{@code id} lo usano il seed e Postman. */
 public record RegisterResponse(Long id, String email, boolean verificationRequired) implements RegistrationResult {
 }

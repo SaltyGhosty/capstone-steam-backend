@@ -13,9 +13,9 @@ import com.capstone.steam.user.RoleName;
 import com.capstone.steam.user.User;
 
 /**
- * Usuario autenticado. En el login se construye desde la BD (con el hash);
- * en cada petición se reconstruye desde el JWT (sin hash y sin tocar la BD).
- * Los controllers lo reciben con {@code @AuthenticationPrincipal}.
+ * Utente autenticato. Al login si costruisce dal DB (con l'hash);
+ * a ogni richiesta si ricostruisce dal JWT (senza hash e senza toccare il DB).
+ * I controller lo ricevono con {@code @AuthenticationPrincipal}.
  */
 public final class AppUserPrincipal implements UserDetails {
 
@@ -49,7 +49,7 @@ public final class AppUserPrincipal implements UserDetails {
         return new AppUserPrincipal(id, username, null, true, roles, issuedAt);
     }
 
-    /** Instante de emisión del token (iat); null si el principal no viene de un token. */
+    /** Istante di emissione del token (iat); null se il principal non viene da un token. */
     public Instant getIssuedAt() {
         return issuedAt;
     }

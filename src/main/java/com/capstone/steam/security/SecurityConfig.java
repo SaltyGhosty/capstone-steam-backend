@@ -30,7 +30,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService,
             AccessTokenRevocations revocations, ProblemResponseWriter problemWriter) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable) // API stateless con Bearer token: sin cookies, sin CSRF
+                .csrf(AbstractHttpConfigurer::disable) // API stateless con Bearer token: niente cookie, niente CSRF
                 .cors(cors -> {})
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -67,7 +67,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /** Construido por Spring a partir del UserDetailsService y el PasswordEncoder de arriba. */
+    /** Costruito da Spring a partire da UserDetailsService e PasswordEncoder qui sopra. */
     @Bean
     AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();

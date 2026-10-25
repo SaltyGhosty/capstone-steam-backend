@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 
 public record ResendVerificationRequest(@NotBlank @Email @Size(max = 254) String email) {
 
-    /** Quita los espacios antes de validar: " Ana@Mail.com " es el mismo email que "ana@mail.com". */
+    /** Toglie gli spazi prima di validare: " Ana@Mail.com " è la stessa email di "ana@mail.com". */
     public ResendVerificationRequest {
         email = email == null ? null : email.trim();
     }

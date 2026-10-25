@@ -7,10 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Límite por IP delante de registro, reenvío, verificación y vista previa: {@code perMinute} peticiones por minuto
- * y dirección (por defecto 20, {@code app.auth.ip-limit.per-minute}). Frena a quien intente llenar el mapa del
- * límite por email o adivinar enlaces desde una sola máquina. Detrás del proxy de Render la IP real la deja
- * {@code server.forward-headers-strategy: native} (en prod).
+ * Limite per IP davanti a registrazione, reinvio, verifica e anteprima: {@code perMinute} richieste al minuto
+ * e per indirizzo (di default 20, {@code app.auth.ip-limit.per-minute}). Frena chi tenta di riempire la mappa del
+ * limite per email o di indovinare i link da una sola macchina. Dietro il proxy di Render l'IP reale lo lascia
+ * {@code server.forward-headers-strategy: native} (in prod).
  */
 @Component
 public class IpRateLimiter extends SlidingWindowLimiter {
@@ -25,20 +25,19 @@ public class IpRateLimiter extends SlidingWindowLimiter {
     }
 
     /**
-     * Comprueba la dirección de una petición. Las IPv6 se agrupan por su prefijo /64 (una conexión doméstica recibe un
-     * /64 entero, así que si no cada dirección del atacante sería una clave nueva); las IPv4 no cambian.
+     * Controlla l'indirizzo di una richiesta. Gli IPv6 si raggruppano per prefisso /64 (una connessione domestica riceve un
+     * /64 intero, quindi altrimenti ogni indirizzo dell'attaccante sarebbe una chiave nuova); gli IPv4 non cambiano.
      */
     public void checkAddress(String remoteAddr) {
         check(keyOf(remoteAddr));
     }
 
     static String keyOf(String remoteAddr) {
-        // solo un literal IPv6 se interpreta: InetAddress.getByName con otra cosa podría hacer una consulta DNS
+        // solo un literal IPv6 viene interpretato: InetAddress.getByName con altro potrebbe fare una query DNS
         if (remoteAddr == null || !remoteAddr.contains(":") || !IPV6_LITERAL.matcher(remoteAddr).matches()) {
             return remoteAddr == null ? "?" : remoteAddr;
         }
         try {
-            // es un literal IPv6: no se resuelve ningún nombre
             java.net.InetAddress address = java.net.InetAddress.getByName(remoteAddr);
             if (address instanceof java.net.Inet4Address) {
                 return address.getHostAddress(); // ::ffff:a.b.c.d

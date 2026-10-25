@@ -4,8 +4,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * ¿Tiene la cuenta algo que perder? Una cuenta sin verificar solo se puede borrar para liberar su
- * usuario si no tiene pedidos, biblioteca, carrito, wishlist, reseñas, juegos, amistades ni sesiones.
+ * L'account ha qualcosa da perdere? Un account non verificato si può eliminare per liberare il suo
+ * username solo se non ha ordini, libreria, carrello, wishlist, recensioni, giochi, amicizie né sessioni.
  */
 @Component
 public class AccountDataCheck {

@@ -7,13 +7,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Límite de correos de verificación (registro y reenvío): {@code perHour} por email y hora. La clave es el email
- * ya normalizado.
+ * Limite di email di verifica (registrazione e reinvio): {@code perHour} per indirizzo e ora. La chiave è l'email
+ * già normalizzata.
  */
 @Component
 public class ResendRateLimiter extends SlidingWindowLimiter {
 
-    /** Tope de emails distintos en memoria. */
+    /** Massimo di email distinte in memoria. */
     static final int MAX_ENTRIES = 100_000;
 
     @Autowired
@@ -26,11 +26,10 @@ public class ResendRateLimiter extends SlidingWindowLimiter {
     }
 
     ResendRateLimiter(Clock clock, int perHour, int maxEntries) {
-        // Retry-After constante (la ventana entera): el valor exacto delataría la hora de la última actividad del email
+        // Retry-After costante (l'intera finestra): il valore esatto rivelerebbe l'ora dell'ultima attività dell'email
         super(clock, perHour, Duration.ofHours(1), maxEntries, "auth.resendRateLimited", false);
     }
 
-    /** Emails con intentos en el mapa (para los tests). */
     int trackedEmails() {
         return trackedKeys();
     }

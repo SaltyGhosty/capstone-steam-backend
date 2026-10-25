@@ -15,13 +15,13 @@ import com.capstone.steam.user.User;
 import com.capstone.steam.user.UserRepository;
 
 /**
- * Emite, rota y revoca refresh tokens. El token en claro solo existe en la respuesta al cliente:
- * en la BD queda su SHA-256, y nunca se escribe en logs.
+ * Emette, ruota e revoca refresh token. Il token in chiaro esiste solo nella risposta al client:
+ * nel DB resta il suo SHA-256, e non viene mai scritto nei log.
  *
- * <p>Cada refresh revoca el token usado y emite otro de la misma familia. Si llega uno ya revocado
- * se revoca la familia entera. La revocación es un UPDATE condicional atómico: de varios refresh
- * simultáneos con el mismo token solo uno gana; los demás cuentan como reutilización, cierran la
- * familia y reciben 401 (así funciona la detección de reutilización).
+ * <p>Ogni refresh revoca il token usato ed emette un altro della stessa famiglia. Se ne arriva uno già revocato
+ * si revoca l'intera famiglia. La revoca è un UPDATE condizionale atomico: tra più refresh
+ * simultanei con lo stesso token vince uno solo; gli altri contano come riutilizzo, chiudono la
+ * famiglia e ricevono 401 (così funziona il rilevamento del riutilizzo).
  */
 @Service
 public class RefreshTokenService {
@@ -45,11 +45,11 @@ public class RefreshTokenService {
         this.clock = clock;
     }
 
-    /** Resultado de rotar: el usuario (con roles) y el refresh token nuevo en claro. */
+    /** Risultato della rotazione: l'utente (con ruoli) e il nuovo refresh token in chiaro. */
     public record Rotation(User user, String refreshToken) {
     }
 
-    /** Abre una sesión nueva (familia nueva) y devuelve el token en claro. */
+    /** Apre una nuova sessione (nuova famiglia) e restituisce il token in chiaro. */
     @Transactional
     public String issue(User user) {
         String raw = TokenHashing.newRawToken();
@@ -59,19 +59,19 @@ public class RefreshTokenService {
     }
 
     /**
-     * Canjea un refresh token por otro nuevo de la misma familia.
-     * {@code noRollbackFor}: las revocaciones previas al error tienen que confirmarse.
+     * Scambia un refresh token con un altro nuovo della stessa famiglia.
+     * {@code noRollbackFor}: le revoche precedenti all'errore devono essere confermate.
      *
-     * <p>AVISO: la revocación de la familia solo se guarda porque <b>todas</b> las transacciones de la
-     * cadena ({@code AuthService.refresh} y este método) llevan {@code noRollbackFor = UnauthorizedException.class}.
-     * Si una sola la pierde, la excepción marca la transacción para rollback y la reutilización no se persiste.
+     * <p>ATTENZIONE: la revoca della famiglia viene salvata solo perché <b>tutte</b> le transazioni della
+     * catena ({@code AuthService.refresh} e questo metodo) hanno {@code noRollbackFor = UnauthorizedException.class}.
+     * Se anche una sola lo perde, l'eccezione segna la transazione per il rollback e il riutilizzo non viene persistito.
      */
     @Transactional(noRollbackFor = UnauthorizedException.class)
     public Rotation rotate(String rawToken) {
         Instant now = clock.instant();
         RefreshToken current = repository.findByTokenHash(TokenHashing.sha256Hex(rawToken)).orElseThrow(RefreshTokenService::invalid);
         if (current.isRevoked()) {
-            // Token ya usado: alguien lo reutiliza. Se cierra toda la familia.
+            // Token già usato: qualcuno lo riutilizza. Si chiude l'intera famiglia.
             repository.revokeFamily(current.getFamilyId(), now);
             throw invalid();
         }
@@ -79,13 +79,13 @@ public class RefreshTokenService {
             throw invalid();
         }
         User user = userRepository.findWithRolesById(current.getUserId()).orElseThrow(RefreshTokenService::invalid);
-        // En pausa o eliminada cuenta como desactivada: un login en vuelo pudo guardar un token que revokeAll no vio
+        // In pausa o eliminato conta come disattivato: un login in corso poteva aver salvato un token che revokeAll non ha visto
         if (!user.isEnabled() || user.isPendingDeletion() || user.isDeleted()) {
             repository.revokeAllForUser(user.getId(), now);
             throw invalid();
         }
 
-        // Revocación atómica: si otra petición se nos adelantó, esto es una reutilización.
+        // Revoca atomica: se un'altra richiesta ci ha preceduto, è un riutilizzo.
         if (repository.revokeIfActive(current.getId(), now) == 0) {
             repository.revokeFamily(current.getFamilyId(), now);
             throw invalid();
@@ -98,7 +98,7 @@ public class RefreshTokenService {
         return new Rotation(user, raw);
     }
 
-    /** Cierra la sesión del token dado. Idempotente: un token desconocido no es error. */
+    /** Chiude la sessione del token indicato. Idempotente: un token sconosciuto non è un errore. */
     @Transactional
     public void revoke(String rawToken) {
         repository.findByTokenHash(TokenHashing.sha256Hex(rawToken))
@@ -110,7 +110,7 @@ public class RefreshTokenService {
         repository.revokeAllForUser(userId, clock.instant());
     }
 
-    /** Borra las familias cuyos tokens caducaron todos hace más de {@code grace}. Devuelve las filas borradas. */
+    /** Cancella le famiglie i cui token sono scaduti tutti da più di {@code grace}. Restituisce le righe cancellate. */
     @Transactional
     public int purgeExpired(Duration grace) {
         return repository.deleteExpiredFamilies(clock.instant().minus(grace));

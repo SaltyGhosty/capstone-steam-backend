@@ -8,8 +8,8 @@ import java.util.Base64;
 import java.util.HexFormat;
 
 /**
- * Tokens opacos (refresh, verificación de email): 32 bytes aleatorios en Base64URL sin relleno.
- * En la BD solo se guarda su SHA-256 en hex.
+ * Token opachi (refresh, verifica email): 32 byte casuali in Base64URL senza padding.
+ * Nel DB si salva solo il loro SHA-256 in hex.
  */
 public final class TokenHashing {
 
@@ -18,14 +18,13 @@ public final class TokenHashing {
     private TokenHashing() {
     }
 
-    /** Token nuevo en claro (43 caracteres). */
     public static String newRawToken() {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
-    /** SHA-256 en hex (64 caracteres) del token en claro. */
+    /** SHA-256 in hex (64 caratteri) del token in chiaro. */
     public static String sha256Hex(String raw) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));
