@@ -1,5 +1,5 @@
-# Configuración común a todos los perfiles.
-# Los secretos llegan por variables de entorno o desde el archivo .env (ver .env.example).
+# Configurazione comune a tutti i profili.
+# I segreti arrivano da variabili d'ambiente o dal file .env (vedi .env.example).
 spring:
   application:
     name: capstone-steam-backend
@@ -7,13 +7,13 @@ spring:
     import: optional:file:.env[.properties]
   profiles:
     default: dev
-  # Textos de la API en messages*.properties (es por defecto, en, it); el idioma sale de Accept-Language
+  # Testi dell'API in messages*.properties (es di default, en, it); la lingua si ricava da Accept-Language
   messages:
     basename: messages
     encoding: UTF-8
     fallback-to-system-locale: false
     always-use-message-format: true
-  # portadas subidas como archivo: máximo 5 MB (el 413 lo traduce GlobalExceptionHandler)
+  # copertine caricate come file: massimo 5 MB (il 413 lo traduce GlobalExceptionHandler)
   servlet:
     multipart:
       max-file-size: 5MB
@@ -24,12 +24,12 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate # el esquema es propiedad de Flyway
+      ddl-auto: validate # lo schema è di proprietà di Flyway
     properties:
       hibernate:
         jdbc:
           time_zone: UTC
-        # colecciones LAZY (roles, géneros) se cargan en lotes con IN (...) en vez de 1 query por fila
+        # le collezioni LAZY (ruoli, generi) si caricano a lotti con IN (...) invece di 1 query per riga
         default_batch_fetch_size: 50
   data:
     web:
@@ -37,7 +37,7 @@ spring:
         max-page-size: 100
   flyway:
     enabled: true
-    # V1-V3 son SQL portable; V4 tiene una variante por motor ({vendor} = postgresql | h2)
+    # V1-V3 sono SQL portabile; V4 ha una variante per motore ({vendor} = postgresql | h2)
     locations: classpath:db/migration/common,classpath:db/migration/{vendor}
   mail:
     host: smtp.gmail.com
@@ -51,7 +51,7 @@ spring:
           starttls:
             enable: true
             required: true
-          # Gmail desde Render a veces tarda en conectar: 15 s y EmailService reintenta los fallos de conexión
+          # Gmail da Render a volte impiega a connettersi: 15 s e EmailService ritenta gli errori di connessione
           connectiontimeout: ${MAIL_TIMEOUT:15000}
           timeout: ${MAIL_TIMEOUT:15000}
           writetimeout: ${MAIL_TIMEOUT:15000}
@@ -62,61 +62,61 @@ app:
     expiration: ${JWT_EXPIRATION:PT15M}
     refresh-expiration: ${JWT_REFRESH_EXPIRATION:P7D}
   auth:
-    # Purga diaria de refresh_tokens: solo familias enteras caducadas hace más de grace (respeta la detección de reutilización)
+    # Pulizia giornaliera di refresh_tokens: solo famiglie intere scadute da più di grace (rispetta il rilevamento del riutilizzo)
     refresh-purge-cron: ${REFRESH_PURGE_CRON:0 30 3 * * *}
     refresh-purge-grace: ${REFRESH_PURGE_GRACE:P1D}
-    # Peticiones por minuto y IP al registro, reenvío y verificación de email (429 después)
+    # Richieste al minuto per IP a registrazione, reinvio e verifica email (poi 429)
     ip-limit:
       per-minute: ${AUTH_IP_LIMIT_PER_MINUTE:60}
     email-verification:
-      # Sin verificar el email no se puede iniciar sesión. Solo los tests lo desactivan.
+      # Senza verificare l'email non si può accedere. Solo i test la disattivano.
       required: ${EMAIL_VERIFICATION_REQUIRED:true}
       ttl: ${EMAIL_VERIFICATION_TTL:P1D}
       resend-per-hour: 3
   account:
-    # Margen entre pedir la baja de la cuenta y anonimizarla; la tarea que lo hace corre una vez al día
+    # Margine tra la richiesta di cancellazione dell'account e l'anonimizzazione; il task che la esegue gira una volta al giorno
     deletion-grace: ${ACCOUNT_DELETION_GRACE:P14D}
     deletion-cron: ${ACCOUNT_DELETION_CRON:0 15 4 * * *}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   payments:
-    failure-rate: ${PAYMENT_FAILURE_RATE:0.0} # rechazo aleatorio para demos (0.0-1.0)
-    declined-suffix: "0000"                  # tarjeta terminada en 0000 = rechazada siempre
+    failure-rate: ${PAYMENT_FAILURE_RATE:0.0} # rifiuto casuale per le demo (0.0-1.0)
+    declined-suffix: "0000"                  # carta che termina in 0000 = sempre rifiutata
   steam:
-    # Precios de la API pública de la tienda de Steam (sin clave). Se sincronizan al arrancar y cada 6 h;
-    # el admin también puede lanzarlo a mano. STEAM_SYNC_ENABLED=false lo desactiva.
+    # Prezzi dell'API pubblica dello store di Steam (senza chiave). Si sincronizzano all'avvio e ogni 6 h;
+    # l'admin può anche lanciarla a mano. STEAM_SYNC_ENABLED=false la disattiva.
     sync-enabled: ${STEAM_SYNC_ENABLED:true}
     sync-cron: ${STEAM_SYNC_CRON:0 0 */6 * * *}
-    country: es # euros
+    country: es # euro
     base-url: https://store.steampowered.com
     timeout: 10s
   cloudinary:
-    # cloudinary://<api_key>:<api_secret>@<cloud_name>; vacío = no se pueden subir portadas como archivo
+    # cloudinary://<api_key>:<api_secret>@<cloud_name>; vuoto = non si possono caricare copertine come file
     url: ${CLOUDINARY_URL:}
     folder: arcade/covers
     timeout: 20s
   openrouter:
-    # Chat recomendador. Sin clave el asistente responde "no disponible" y no se hace ninguna llamada.
+    # Chat di raccomandazione. Senza chiave l'assistente risponde "non disponibile" e non si fa nessuna chiamata.
     api-key: ${OPENROUTER_API_KEY:}
     model: ${OPENROUTER_MODEL:minimax/minimax-m3.1-flash:free,google/gemma-4-31b-it:free}
     base-url: https://openrouter.ai/api/v1
     timeout: 30s
-    global-per-hour: 200 # tope de mensajes por hora entre todos los usuarios
-    cooldown: 5m # tras un 429 de OpenRouter no se llama al modelo durante este tiempo
+    global-per-hour: 200 # tetto di messaggi all'ora tra tutti gli utenti
+    cooldown: 5m # dopo un 429 di OpenRouter non si chiama il modello per questo tempo
   admin:
     username: ${ADMIN_USERNAME:admin}
     email: ${ADMIN_EMAIL:admin@capstone-steam.local}
     password: ${ADMIN_PASSWORD:}
   support:
-    # buzón que recibe el formulario de asistencia; por defecto el mismo remitente de los correos
+    # casella che riceve il form di assistenza; di default lo stesso mittente delle email
     email: ${SUPPORT_EMAIL:${MAIL_FROM:${MAIL_USERNAME:}}}
   mail:
     from: ${MAIL_FROM:${MAIL_USERNAME:no-reply@capstone-steam.local}}
-    from-name: ${MAIL_FROM_NAME:ARCADE} # nombre visible del remitente y marca de los correos
-    # API HTTP de Brevo: con clave, los correos salen por HTTPS y no por SMTP (Render free bloquea los puertos SMTP)
+    from-name: ${MAIL_FROM_NAME:ARCADE} # nome visibile del mittente e marchio delle email
+    # API HTTP di Brevo: con la chiave, le email escono via HTTPS e non via SMTP (Render free blocca le porte SMTP)
     brevo:
       api-key: ${BREVO_API_KEY:}
-    # adónde llevan los botones de los correos; sin FRONTEND_URL se usa el primer origen de CORS
+    # dove portano i pulsanti delle email; senza FRONTEND_URL si usa la prima origine di CORS
     store-url: ${FRONTEND_URL:${CORS_ALLOWED_ORIGINS:http://localhost:5173}}
     executor:
       core-pool-size: 4
@@ -125,14 +125,14 @@ app:
 
 server:
   tomcat:
-    # tragarse el resto de una subida que pasa del límite, para poder responder 413 y no cortar la conexión
+    # ingoiare il resto di un upload che supera il limite, per poter rispondere 413 senza chiudere la connessione
     max-swallow-size: 10MB
-  port: ${SERVER_PORT:${PORT:8080}} # PORT lo fija la plataforma de despliegue (Render)
+  port: ${SERVER_PORT:${PORT:8080}} # PORT lo fissa la piattaforma di deploy (Render)
 
 management:
   health:
     mail:
-      enabled: false # un fallo de SMTP no debe marcar la API como caída (el correo es asíncrono y opcional)
+      enabled: false # un errore SMTP non deve segnare l'API come non disponibile (l'email è asincrona e opzionale)
   endpoints:
     web:
       exposure:
