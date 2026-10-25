@@ -5,15 +5,15 @@ type ScoreGame = Pick<GameSummary, 'reviewCount' | 'positivePercent' | 'reviewSc
 
 const POSITIVE: ReviewScore[] = ['OVERWHELMINGLY_POSITIVE', 'VERY_POSITIVE', 'POSITIVE', 'MOSTLY_POSITIVE'];
 
-/** Color de la etiqueta, como en Steam: azul las positivas, ámbar las variadas y rojo las negativas. */
+/** Colore dell'etichetta, come su Steam: blu le positive, ambra le miste e rosso le negative. */
 const scoreClass = (score: ReviewScore) =>
   POSITIVE.includes(score) ? 'score-positive' : score === 'MIXED' ? 'score-mixed' : 'score-negative';
 
-/** Etiqueta de valoración del juego («Muy positivas») con el porcentaje de reseñas positivas. */
+/** Etichetta di valutazione del gioco («Molto positive») con la percentuale di recensioni positive. */
 export default function ReviewScoreBadge({ game, compact }: { game: ScoreGame; compact?: boolean }) {
   const { t } = useI18n();
 
-  // Con menos de 10 reseñas no hay puntuación: solo el número de reseñas (y nada en la tarjeta)
+  // Con meno di 10 recensioni non c'è punteggio: solo il numero di recensioni (e niente sulla card)
   if (game.reviewScore === 'NONE') {
     if (compact) return null;
     return (

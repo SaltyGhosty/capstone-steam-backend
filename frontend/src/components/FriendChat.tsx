@@ -1,4 +1,4 @@
-// Conversación uno a uno con un amigo: historial, consulta cada 4 s y cuadro de envío.
+// Conversazione uno a uno con un amico: cronologia, polling ogni 4 s e campo di invio.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { friendsApi } from '@/api/endpoints';
 import type { ChatMessageItem } from '@/api/types';
@@ -12,7 +12,7 @@ const MAX_LENGTH = 1000;
 const time = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
-/** Une mensajes nuevos a los que ya hay, sin repetir ids y del más antiguo al más nuevo. */
+/** Unisce i messaggi nuovi a quelli già presenti, senza id ripetuti e dal più vecchio al più nuovo. */
 const merge = (old: ChatMessageItem[], incoming: ChatMessageItem[]) => {
   const seen = new Set(old.map((m) => m.id));
   const fresh = incoming.filter((m) => !seen.has(m.id));
@@ -22,10 +22,10 @@ const merge = (old: ChatMessageItem[], incoming: ChatMessageItem[]) => {
 interface Props {
   username: string;
   name: string;
-  /** false con un ex-amigo: solo se puede leer. */
+  /** false con un ex amico: si può solo leggere. */
   writable: boolean;
   onBack: () => void;
-  /** Avisa de que cambió algo (enviado o leído) para refrescar la lista de conversaciones. */
+  /** Segnala che qualcosa è cambiato (inviato o letto) per aggiornare la lista delle conversazioni. */
   onChanged: () => void;
 }
 
@@ -37,9 +37,9 @@ export default function FriendChat({ username, name, writable, onBack, onChanged
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
-  // Solo se baja al último cuando llegan mensajes por abajo, no al cargar anteriores
+  // Si scende in fondo solo quando arrivano messaggi in basso, non quando si caricano quelli precedenti
   const stickBottom = useRef(true);
-  // Ids ya mostrados: sirve para saber si la consulta trae mensajes ajenos nuevos
+  // Id già mostrati: servono a sapere se la consultazione porta nuovi messaggi altrui
   const known = useRef(new Set<number>());
 
   const markRead = useCallback(async () => {
@@ -47,12 +47,12 @@ export default function FriendChat({ username, name, writable, onBack, onChanged
       await friendsApi.markRead(username);
       await refreshFriendActivity();
       onChanged();
-    } catch { /* un fallo al marcar como leído no interrumpe la conversación */ }
+    } catch { /* un errore nel segnare come letto non interrompe la conversazione */ }
   }, [username, refreshFriendActivity, onChanged]);
   const markReadRef = useRef(markRead);
   markReadRef.current = markRead;
 
-  // Al abrir: últimos 30, bajar al final y marcar como leído
+  // All'apertura: ultimi 30, scendere in fondo e segnare come letto
   useEffect(() => {
     let cancelled = false;
     setMessages([]);
@@ -70,7 +70,7 @@ export default function FriendChat({ username, name, writable, onBack, onChanged
     return () => { cancelled = true; };
   }, [username, notifyError]);
 
-  // Consulta de los nuevos cada 4 s, solo con la pestaña visible
+  // Consultazione dei nuovi ogni 4 s, solo con la scheda visibile
   useEffect(() => {
     let cancelled = false;
     const timer = window.setInterval(async () => {
@@ -84,7 +84,7 @@ export default function FriendChat({ username, name, writable, onBack, onChanged
         stickBottom.current = true;
         setMessages((old) => merge(old, fresh));
         if (fresh.some((m) => !m.mine)) void markReadRef.current();
-      } catch { /* la siguiente consulta lo reintenta */ }
+      } catch { /* la consultazione successiva riprova */ }
     }, POLL_MS);
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [username]);

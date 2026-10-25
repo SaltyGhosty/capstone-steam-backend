@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-/** Tarjeta centrada de las pantallas de cuenta (login, registro, verificación de email). */
+/** Card centrata delle schermate dell'account (login, registrazione, verifica email). */
 export default function AuthShell({ eyebrow, title, children, footer }: { eyebrow: string; title: string; children?: ReactNode; footer?: ReactNode }) {
   return (
     <div className="auth">

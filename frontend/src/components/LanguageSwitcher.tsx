@@ -1,4 +1,4 @@
-// Banderas para cambiar el idioma de la interfaz. Son SVG porque Windows no pinta los emojis de banderas.
+// Bandiere per cambiare la lingua dell'interfaccia. Sono SVG perché Windows non disegna le emoji delle bandiere.
 import type { ReactNode } from 'react';
 import type { Locale } from '@/api/types';
 import { useI18n } from '@/i18n';

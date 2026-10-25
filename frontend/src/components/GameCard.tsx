@@ -24,7 +24,7 @@ export default function GameCard({ game }: { game: GameSummary }) {
       </div>
       <div className="game-info">
         <div>
-          {/* El ::after de este enlace cubre toda la tarjeta: imagen y título navegan al detalle */}
+          {/* Il ::after di questo link copre tutta la card: immagine e titolo portano al dettaglio */}
           <h3><Link className="card-link" to={`/games/${game.slug}`}>{game.title}</Link></h3>
           <p>{genreLabel(game.genres)}</p>
         </div>
