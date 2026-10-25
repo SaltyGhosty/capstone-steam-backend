@@ -10,7 +10,7 @@ import { useI18n } from '@/i18n';
 import { cardImage } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 
-/** Resuelve cada demo contra el catálogo: si el juego no está publicado (404) o falla, su tarjeta no aparece. */
+/** Risolve ogni demo rispetto al catalogo: se il gioco non è pubblicato (404) o fallisce, la sua card non appare. */
 async function loadPublished(): Promise<Map<string, GameDetail>> {
   const results = await Promise.allSettled(DEMOS.map((d) => catalogApi.get(d.slug)));
   const found = new Map<string, GameDetail>();

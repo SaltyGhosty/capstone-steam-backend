@@ -67,7 +67,7 @@ export function OrderDetail() {
   const reason = o.lastPayment?.failureReason?.trim() ?? '';
   const failureText = reason && !/[.!?]$/.test(reason) ? `${reason}.` : reason;
 
-  // Paso 2 del checkout: 200 → PAID, 402 → FAILED (ambos devuelven el pedido)
+  // Passo 2 del checkout: 200 → PAID, 402 → FAILED (entrambi restituiscono l'ordine)
   const pay = async (e: FormEvent) => {
     e.preventDefault();
     const digits = card.replace(/\s+/g, '');

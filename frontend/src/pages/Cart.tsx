@@ -18,7 +18,7 @@ export default function Cart() {
   const available = cart.items.filter((i) => i.available);
   const hasUnavailable = available.length < cart.items.length;
 
-  // Paso 1 del checkout: el backend congela el carrito en un pedido PENDING
+  // Passo 1 del checkout: il backend congela il carrello in un ordine PENDING
   const checkout = async () => {
     setBusy(true);
     try {

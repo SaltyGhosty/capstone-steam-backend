@@ -1,4 +1,4 @@
-// Panel de administración: moderación de juegos, usuarios (roles, activación, regalos) y géneros.
+// Pannello di amministrazione: moderazione dei giochi, utenti (ruoli, attivazione, regali) e generi.
 import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { adminApi, catalogApi } from '@/api/endpoints';

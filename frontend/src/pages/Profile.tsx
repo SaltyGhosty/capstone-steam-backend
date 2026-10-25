@@ -1,4 +1,4 @@
-// Perfil de un jugador: cabecera siempre visible; biblioteca y amigos solo si el backend los envía.
+// Profilo di un giocatore: header sempre visibile; libreria e amici solo se il backend li invia.
 import { Link, useParams } from 'react-router';
 import { friendsApi, userApi } from '@/api/endpoints';
 import type { PublicProfile } from '@/api/types';

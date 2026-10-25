@@ -1,4 +1,4 @@
-// Formulario de asistencia al cliente (/support). Público: sin sesión pide el email; con sesión el backend usa el de la cuenta.
+// Form di assistenza clienti (/support). Pubblico: senza sessione chiede l'email; con la sessione il backend usa quella dell'account.
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { ApiError } from '@/api/client';
@@ -18,7 +18,7 @@ export default function Support() {
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-  // el email al que se envió la copia, para enseñarlo al terminar
+  // l'email a cui è stata inviata la copia, da mostrare alla fine
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   if (booting) return <Loading />;

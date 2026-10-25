@@ -1,4 +1,4 @@
-// Amigos: buscador de jugadores, solicitudes recibidas y enviadas, y la lista de amigos.
+// Amici: ricerca di giocatori, richieste ricevute e inviate, e lista degli amici.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { friendsApi, userApi } from '@/api/endpoints';
@@ -44,7 +44,7 @@ export default function Friends() {
   const reloadConversations = conversations.reload;
 
   const term = query.trim();
-  // Último término escrito: una respuesta de otro término más viejo se descarta
+  // Ultimo termine digitato: la risposta di un termine più vecchio si scarta
   const latestTerm = useRef(term);
   latestTerm.current = term;
 
@@ -61,7 +61,7 @@ export default function Friends() {
     }
   }, [term, notifyError]);
 
-  // Espera 300 ms tras la última tecla antes de buscar
+  // Aspetta 300 ms dall'ultimo tasto prima di cercare
   useEffect(() => {
     const timer = window.setTimeout(runSearch, SEARCH_DELAY_MS);
     return () => window.clearTimeout(timer);
@@ -73,7 +73,7 @@ export default function Friends() {
     void runSearch();
   };
 
-  /** Ejecuta una acción, avisa y refresca las listas. */
+  /** Esegue un'azione, avvisa e aggiorna le liste. */
   const act = async (action: () => Promise<unknown>, message: string) => {
     setBusy(true);
     try {
@@ -115,7 +115,7 @@ export default function Friends() {
   const openChat = (username: string | null) => setParams(username ? { chat: username } : {}, { replace: true });
   const chatConv = conversations.data?.find((c) => c.username === chatWith);
   const chatFriend = friends.data?.find((f) => f.user.username === chatWith)?.user;
-  // Un ex-amigo solo sale en conversaciones (friend: false); sin dato se deja escribir y el servidor decide
+  // Un ex amico compare solo nelle conversazioni (friend: false); senza il dato si lascia scrivere e decide il server
   const writable = chatConv ? chatConv.friend : true;
   const chatName = chatConv ? chatConv.displayName || chatConv.username : chatFriend ? nameOf(chatFriend) : chatWith ?? '';
 

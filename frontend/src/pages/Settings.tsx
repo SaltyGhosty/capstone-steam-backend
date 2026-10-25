@@ -19,7 +19,7 @@ export default function Settings() {
   const [profilePublic, setProfilePublic] = useState(user?.profilePublic ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-  // Baja de la cuenta: diálogo con contraseña; al terminar muestra la fecha y cierra la sesión
+  // Cancellazione dell'account: dialog con password; al termine mostra la data e chiude la sessione
   const [deleting, setDeleting] = useState(false);
 
   if (!user) return null;
@@ -29,7 +29,7 @@ export default function Settings() {
     setBusy(true);
     setErrors({});
     try {
-      // null = no se modifica; por eso solo se envía lo que tiene contenido
+      // null = non si modifica; per questo si invia solo ciò che ha contenuto
       const updated = await userApi.update({
         displayName: displayName.trim() || undefined,
         avatarUrl: avatarUrl.trim() || undefined,
@@ -106,9 +106,9 @@ export default function Settings() {
 }
 
 /**
- * Diálogo de la baja, como el de las demos: el foco entra y se queda dentro (Tab da la vuelta), Escape lo cierra y
- * al cerrarse el foco vuelve al botón que lo abrió. Con la baja ya pedida solo se sale con «Entendido», que cierra
- * la sesión.
+  * Dialog della cancellazione, come quello delle demo: il focus entra e resta dentro (Tab gira), Escape lo chiude e
+  * alla chiusura il focus torna al pulsante che l'ha aperto. Con la cancellazione già richiesta si esce solo con «Capito», che chiude
+  * la sessione.
  */
 function DeleteAccountDialog({ developer, onClose }: { developer: boolean; onClose: () => void }) {
   const { logout } = useStore();
@@ -122,7 +122,7 @@ function DeleteAccountDialog({ developer, onClose }: { developer: boolean; onClo
   const [busy, setBusy] = useState(false);
   const [deletionDate, setDeletionDate] = useState<string | null>(null);
 
-  // Escape cierra, salvo cuando la baja ya está pedida
+  // Escape chiude, tranne quando la cancellazione è già richiesta
   useEffect(() => {
     if (deletionDate) return;
     const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -130,7 +130,7 @@ function DeleteAccountDialog({ developer, onClose }: { developer: boolean; onClo
     return () => window.removeEventListener('keydown', onKey);
   }, [deletionDate, onClose]);
 
-  // Al abrir, el foco entra en el diálogo (la contraseña ya lo tiene por autoFocus). Al cerrar, vuelve al botón.
+  // All'apertura, il focus entra nel dialog (la password ce l'ha già con autoFocus). Alla chiusura, torna al pulsante.
   useEffect(() => {
     if (!dialogRef.current?.contains(document.activeElement)) dialogRef.current?.focus();
     const from = opener.current;
@@ -144,7 +144,7 @@ function DeleteAccountDialog({ developer, onClose }: { developer: boolean; onClo
     };
   }, []);
 
-  // El formulario desaparece al terminar: el foco pasa a «Entendido»
+  // Il form scompare al termine: il focus passa a «Capito»
   useEffect(() => {
     if (deletionDate) doneRef.current?.focus();
   }, [deletionDate]);
@@ -158,7 +158,7 @@ function DeleteAccountDialog({ developer, onClose }: { developer: boolean; onClo
       setPassword('');
       setDeletionDate(formatDate(res.deletionScheduledAt));
     } catch (err) {
-      // El mensaje del backend ya viene traducido (contraseña mala, último admin…)
+      // Il messaggio del backend arriva già tradotto (password errata, ultimo admin…)
       setError(err instanceof ApiError ? err.message : t('common.somethingWrong'));
     } finally {
       setBusy(false);

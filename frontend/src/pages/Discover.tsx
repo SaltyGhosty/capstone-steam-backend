@@ -25,7 +25,7 @@ async function loadHome(): Promise<HomeData> {
     catalogApi.search({ sort: 'newest', size: 4 }),
     catalogApi.search({ onSale: true, sort: 'price_asc', size: 20 }),
   ]);
-  // El hero necesita la descripción, que solo trae la ficha completa
+  // L'hero ha bisogno della descrizione, che arriva solo con la scheda completa
   const featured = await Promise.all(topRated.content.map((g) => catalogApi.get(g.slug)));
   return {
     featured,
@@ -43,7 +43,7 @@ function Hero({ games }: { games: GameDetail[] }) {
   const [slide, setSlide] = useState(0);
   const active = games[slide];
 
-  // Avance automático cada 8 s; se reinicia al cambiar de slide a mano
+  // Avanzamento automatico ogni 8 s; riparte quando si cambia slide a mano
   useEffect(() => {
     if (games.length < 2) return;
     const id = window.setTimeout(() => setSlide((s) => (s + 1) % games.length), 8000);
@@ -92,7 +92,7 @@ export default function Discover() {
 
   const maxDiscount = Math.max(0, ...data.onSale.map((g) => g.discountPercent));
   const saleImage = data.onSale[0]?.coverUrl ?? data.bestSelling[1]?.coverUrl;
-  // Distinta de la del hero (featured[0]) y de la tarjeta de ofertas
+  // Diversa da quella dell'hero (featured[0]) e dalla card delle offerte
   const topImage = [...data.featured.slice(1), ...data.newest].map((g) => g.coverUrl).find((url) => url && url !== saleImage);
 
   return (

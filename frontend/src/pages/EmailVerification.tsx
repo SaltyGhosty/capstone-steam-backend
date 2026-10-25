@@ -1,4 +1,4 @@
-// Verificación de email: /check-email (avisa de que el correo va de camino) y /verify-email (el enlace).
+// Verifica email: /check-email (avvisa che l'email è in arrivo) e /verify-email (il link).
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ApiError } from '@/api/client';
@@ -8,8 +8,8 @@ import { useStore } from '@/context/StoreContext';
 import { useI18n } from '@/i18n';
 
 /**
- * «Reenviar correo». Con el email ya conocido solo muestra el botón; sin él, pide el email antes.
- * El backend responde siempre 204 (no dice si la cuenta existe), así que el aviso es genérico.
+  * «Reinvia email». Con l'email già nota mostra solo il pulsante; senza, chiede prima l'email.
+  * Il backend risponde sempre 204 (non dice se l'account esiste), quindi l'avviso è generico.
  */
 export function ResendVerification({ email }: { email?: string }) {
   const { t } = useI18n();
@@ -50,7 +50,7 @@ export function ResendVerification({ email }: { email?: string }) {
   );
 }
 
-/** Tras registrarse: «Revisa tu correo». El email viaja en la query (?email=). */
+/** Dopo la registrazione: «Controlla la tua email». L'email viaggia nella query (?email=). */
 export function CheckEmail() {
   const { t } = useI18n();
   const [params] = useSearchParams();
@@ -66,9 +66,9 @@ export function CheckEmail() {
 }
 
 /**
- * El enlace del correo. Primero pregunta de qué cuenta es (vista previa, que no gasta el enlace) y pide la
- * contraseña de ese registro; con ella canjea el enlace, inicia la sesión y lleva a la tienda (o al panel del
- * estudio). Pedir la contraseña evita que alguien que registró el mismo email antes se quede con la cuenta.
+  * Il link dell'email. Prima chiede di quale account è (anteprima, che non consuma il link) e chiede la
+  * password di quella registrazione; con essa riscatta il link, avvia la sessione e porta allo store (o al pannello
+  * dello studio). Chiedere la password evita che chi ha registrato prima la stessa email si prenda l'account.
  */
 export function VerifyEmail() {
   const { verifyEmail, notify } = useStore();
@@ -86,12 +86,12 @@ export function VerifyEmail() {
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [busy, setBusy] = useState(false);
-  // La vista previa es idempotente, pero se guarda la promesa para no repetirla con el doble montaje de StrictMode
+  // L'anteprima è idempotente, ma si conserva la promise per non ripeterla con il doppio mount di StrictMode
   const preview = useRef<{ token: string; no: number; promise: Promise<{ username: string }> } | null>(null);
 
   useEffect(() => {
     if (!token) return;
-    // el token no se queda en la barra de direcciones ni en el historial
+    // il token non resta nella barra degli indirizzi né nella cronologia
     window.history.replaceState(window.history.state, '', window.location.pathname);
     if (preview.current?.token !== token || preview.current.no !== attemptNo) {
       preview.current = { token, no: attemptNo, promise: authApi.previewVerification(token) };
@@ -127,9 +127,9 @@ export function VerifyEmail() {
       navigate(user.roles.includes('ROLE_DEVELOPER') ? '/developer' : '/', { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 400 && err.code !== 'auth.verificationPasswordInvalid') {
-        setStage({ kind: 'invalid' }); // el enlace se gastó, caducó o se anuló por demasiados intentos
+        setStage({ kind: 'invalid' }); // il link è stato consumato, è scaduto o è stato annullato per troppi tentativi
       } else {
-        // contraseña que no es la de este registro (se puede reintentar) u otro fallo (409, 403, red...)
+        // password diversa da quella di questa registrazione (si può riprovare) o altro errore (409, 403, rete...)
         setPasswordError(err instanceof ApiError ? err.message : t('common.somethingWrong'));
       }
     } finally {

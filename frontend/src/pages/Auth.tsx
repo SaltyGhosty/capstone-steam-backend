@@ -21,9 +21,9 @@ export function Login() {
   const target = useRedirectTarget();
   const [form, setForm] = useState({ login: '', password: '' });
   const [error, setError] = useState('');
-  // La cuenta existe pero falta pulsar el enlace del correo: se ofrece reenviarlo
+  // L'account esiste ma manca il click sul link dell'email: si offre di reinviarlo
   const [unverified, setUnverified] = useState(false);
-  // La cuenta está en pausa por una baja pendiente: SELF puede recuperarla, ADMIN no
+  // L'account è in pausa per una cancellazione in sospeso: SELF può recuperarlo, ADMIN no
   const [paused, setPaused] = useState<{ byAdmin: boolean; date: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -97,7 +97,7 @@ export function Login() {
       {unverified && (
         <>
           <p className="form-error" role="alert">{t('verify.notVerified')}</p>
-          {/* si escribió un email se usa tal cual; si escribió un usuario, el reenvío pide el email */}
+          {/* se ha scritto un'email si usa così com'è; se ha scritto un username, il reinvio chiede l'email */}
           <ResendVerification email={form.login.includes('@') ? form.login.trim() : undefined} />
         </>
       )}
@@ -125,10 +125,10 @@ export function Register() {
     setErrors({});
     setError('');
     try {
-      // Los correos salen en el idioma elegido con las banderas; se puede cambiar luego en Ajustes
+      // Le email partono nella lingua scelta con le bandiere; si può cambiare dopo nelle Impostazioni
       const result = await register({ ...form, displayName: form.displayName.trim() || undefined, locale: lang });
       notify(t('auth.created'));
-      // Con verificación de email no hay sesión: primero hay que pulsar el enlace del correo
+      // Con la verifica email non c'è sessione: prima bisogna cliccare il link dell'email
       if (result.verificationRequired) {
         navigate(`/check-email?email=${encodeURIComponent(result.email)}`, { replace: true });
         return;
