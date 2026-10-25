@@ -6,8 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 /**
- * {@code cardNumber}: obligatorio con CREDIT_CARD; solo dígitos. Es simulado y NO se guarda.
- * Termina en 0000 -> rechazo (para probar el flujo de pago fallido).
+ * {@code cardNumber}: obbligatorio con CREDIT_CARD; solo cifre. È simulato e NON viene salvato.
+ * Termina in 0000 -> rifiuto (per provare il flusso di pagamento fallito).
  */
 public record PayRequest(
         @NotNull PaymentMethod method,

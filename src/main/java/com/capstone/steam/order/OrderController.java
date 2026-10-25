@@ -30,14 +30,14 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    /** Checkout, paso 1: crea un pedido PENDING con el contenido actual del carrito. */
+    /** Checkout, passo 1: crea un ordine PENDING con il contenuto attuale del carrello. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse checkout(@AuthenticationPrincipal AppUserPrincipal user) {
         return orderService.createFromCart(user.getId());
     }
 
-    /** Checkout, paso 2: 200 si el pago se aprueba, 402 Payment Required si se rechaza (el pedido queda FAILED). */
+    /** Checkout, passo 2: 200 se il pagamento è approvato, 402 Payment Required se è rifiutato (l'ordine resta FAILED). */
     @PostMapping("/{id}/pay")
     public ResponseEntity<OrderResponse> pay(@AuthenticationPrincipal AppUserPrincipal user, @PathVariable Long id,
             @Valid @RequestBody PayRequest request) {

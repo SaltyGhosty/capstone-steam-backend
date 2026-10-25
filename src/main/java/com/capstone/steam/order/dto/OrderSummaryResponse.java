@@ -6,7 +6,7 @@ import java.time.Instant;
 import com.capstone.steam.order.Order;
 import com.capstone.steam.order.OrderStatus;
 
-/** Fila del historial de pedidos. */
+/** Riga dello storico ordini. */
 public record OrderSummaryResponse(Long id, OrderStatus status, BigDecimal total, int itemCount, Instant createdAt,
         Instant paidAt) {
 

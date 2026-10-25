@@ -1,6 +1,6 @@
 package com.capstone.steam.friend.dto;
 
-/** Relación de quien mira con el otro usuario. */
+/** Relazione di chi guarda con l'altro utente. */
 public enum Relation {
     SELF,
     FRIENDS,

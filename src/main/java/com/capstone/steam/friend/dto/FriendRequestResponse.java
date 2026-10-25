@@ -5,7 +5,7 @@ import java.time.Instant;
 import com.capstone.steam.friend.Friendship;
 import com.capstone.steam.friend.FriendshipStatus;
 
-/** {@code user} es la otra persona, no quien consulta. */
+/** {@code user} è l'altra persona, non chi consulta. */
 public record FriendRequestResponse(Long id, UserCard user, FriendshipStatus status, Instant createdAt) {
 
     public static FriendRequestResponse from(Friendship friendship, Long viewerId) {

@@ -5,16 +5,16 @@ import java.math.BigDecimal;
 import com.capstone.steam.order.PaymentMethod;
 
 /**
- * Pasarela de pago. Hoy solo existe la simulada; una real (Stripe...) implementaría esta
- * misma interfaz sin tocar el checkout.
+ * Gateway di pagamento. Oggi esiste solo quello simulato; uno reale (Stripe...) implementerebbe questa
+ * stessa interfaccia senza toccare il checkout.
  */
 public interface PaymentGateway {
 
-    /** Referencia única de la transacción en el proveedor. */
+    /** Riferimento univoco della transazione presso il provider. */
     String newReference();
 
     /**
-     * @param cardNumber solo para CREDIT_CARD; nunca se persiste
+     * @param cardNumber solo per CREDIT_CARD; non viene mai persistito
      */
     PaymentResult charge(String reference, BigDecimal amount, PaymentMethod method, String cardNumber);
 
@@ -24,7 +24,7 @@ public interface PaymentGateway {
             return new PaymentResult(true, null);
         }
 
-        /** @param reason clave de messages*.properties (payment.declined.*) */
+        /** @param reason chiave di messages*.properties (payment.declined.*) */
         public static PaymentResult declined(String reason) {
             return new PaymentResult(false, reason);
         }

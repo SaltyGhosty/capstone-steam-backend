@@ -18,7 +18,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-/** Una fila por pareja de usuarios, sea cual sea quién pidió la amistad (UNIQUE sobre low/high). */
+/** Una riga per coppia di utenti, chiunque abbia chiesto l'amicizia (UNIQUE su low/high). */
 @Entity
 @Table(name = "friendships")
 public class Friendship {
@@ -35,11 +35,11 @@ public class Friendship {
     @JoinColumn(name = "addressee_id", nullable = false)
     private User addressee;
 
-    /** Menor de los dos ids de la pareja. */
+    /** Il minore dei due id della coppia. */
     @Column(name = "user_low_id", nullable = false)
     private Long userLowId;
 
-    /** Mayor de los dos ids de la pareja. */
+    /** Il maggiore dei due id della coppia. */
     @Column(name = "user_high_id", nullable = false)
     private Long userHighId;
 
@@ -57,7 +57,7 @@ public class Friendship {
     protected Friendship() {
     }
 
-    /** Solicitud pendiente de requester a addressee; calcula el orden low/high de la pareja. */
+    /** Richiesta pendente da requester ad addressee; calcola l'ordine low/high della coppia. */
     public Friendship(User requester, User addressee) {
         this.requester = requester;
         this.addressee = addressee;
@@ -74,7 +74,7 @@ public class Friendship {
         return requester.getId().equals(userId) || addressee.getId().equals(userId);
     }
 
-    /** El otro usuario de la pareja. */
+    /** L'altro utente della coppia. */
     public User other(Long userId) {
         return requester.getId().equals(userId) ? addressee : requester;
     }

@@ -21,18 +21,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findWithItemsById(Long id);
 
     /**
-     * Lee el pedido propio bloqueando la fila (D33): un segundo pago del mismo pedido espera al
-     * commit del primero y ve ya el estado final, así no llega a llamar a la pasarela.
+     * Legge l'ordine proprio bloccando la riga (D33): un secondo pagamento dello stesso ordine aspetta il
+     * commit del primo e vede già lo stato finale, così non arriva a chiamare il gateway.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select o from Order o where o.id = :orderId and o.user.id = :userId")
     Optional<Order> findOwnForUpdate(Long orderId, Long userId);
 
-    // ------------------------------------------------------------------
-    // Transiciones de estado atómicas: el "and o.status = PENDING" hace que
-    // solo una transacción pueda sacar el pedido de PENDING. Si devuelve 0,
-    // el pedido ya estaba pagado, fallido o cancelado (p. ej. un doble clic).
-    // ------------------------------------------------------------------
+    // Transizioni di stato atomiche: l'"and o.status = PENDING" fa sì che
+    // una sola transazione possa far uscire l'ordine da PENDING. Se restituisce 0,
+    // l'ordine era già pagato, fallito o annullato (es. un doppio clic).
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""

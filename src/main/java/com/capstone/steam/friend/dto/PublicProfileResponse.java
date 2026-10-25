@@ -3,7 +3,7 @@ package com.capstone.steam.friend.dto;
 import java.time.Instant;
 import java.util.List;
 
-/** {@code library} y {@code friends} son null si {@code visible} es false (perfil privado y no son amigos). */
+/** {@code library} e {@code friends} sono null se {@code visible} è false (profilo privato e non sono amici). */
 public record PublicProfileResponse(
         UserCard user,
         Instant memberSince,

@@ -60,7 +60,7 @@ public class Order {
         this.user = user;
     }
 
-    /** Añade una línea con el precio final actual del juego (snapshot) y recalcula el total. */
+    /** Aggiunge una riga con il prezzo finale attuale del gioco (snapshot) e ricalcola il totale. */
     public OrderItem addItem(Game game) {
         OrderItem item = new OrderItem(this, game, game.getFinalPrice());
         items.add(item);

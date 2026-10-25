@@ -4,7 +4,7 @@ import java.time.Instant;
 
 import com.capstone.steam.friend.FriendMessage;
 
-/** Un mensaje visto por quien lo pide: {@code mine} dice si lo escribió él. */
+/** Un messaggio visto da chi lo richiede: {@code mine} dice se lo ha scritto lui. */
 public record MessageResponse(Long id, boolean mine, String body, Instant createdAt) {
 
     public static MessageResponse from(FriendMessage message, Long viewerId) {

@@ -40,7 +40,7 @@ public class FriendController {
         return friendService.friends(principal.getId());
     }
 
-    /** Lo pendiente (solicitudes y mensajes sin leer). */
+    /** Le novità (richieste e messaggi non letti). */
     @GetMapping("/activity")
     public FriendActivityResponse activity(@AuthenticationPrincipal AppUserPrincipal principal) {
         return chatService.activity(principal.getId());

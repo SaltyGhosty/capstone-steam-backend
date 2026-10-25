@@ -30,7 +30,7 @@ public class OrderItem {
     @JoinColumn(name = "game_id", nullable = false)
     private Game game;
 
-    /** Precio pagado (con descuento) en el momento de la compra. */
+    /** Prezzo pagato (scontato) al momento dell'acquisto. */
     @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
 
