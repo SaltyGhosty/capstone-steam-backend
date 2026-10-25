@@ -2,8 +2,8 @@ import { Component, type ReactNode } from 'react';
 import { t } from '@/i18n';
 
 /**
- * Si el minijuego no se carga (sin red, chunk viejo tras un despliegue) o falla al dibujar, se avisa
- * dentro del diálogo en vez de dejar la aplicación en blanco.
+  * Se il minigioco non si carica (senza rete, chunk vecchio dopo un deploy) o fallisce nel disegno, si avvisa
+  * dentro il dialog invece di lasciare l'applicazione bianca.
  */
 export class DemoErrorBoundary extends Component<{ onClose: () => void; children: ReactNode }, { failed: boolean }> {
   state = { failed: false };

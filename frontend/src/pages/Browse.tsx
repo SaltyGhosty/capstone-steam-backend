@@ -1,5 +1,5 @@
-// Catálogo con los filtros de la Criteria API. Todo el estado vive en la URL (?q=&genres=&…),
-// así que se puede compartir el enlace o volver atrás sin perder la búsqueda.
+// Catalogo con i filtri della Criteria API. Tutto lo stato vive nell'URL (?q=&genres=&…),
+// così si può condividere il link o tornare indietro senza perdere la ricerca.
 import { useSearchParams } from 'react-router';
 import { catalogApi } from '@/api/endpoints';
 import type { GameSort } from '@/api/types';

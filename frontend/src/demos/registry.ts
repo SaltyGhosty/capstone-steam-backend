@@ -1,6 +1,6 @@
 import type { DemoDefinition } from './types';
 
-/** Juegos del catálogo que tienen demo, por slug. Cada minijuego se carga cuando se abre. */
+/** Giochi del catalogo che hanno una demo, per slug. Ogni minigioco si carica quando si apre. */
 export const DEMOS: DemoDefinition[] = [
   {
     slug: 'celeste',

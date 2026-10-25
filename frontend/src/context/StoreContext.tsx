@@ -1,4 +1,4 @@
-// Estado global de la sesión: usuario y token, carrito, ids de la wishlist y avisos (toast).
+// Stato globale della sessione: utente e token, carrello, id della wishlist e avvisi (toast).
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { ApiError, getRefreshToken, getToken, setRefreshToken, setToken, setUnauthorizedHandler } from '@/api/client';
@@ -10,12 +10,12 @@ type ToastKind = 'success' | 'error';
 interface ToastAction { label: string; to: string }
 interface Toast { id: number; message: string; kind: ToastKind; action?: ToastAction }
 
-/** Cada cuánto se consulta la actividad de amigos (también al volver a la pestaña). */
+/** Ogni quanto si consulta l'attività degli amici (anche al ritorno sulla scheda). */
 const ACTIVITY_POLL_MS = 30_000;
 const TOAST_MS = 2800;
 const TOAST_WITH_ACTION_MS = 6000;
 
-/** Lo que ya se había visto en la consulta anterior, para saber qué es nuevo. */
+/** Quanto già visto nella consultazione precedente, per sapere cosa è nuovo. */
 interface ActivitySeen { requestIds: Set<number>; unread: Map<string, number> }
 
 const seenOf = (a: FriendActivity): ActivitySeen => ({
@@ -23,7 +23,7 @@ const seenOf = (a: FriendActivity): ActivitySeen => ({
   unread: new Map(a.unread.map((u) => [u.username, u.count])),
 });
 
-/** El aviso de lo que ha cambiado desde la consulta anterior: uno solo, concreto o resumen. */
+/** L'avviso di ciò che è cambiato dalla consultazione precedente: uno solo, specifico o riassuntivo. */
 function friendToast(activity: FriendActivity, seen: ActivitySeen): { message: string; to: string } | null {
   const newRequests = activity.incomingRequests.filter((r) => !seen.requestIds.has(r.id));
   const newSenders = activity.unread.filter((u) => u.count > (seen.unread.get(u.username) ?? 0));
@@ -48,15 +48,15 @@ function friendToast(activity: FriendActivity, seen: ActivitySeen): { message: s
 
 interface StoreValue {
   user: User | null;
-  /** true mientras se comprueba el token guardado al cargar la página */
+  /** true mentre si controlla il token salvato al caricamento della pagina */
   booting: boolean;
   hasRole: (role: Role) => boolean;
   login: (login: string, password: string) => Promise<void>;
-  /** verificationRequired: la cuenta existe pero no hay sesión hasta verificar el email. */
+  /** verificationRequired: l'account esiste ma non c'è sessione finché non si verifica l'email. */
   register: (data: RegisterRequest) => Promise<{ verificationRequired: boolean; email: string }>;
-  /** Cancela la baja pendiente de la cuenta e inicia la sesión. */
+  /** Annulla la cancellazione in sospeso dell'account e avvia la sessione. */
   recoverAccount: (login: string, password: string) => Promise<void>;
-  /** Canjea el enlace del correo e inicia la sesión. */
+  /** Riscatta il link dell'email e avvia la sessione. */
   verifyEmail: (token: string, password: string) => Promise<User>;
   logout: () => void;
   setUser: (user: User) => void;
@@ -69,15 +69,15 @@ interface StoreValue {
   wishlistIds: Set<number>;
   toggleWishlist: (gameId: number, title: string) => Promise<void>;
 
-  /** Solicitudes recibidas + mensajes sin leer: el número de «Amigos». */
+  /** Richieste ricevute + messaggi non letti: il numero di «Amici». */
   friendBadge: number;
   refreshFriendActivity: () => Promise<void>;
 
   toast: Toast | null;
-  /** Con `action` el aviso trae un enlace y dura más. */
+  /** Con `action` l'avviso porta un link e dura di più. */
   notify: (message: string, kind?: ToastKind, action?: ToastAction) => void;
   notifyError: (error: unknown) => void;
-  /** Lleva al login y vuelve a la página actual después */
+  /** Porta al login e poi torna alla pagina corrente */
   requireLogin: () => boolean;
 }
 
@@ -94,9 +94,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const toastTimer = useRef<number | undefined>(undefined);
 
   const [friendBadge, setFriendBadge] = useState(0);
-  // null = aún no hay consulta de esta sesión: la primera no avisa
+  // null = ancora nessuna consultazione in questa sessione: la prima non avvisa
   const activitySeen = useRef<ActivitySeen | null>(null);
-  // número de la última consulta lanzada (las respuestas anteriores se descartan) y la que sigue en vuelo (0 = ninguna)
+  // numero dell'ultima consultazione lanciata (le risposte precedenti si scartano) e quella ancora in volo (0 = nessuna)
   const activityReqId = useRef(0);
   const activityInFlight = useRef(0);
 
@@ -127,7 +127,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setWishlistIds(new Set(wishRes.content.map((w) => w.gameId)));
   }, []);
 
-  // Al arrancar: si hay token guardado, se valida pidiendo /users/me
+  // All'avvio: se c'è un token salvato, lo si valida chiedendo /users/me
   useEffect(() => {
     if (!getToken()) return;
     userApi
@@ -137,13 +137,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await loadUserData();
       })
       .catch((e: unknown) => {
-        // Solo un 401 invalida la sesión; un fallo de red o un 5xx no debe cerrarla
+        // Solo un 401 invalida la sessione; un errore di rete o un 5xx non deve chiuderla
         if (e instanceof ApiError && e.status === 401) clearSession();
       })
       .finally(() => setBooting(false));
   }, [clearSession, loadUserData]);
 
-  // Sesión caducada (el refresh de 7 días ya no vale) o inválida: se cierra y se manda al login
+  // Sessione scaduta (il refresh di 7 giorni non vale più) o non valida: si chiude e si manda al login
   useEffect(() => {
     setUnauthorizedHandler(() => {
       clearSession();
@@ -182,7 +182,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const register = useCallback<StoreValue['register']>(
     async (data) => {
       const res = await authApi.register(data);
-      // Con la verificación de email activa no hay sesión: hay que pulsar el enlace del correo
+      // Con la verifica email attiva non c'è sessione: bisogna cliccare il link dell'email
       if ('verificationRequired' in res) return { verificationRequired: true, email: res.email };
       await startSession(res.accessToken, res.refreshToken, res.user);
       return { verificationRequired: false, email: res.user.email };
@@ -200,10 +200,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
-    // Recarga completa en la portada: React Router navega como transición y, si solo se limpiara
-    // el estado, RequireAuth vería antes el usuario vacío y mandaría al login.
+    // Ricarica completa sulla home: React Router naviga come transizione e, se si svuotasse solo
+    // lo stato, RequireAuth vedrebbe prima l'utente vuoto e manderebbe al login.
     const refreshToken = getRefreshToken();
-    // Se revoca en el servidor sin esperar la respuesta; si falla, el refresh caducará solo
+    // Si revoca sul server senza aspettare la risposta; se fallisce, il refresh scadrà da solo
     if (refreshToken) authApi.logout(refreshToken).catch(() => undefined);
     setToken(null);
     setRefreshToken(null);
@@ -270,7 +270,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const hasRole = useCallback((role: Role) => Boolean(user?.roles.includes(role)), [user]);
 
-  // Solo los jugadores tienen amigos (estudios y admins no consultan)
+  // Solo i giocatori hanno amici (studi e admin non consultano)
   const isPlayer = Boolean(user) && !hasRole('ROLE_DEVELOPER') && !hasRole('ROLE_ADMIN');
   const userId = user?.id;
 
@@ -284,7 +284,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } finally {
       if (activityInFlight.current === reqId) activityInFlight.current = 0;
     }
-    // si la sesión se cerró o llegó otra consulta más reciente mientras tanto, esta respuesta ya no vale
+    // se la sessione si è chiusa o è arrivata una consultazione più recente nel frattempo, questa risposta non vale più
     if (!getToken() || reqId !== activityReqId.current) return;
     const seen = activitySeen.current;
     activitySeen.current = seenOf(activity);
@@ -293,7 +293,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (news) notify(news.message, 'success', { label: t('toast.friendView'), to: news.to });
   }, [isPlayer, notify]);
 
-  // Consulta al entrar, cada 30 s y al volver a la pestaña. Otra sesión empieza de cero: su primera consulta no avisa.
+  // Consulta all'ingresso, ogni 30 s e al ritorno sulla scheda. Un'altra sessione riparte da zero: la sua prima consultazione non avvisa.
   useEffect(() => {
     activitySeen.current = null;
     activityReqId.current++;
@@ -302,7 +302,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!isPlayer) return;
     const poll = () => refreshFriendActivity().catch(() => undefined);
     poll();
-    // el intervalo no consulta con la pestaña oculta ni mientras otra consulta sigue en vuelo
+    // l'intervallo non consulta con la scheda nascosta né mentre un'altra consultazione è ancora in volo
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible' && activityInFlight.current === 0) poll();
     }, ACTIVITY_POLL_MS);
@@ -314,7 +314,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-    // refreshFriendActivity depende de isPlayer; userId reinicia la consulta con otra sesión
+    // refreshFriendActivity dipende da isPlayer; userId riavvia la consultazione con un'altra sessione
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlayer, userId]);
 

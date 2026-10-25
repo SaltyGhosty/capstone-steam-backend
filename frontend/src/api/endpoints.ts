@@ -1,4 +1,4 @@
-// Una función por endpoint del backend. La colección de Postman es el contrato de referencia.
+// Una funzione per ogni endpoint del backend. La collezione Postman è il contratto di riferimento.
 import { api } from './client';
 import type {
   AuthResponse, Cart, CatalogQuery, ChatMessage, ChatResponse, GameDetail, GameRequest, GameStatus, GameSummary, Genre,
@@ -12,22 +12,22 @@ const page = (p = 0, size = 20) => ({ page: p, size });
 export const authApi = {
   login: (login: string, password: string) =>
     api<AuthResponse>('/api/auth/login', { method: 'POST', body: { login, password } }),
-  /** Con la verificación de email activa no devuelve sesión sino un RegisterResponse. */
+  /** Con la verifica email attiva non restituisce una sessione ma un RegisterResponse. */
   register: (body: RegisterRequest) =>
     api<AuthResponse | RegisterResponse>('/api/auth/register', { method: 'POST', body }),
-  /** De qué cuenta es el enlace (si sigue vigente). No gasta el enlace. */
+  /** Di quale account è il link (se è ancora valido). Non consuma il link. */
   previewVerification: (token: string) =>
     api<{ username: string }>('/api/auth/verify-email/preview', { method: 'POST', body: { token } }),
-  /** Canjea el enlace del correo con la contraseña de ese registro: verifica el email y devuelve la sesión. */
+  /** Riscatta il link dell'email con la password di quella registrazione: verifica l'email e restituisce la sessione. */
   verifyEmail: (token: string, password: string) =>
     api<AuthResponse>('/api/auth/verify-email', { method: 'POST', body: { token, password } }),
-  /** Siempre 204, exista o no la cuenta. */
+  /** Sempre 204, che l'account esista o no. */
   resendVerification: (email: string) =>
     api<void>('/api/auth/resend-verification', { method: 'POST', body: { email } }),
-  /** Cancela la baja pendiente (pedida por el dueño) y abre la sesión como el login. */
+  /** Annulla la cancellazione in sospeso (richiesta dal titolare) e apre la sessione come il login. */
   recoverAccount: (login: string, password: string) =>
     api<AuthResponse>('/api/auth/recover-account', { method: 'POST', body: { login, password } }),
-  /** Revoca el refresh token en el servidor (204). */
+  /** Revoca il refresh token sul server (204). */
   logout: (refreshToken: string) =>
     api<void>('/api/auth/logout', { method: 'POST', body: { refreshToken }, keepalive: true }),
 };
@@ -36,7 +36,7 @@ export const userApi = {
   me: () => api<User>('/api/users/me'),
   update: (body: UpdateProfileRequest) =>
     api<User>('/api/users/me', { method: 'PATCH', body }),
-  /** Pone la cuenta en pausa 14 días; el servidor corta las sesiones. */
+  /** Mette l'account in pausa per 14 giorni; il server chiude le sessioni. */
   requestDeletion: (password: string) =>
     api<{ deletionScheduledAt: string }>('/api/users/me/deletion', { method: 'POST', body: { password } }),
   search: (q: string) => api<SearchHit[]>('/api/users/search', { query: { q } }),
@@ -54,7 +54,7 @@ export const friendsApi = {
   remove: (username: string) => api<void>(`/api/friends/${encodeURIComponent(username)}`, { method: 'DELETE' }),
   activity: () => api<FriendActivity>('/api/friends/activity'),
   conversations: () => api<Conversation[]>('/api/friends/conversations'),
-  /** Del más nuevo al más antiguo; `before` es el id del mensaje más antiguo que ya se tiene. */
+  /** Dal più nuovo al più vecchio; `before` è l'id del messaggio più vecchio già in possesso. */
   messages: (username: string, before?: number, size?: number) =>
     api<ChatMessageItem[]>(`/api/friends/${encodeURIComponent(username)}/messages`, { query: { before, size } }),
   sendMessage: (username: string, body: string) =>
@@ -64,13 +64,13 @@ export const friendsApi = {
 };
 
 export const assistantApi = {
-  /** Los últimos mensajes (máx. 10); el último tiene que ser del usuario. El idioma sale de Accept-Language. */
+  /** Gli ultimi messaggi (max 10); l'ultimo deve essere dell'utente. La lingua viene da Accept-Language. */
   chat: (messages: ChatMessage[]) =>
     api<ChatResponse>('/api/recommendations/chat', { method: 'POST', body: { messages } }),
 };
 
 export const supportApi = {
-  /** 202 sin cuerpo. Sin sesión hace falta el email; con sesión el backend usa el de la cuenta. */
+  /** 202 senza corpo. Senza sessione serve l'email; con la sessione il backend usa quella dell'account. */
   send: (body: { email?: string; subject: string; message: string }) =>
     api<void>('/api/support', { method: 'POST', body }),
 };
@@ -79,7 +79,7 @@ export const catalogApi = {
   search: (q: CatalogQuery = {}) =>
     api<PageResponse<GameSummary>>('/api/games', { query: { ...q } }),
   get: (slug: string) => api<GameDetail>(`/api/games/${encodeURIComponent(slug)}`),
-  /** Sin language salen las reseñas de todos los idiomas. */
+  /** Senza language restituisce le recensioni di tutte le lingue. */
   reviews: (slug: string, p = 0, size = 10, language?: Locale) =>
     api<PageResponse<Review>>(`/api/games/${encodeURIComponent(slug)}/reviews`, { query: { ...page(p, size), language } }),
   genres: () => api<Genre[]>('/api/genres'),
@@ -113,7 +113,7 @@ export const reviewApi = {
 
 export const orderApi = {
   checkout: () => api<Order>('/api/orders', { method: 'POST' }),
-  // 402 = pago rechazado: el backend devuelve el pedido FAILED en el cuerpo
+  // 402 = pagamento rifiutato: il backend restituisce l'ordine FAILED nel corpo
   pay: (id: number, method: PaymentMethod, cardNumber?: string) =>
     api<Order>(`/api/orders/${id}/pay`, { method: 'POST', body: { method, cardNumber }, acceptStatus: [402] }),
   cancel: (id: number) => api<Order>(`/api/orders/${id}/cancel`, { method: 'POST' }),
@@ -121,7 +121,7 @@ export const orderApi = {
   get: (id: number) => api<Order>(`/api/orders/${id}`),
 };
 
-/** Sube el archivo como multipart (la parte se llama `file`). */
+/** Carica il file come multipart (la parte si chiama `file`). */
 const coverForm = (file: File) => {
   const form = new FormData();
   form.append('file', file);
@@ -129,7 +129,7 @@ const coverForm = (file: File) => {
 };
 
 export const uploadsApi = {
-  /** Si el servidor tiene Cloudinary configurado, se puede subir la portada como archivo */
+  /** Se il server ha Cloudinary configurato, la copertina si può caricare come file */
   coverStatus: () => api<{ enabled: boolean }>('/api/uploads/covers/status'),
 };
 

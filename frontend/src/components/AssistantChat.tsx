@@ -9,7 +9,7 @@ import { cardImage, formatMoney } from '@/lib/format';
 import Icon from './Icon';
 import ReviewScoreBadge from './ReviewScoreBadge';
 
-/** Cuántos mensajes viajan en cada petición (el backend acepta 10 como máximo). */
+/** Quanti messaggi viaggiano in ogni richiesta (il backend ne accetta 10 al massimo). */
 const MAX_HISTORY = 10;
 const MAX_LENGTH = 500;
 
@@ -37,7 +37,7 @@ function MiniCard({ game, onOpen }: { game: GameSummary; onOpen: () => void }) {
   );
 }
 
-/** Chat flotante que recomienda juegos del catálogo. La conversación vive en el estado: se pierde al recargar. */
+/** Chat flottante che consiglia giochi del catalogo. La conversazione vive nello stato: si perde al ricaricamento. */
 export default function AssistantChat() {
   const { user } = useStore();
   const { t } = useI18n();
@@ -49,7 +49,7 @@ export default function AssistantChat() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Cada envío lleva un número; una respuesta que llega tarde (otra pregunta, sesión cerrada) se descarta
+  // Ogni invio ha un numero; una risposta che arriva in ritardo (altra domanda, sessione chiusa) si scarta
   const requestId = useRef(0);
   useEffect(() => () => { requestId.current += 1; }, []);
 
@@ -59,7 +59,7 @@ export default function AssistantChat() {
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
-    // al cerrar, el foco vuelve al botón flotante (que se vuelve a montar justo antes de este efecto)
+    // alla chiusura, il focus torna al pulsante flottante (che viene rimontato subito prima di questo effect)
     else if (wasOpen.current) fabRef.current?.focus();
     wasOpen.current = open;
   }, [open]);

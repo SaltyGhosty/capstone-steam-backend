@@ -1,4 +1,4 @@
-// Lógica pura del minijuego de supervivencia (sin canvas): estado + step(dt, input).
+// Logica pura del minigioco di sopravvivenza (senza canvas): stato + step(dt, input).
 import type { DemoInput } from '../types';
 
 export const SURVIVE_SECONDS = 60;
@@ -6,7 +6,7 @@ export const ARENA_W = 640;
 export const ARENA_H = 360;
 export const PLAYER_RADIUS = 8;
 export const ENEMY_RADIUS = 8;
-/** Alcance del ataque automático */
+/** Raggio dell'attacco automatico */
 export const ATTACK_RADIUS = 95;
 
 const PLAYER_SPEED = 140;
@@ -21,23 +21,23 @@ export interface SurvivorsState {
   elapsed: number;
   hp: number;
   kills: number;
-  /** Cuántos enemigos han aparecido en total (para medir cómo crece la densidad) */
+  /** Quanti nemici sono comparsi in totale (per misurare come cresce la densità) */
   spawned: number;
   enemies: Enemy[];
   player: { x: number; y: number };
   invuln: number;
   attackCd: number;
   spawnCd: number;
-  /** Segundo de la próxima oleada en anillo */
+  /** Secondo della prossima ondata ad anello */
   nextWave: number;
-  /** Último golpe del ataque, para dibujar el destello */
+  /** Ultimo colpo dell'attacco, per disegnare il lampo */
   flash: { x: number; y: number; t: number } | null;
   rng: number;
   finished: boolean;
   won: boolean;
 }
 
-/** Generador con semilla (mulberry32): cada llamada devuelve el valor y el estado siguiente. */
+/** Generatore con seed (mulberry32): ogni chiamata restituisce il valore e lo stato successivo. */
 function random(seed: number): [number, number] {
   const next = (seed + 0x6d2b79f5) | 0;
   let t = next;
@@ -55,10 +55,10 @@ export function createSurvivors(seed: number): SurvivorsState {
   };
 }
 
-/** Segundos entre apariciones: de 1 s al principio a ~0,24 s al final */
+/** Secondi tra le comparse: da 1 s all'inizio a ~0,24 s alla fine */
 export const spawnInterval = (elapsed: number) => Math.max(0.24, 1 - elapsed * 0.0125);
 const enemySpeed = (e: Enemy, elapsed: number) => (40 + elapsed * 0.5) * (e.fast ? 1.5 : 1);
-/** El ataque se acelera con cada baja */
+/** L'attacco accelera a ogni uccisione */
 const attackCooldown = (kills: number) => Math.max(0.18, 0.55 - kills * 0.007);
 
 export function stepSurvivors(state: SurvivorsState, dt: number, input: DemoInput): SurvivorsState {
@@ -77,7 +77,7 @@ export function stepSurvivors(state: SurvivorsState, dt: number, input: DemoInpu
   let spawnCd = state.spawnCd - dt;
   let flash = state.flash && state.flash.t - dt > 0 ? { ...state.flash, t: state.flash.t - dt } : null;
 
-  // Movimiento del jugador (la diagonal no es más rápida)
+  // Movimento del giocatore (la diagonale non è più veloce)
   let dx = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   let dy = (input.down ? 1 : 0) - (input.up ? 1 : 0);
   const len = Math.hypot(dx, dy);
@@ -89,7 +89,7 @@ export function stepSurvivors(state: SurvivorsState, dt: number, input: DemoInpu
 
   let enemies: Enemy[] = state.enemies.map((e) => ({ ...e }));
 
-  // Apariciones por los bordes, cada vez más seguidas, y una oleada en anillo cada 15 s
+  // Comparse dai bordi, sempre più ravvicinate, e un'ondata ad anello ogni 15 s
   while (spawnCd <= 0) {
     spawnCd += spawnInterval(elapsed);
     const side = Math.floor(rand() * 4);
@@ -114,7 +114,7 @@ export function stepSurvivors(state: SurvivorsState, dt: number, input: DemoInpu
     }
   }
 
-  // Los enemigos persiguen al jugador
+  // I nemici inseguono il giocatore
   for (const e of enemies) {
     const ex = player.x - e.x;
     const ey = player.y - e.y;
@@ -126,7 +126,7 @@ export function stepSurvivors(state: SurvivorsState, dt: number, input: DemoInpu
     }
   }
 
-  // Ataque automático: elimina al enemigo más cercano si está dentro del radio
+  // Attacco automatico: elimina il nemico più vicino se è dentro il raggio
   if (attackCd <= 0) {
     let best = -1;
     let bestDist = ATTACK_RADIUS;
@@ -140,11 +140,11 @@ export function stepSurvivors(state: SurvivorsState, dt: number, input: DemoInpu
       kills++;
       attackCd = attackCooldown(kills);
     } else {
-      attackCd = 0.05; // sin objetivo: vuelve a mirar enseguida
+      attackCd = 0.05; // senza bersaglio: ricontrolla subito
     }
   }
 
-  // Contacto: 1 de vida y un segundo de invulnerabilidad
+  // Contatto: 1 di vita e un secondo di invulnerabilità
   if (invuln <= 0 && enemies.some((e) => Math.hypot(e.x - player.x, e.y - player.y) < PLAYER_RADIUS + ENEMY_RADIUS)) {
     hp--;
     invuln = INVULN_SECONDS;

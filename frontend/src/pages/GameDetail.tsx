@@ -37,7 +37,7 @@ export default function GameDetail() {
   const own = ownership.data;
   const isMine = user?.id === g.developer.id;
   const wished = wishlistIds.has(g.id);
-  // Lo decide la bandera de la API: un estudio vivo puede no tener nombre visible
+  // Lo decide il flag dell'API: uno studio attivo può non avere un nome visibile
   const studio = g.developer.deleted ? t('game.deletedStudio') : g.developer.displayName ?? '';
   const delisted = g.status === 'DELISTED';
 
@@ -124,13 +124,13 @@ function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Owners
   const { t, lang } = useI18n();
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<Review | null>(null);
-  // Por defecto, las reseñas en el idioma de la interfaz; la puntuación de arriba cuenta todas
+  // Di default, le recensioni nella lingua dell'interfaccia; il punteggio in alto le conta tutte
   const [allLanguages, setAllLanguages] = useState(false);
   const reviews = useAsync(
     () => catalogApi.reviews(game.slug, page, 6, allLanguages ? undefined : lang),
     [game.slug, page, allLanguages, lang, game.reviewCount, game.positivePercent],
   );
-  // Otro idioma de interfaz es otra lista: se vuelve a la primera página
+  // Un'altra lingua dell'interfaccia è un'altra lista: si torna alla prima pagina
   useEffect(() => setPage(0), [lang]);
   const languageName = LOCALES.find((l) => l.value === lang)?.label ?? lang;
   const pickScope = (all: boolean) => { setAllLanguages(all); setPage(0); };
@@ -217,7 +217,7 @@ function Reviews({ game, ownership, onChanged }: { game: Game; ownership: Owners
 function ReviewForm({ gameId, review, onSaved, onCancel }: { gameId: number; review?: Review; onSaved: () => void; onCancel?: () => void }) {
   const { notify, notifyError } = useStore();
   const { t } = useI18n();
-  // Sin veredicto elegido de partida: hay que decidir 👍 o 👎 antes de publicar
+  // Nessun verdetto scelto in partenza: bisogna decidere 👍 o 👎 prima di pubblicare
   const [recommended, setRecommended] = useState<boolean | null>(review?.recommended ?? null);
   const [body, setBody] = useState(review?.body ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});

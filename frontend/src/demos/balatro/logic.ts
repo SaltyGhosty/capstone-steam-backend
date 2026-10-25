@@ -1,4 +1,4 @@
-// Lógica pura del minijuego de cartas (sin DOM): jugadas de póquer, puntuación y rondas.
+// Logica pura del minigioco di carte (senza DOM): mani di poker, punteggio e round.
 
 export type Suit = '♠' | '♥' | '♦' | '♣';
 export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
@@ -14,7 +14,7 @@ export const START_HANDS = 5;
 export const START_DISCARDS = 2;
 export const TARGET_SCORE = 300;
 
-/** Fichas y multiplicador de cada jugada (los valores de Balatro) */
+/** Chips e moltiplicatore di ogni giocata (i valori di Balatro) */
 export const HAND_TABLE: Record<HandName, { chips: number; mult: number }> = {
   highCard: { chips: 5, mult: 1 },
   pair: { chips: 10, mult: 2 },
@@ -29,7 +29,7 @@ export const HAND_TABLE: Record<HandName, { chips: number; mult: number }> = {
 
 export interface Evaluation { hand: HandName; chips: number; mult: number; scoring: Card[] }
 
-/** 2-10 su valor, J/Q/K 10, As 11 */
+/** 2-10 il loro valore, J/Q/K 10, Asso 11 */
 export const cardChips = (card: Card) => (card.rank === 14 ? 11 : Math.min(card.rank, 10));
 
 function isStraight(cards: Card[]): boolean {
@@ -37,7 +37,7 @@ function isStraight(cards: Card[]): boolean {
   const ranks = [...new Set(cards.map((c) => c.rank))].sort((a, b) => a - b);
   if (ranks.length !== 5) return false;
   if (ranks[4] - ranks[0] === 4) return true;
-  // A-2-3-4-5: el As también vale 1
+  // A-2-3-4-5: l'Asso vale anche 1
   return ranks.join() === '2,3,4,5,14';
 }
 
@@ -66,7 +66,7 @@ export function evaluateHand(cards: Card[]): Evaluation {
   return { hand, ...HAND_TABLE[hand], scoring };
 }
 
-/** (fichas de la jugada + fichas de las cartas que puntúan) × multiplicador */
+/** (chips della giocata + chips delle carte che puntano) × moltiplicatore */
 export function scoreHand(cards: Card[]): number {
   if (cards.length === 0) return 0;
   const { chips, mult, scoring } = evaluateHand(cards);
@@ -80,13 +80,13 @@ export interface RoundState {
   discardsLeft: number;
   target: number;
   score: number;
-  /** Última mano jugada, para enseñar qué ha pasado */
+  /** Ultima mano giocata, per mostrare cosa è successo */
   lastPlay: { hand: HandName; points: number } | null;
   finished: boolean;
   won: boolean;
 }
 
-/** Generador con semilla (mulberry32) */
+/** Generatore con seed (mulberry32) */
 function seededRandom(seed: number): () => number {
   let a = seed | 0;
   return () => {
@@ -114,14 +114,14 @@ export function createRound(seed: number): RoundState {
   };
 }
 
-/** Índices válidos: de 1 a 5, sin repetir y dentro de la mano */
+/** Indici validi: da 1 a 5, senza ripetizioni e dentro la mano */
 function validSelection(s: RoundState, indexes: number[]): boolean {
   return indexes.length >= 1 && indexes.length <= MAX_PLAY
     && new Set(indexes).size === indexes.length
     && indexes.every((i) => Number.isInteger(i) && i >= 0 && i < s.hand.length);
 }
 
-/** Quita las cartas elegidas y roba hasta volver a 8 (si queda mazo) */
+/** Toglie le carte scelte e pesca fino a tornare a 8 (se resta mazzo) */
 function refill(s: RoundState, indexes: number[]): Pick<RoundState, 'hand' | 'deck'> {
   const kept = s.hand.filter((_, i) => !indexes.includes(i));
   const need = Math.min(HAND_SIZE - kept.length, s.deck.length);

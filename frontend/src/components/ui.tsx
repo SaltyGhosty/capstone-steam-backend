@@ -1,4 +1,4 @@
-// Piezas pequeñas reutilizadas por las páginas.
+// Piccoli componenti riutilizzati dalle pagine.
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { ApiError } from '@/api/client';
@@ -9,7 +9,7 @@ import { formatMoney } from '@/lib/format';
 import Icon from './Icon';
 
 export function Price({ price, finalPrice, discountPercent }: { price: number; finalPrice: number; discountPercent: number }) {
-  useI18n(); // se vuelve a pintar al cambiar de idioma (formato de moneda)
+  useI18n(); // si ridisegna al cambio di lingua (formato della valuta)
   if (discountPercent > 0) {
     return (
       <span className="price">
@@ -69,7 +69,7 @@ export function Pagination({ page, totalPages, onChange }: { page: number; total
   );
 }
 
-/** Protege una ruta: sin sesión → login; sin el rol pedido → inicio. */
+/** Protegge una rotta: senza sessione → login; senza il ruolo richiesto → home. */
 export function RequireAuth({ role, children }: { role?: Role; children: ReactNode }) {
   const { user, booting, hasRole } = useStore();
   const location = useLocation();

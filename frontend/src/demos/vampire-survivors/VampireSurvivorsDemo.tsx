@@ -12,7 +12,7 @@ const CORAL = '#ff8a7a';
 function draw(ctx: CanvasRenderingContext2D, s: SurvivorsState) {
   ctx.fillStyle = '#0b0f15';
   ctx.fillRect(0, 0, ARENA_W, ARENA_H);
-  // Cuadrícula tenue para que se note el movimiento
+  // Griglia tenue perché si noti il movimento
   ctx.strokeStyle = '#141b24';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -20,7 +20,7 @@ function draw(ctx: CanvasRenderingContext2D, s: SurvivorsState) {
   for (let y = 0; y <= ARENA_H; y += 40) { ctx.moveTo(0, y); ctx.lineTo(ARENA_W, y); }
   ctx.stroke();
 
-  // Radio del ataque
+  // Raggio dell'attacco
   ctx.strokeStyle = 'rgba(183,255,60,.14)';
   ctx.beginPath();
   ctx.arc(s.player.x, s.player.y, ATTACK_RADIUS, 0, Math.PI * 2);
@@ -46,7 +46,7 @@ function draw(ctx: CanvasRenderingContext2D, s: SurvivorsState) {
     ctx.fillRect(e.x + 2, e.y - 2, 2, 2);
   }
 
-  // Jugador: parpadea mientras es invulnerable
+  // Giocatore: lampeggia mentre è invulnerabile
   if (s.invuln <= 0 || Math.floor(s.elapsed * 12) % 2 === 0) {
     ctx.fillStyle = LIME;
     ctx.beginPath();
@@ -57,7 +57,7 @@ function draw(ctx: CanvasRenderingContext2D, s: SurvivorsState) {
     ctx.fillRect(s.player.x + 1, s.player.y - 2, 2, 3);
   }
 
-  // Barra de tiempo, vidas y bajas
+  // Barra del tempo, vite e uccisioni
   ctx.fillStyle = '#1a2029';
   ctx.fillRect(0, 0, ARENA_W, 6);
   ctx.fillStyle = LIME;

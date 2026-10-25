@@ -14,7 +14,7 @@ function draw(ctx: CanvasRenderingContext2D, s: CelesteState) {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  // Montañas de fondo, más altas cuanto más arriba estás en el recorrido
+  // Montagne sullo sfondo, più alte quanto più in alto sei nel percorso
   ctx.fillStyle = '#0e151d';
   ctx.beginPath();
   ctx.moveTo(0, HEIGHT);
@@ -41,7 +41,7 @@ function draw(ctx: CanvasRenderingContext2D, s: CelesteState) {
     ctx.fill();
   }
 
-  // Jugador: lima con el impulso listo, azul hielo cuando se ha gastado
+  // Giocatore: lime con lo scatto pronto, azzurro ghiaccio quando è stato usato
   const p = s.player;
   ctx.fillStyle = p.canDash ? LIME : ICE;
   ctx.fillRect(p.x, p.y, PLAYER_W, PLAYER_H);

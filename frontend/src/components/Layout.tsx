@@ -17,7 +17,7 @@ function SideLink({ to, icon, label, count, end }: { to: string; icon: IconName;
   );
 }
 
-/** El número de una insignia: nada con 0 y «99+» por encima de 99. */
+/** Il numero di un badge: niente con 0 e «99+» oltre 99. */
 const badge = (n: number) => (n > 99 ? '99+' : n > 0 ? String(n) : undefined);
 
 function Brand({ className }: { className: string }) {
@@ -63,17 +63,17 @@ export default function Layout() {
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
-  // Amigos y perfil público solo existen para cuentas de jugador
+  // Amici e profilo pubblico esistono solo per gli account giocatore
   const isPlayer = !hasRole('ROLE_DEVELOPER') && !hasRole('ROLE_ADMIN');
 
-  // El buscador refleja ?q= cuando se está en el catálogo
+  // La barra di ricerca riflette ?q= quando si è nel catalogo
   useEffect(() => {
     setQuery(location.pathname === '/browse' ? params.get('q') ?? '' : '');
   }, [location.pathname, params]);
 
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
-  // ⌘K / Ctrl+K enfoca el buscador
+  // ⌘K / Ctrl+K porta il focus sulla ricerca
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -187,7 +187,7 @@ export default function Layout() {
         <Footer />
       </main>
 
-      {/* con otra sesión se remonta: la conversación de un usuario no pasa al siguiente */}
+      {/* con un'altra sessione si rimonta: la conversazione di un utente non passa al successivo */}
       <AssistantChat key={user?.id ?? 'anon'} />
 
       {toast && (

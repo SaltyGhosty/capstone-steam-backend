@@ -1,4 +1,4 @@
-// Biblioteca y wishlist: las dos colecciones del usuario.
+// Libreria e wishlist: le due collezioni dell'utente.
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { libraryApi, wishlistApi } from '@/api/endpoints';
@@ -9,7 +9,7 @@ import { useI18n } from '@/i18n';
 import { cardImage, formatDate, formatPlaytime } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 
-// No hay cliente de juego real: cada partida suma una sesión simulada de 30 a 90 minutos
+// Non esiste un client di gioco reale: ogni partita aggiunge una sessione simulata di 30-90 minuti
 const randomSession = () => 30 + Math.floor(Math.random() * 61);
 
 export function Library() {

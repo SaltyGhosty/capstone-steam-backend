@@ -1,4 +1,4 @@
-// Panel del estudio: sus juegos (todos los estados), alta/edición, publicar y descuento masivo.
+// Pannello dello studio: i suoi giochi (tutti gli stati), creazione/modifica, pubblicazione e sconto massivo.
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ApiError } from '@/api/client';
@@ -163,7 +163,7 @@ function GameForm({ game, genres, onSaved, onConflict }: {
   const { notifyError } = useStore();
   const { t } = useI18n();
   const coverUploadEnabled = useCoverUploadEnabled();
-  // La subida de la portada cambia el juego en el servidor (nueva versión): se sigue con esa versión
+  // Il caricamento della copertina modifica il gioco sul server (nuova versione): si prosegue con quella versione
   const [version, setVersion] = useState(game?.version ?? null);
   const [form, setForm] = useState({
     title: game?.title ?? '',

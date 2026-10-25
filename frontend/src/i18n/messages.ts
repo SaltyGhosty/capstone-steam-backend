@@ -1,9 +1,9 @@
-// Textos de la interfaz en los tres idiomas. El español es la referencia: las otras dos
-// traducciones tienen que tener las mismas claves (lo comprueba el tipo Messages).
-// {x} se sustituye por la variable x; las claves con _one/_other se eligen con {count}.
+// Testi dell'interfaccia nelle tre lingue. Lo spagnolo è il riferimento: le altre due
+// traduzioni devono avere le stesse chiavi (lo verifica il tipo Messages).
+// {x} viene sostituito dalla variabile x; le chiavi con _one/_other si scelgono con {count}.
 
 const es = {
-  // Comunes
+  // Comuni
   'common.loading': 'Cargando…',
   'common.loadError': 'No se pudo cargar el contenido.',
   'common.retry': 'Reintentar',
@@ -33,10 +33,10 @@ const es = {
   'common.backHome': 'Volver al inicio',
   'common.serverDown': 'No se pudo conectar con el servidor. ¿Está el backend arrancado?',
 
-  // Idioma
+  // Lingua
   'lang.label': 'Idioma',
 
-  // Formatos
+  // Formati
   'format.notPlayed': 'Sin jugar todavía',
   'format.minPlayed': '{n} min jugados',
   'format.hoursPlayed': '{n} h jugadas',
@@ -48,7 +48,7 @@ const es = {
   'gameStatus.PUBLISHED': 'Publicado',
   'gameStatus.DELISTED': 'Retirado',
 
-  // Menú y cabecera
+  // Menu e header
   'nav.home': 'ARCADE, inicio',
   'nav.main': 'Navegación principal',
   'nav.mobile': 'Navegación móvil',
@@ -93,7 +93,7 @@ const es = {
   'role.developer': 'Developer',
   'role.player': 'Jugador',
 
-  // Avisos globales
+  // Avvisi globali
   'toast.sessionExpired': 'Tu sesión ha caducado. Vuelve a iniciar sesión.',
   'toast.friendRequest': '{name} te ha enviado una solicitud de amistad',
   'toast.friendMessage': 'Nuevo mensaje de {name}',
@@ -108,12 +108,12 @@ const es = {
   'toast.removedFromWishlist': '{title} quitado de tu wishlist',
   'toast.addedToWishlist': '{title} añadido a tu wishlist',
 
-  // Tarjeta de juego
+  // Card del gioco
   'card.removeWish': 'Quitar {title} de la wishlist',
   'card.addWish': 'Añadir {title} a la wishlist',
   'card.addCart': 'Añadir {title} al carrito',
 
-  // Login y registro
+  // Login e registrazione
   'auth.welcomeBack': '¡Bienvenido de nuevo!',
   'auth.loginFailed': 'No se pudo iniciar sesión',
   'auth.loginEyebrow': 'BIENVENIDO DE NUEVO',
@@ -152,7 +152,7 @@ const es = {
   'auth.minChars': 'Mínimo 8 caracteres.',
   'auth.creating': 'Creando cuenta…',
 
-  // Ajustes
+  // Impostazioni
   'settings.updated': 'Perfil actualizado',
   'settings.eyebrow': 'TU CUENTA',
   'settings.memberSince': 'Miembro desde',
@@ -161,7 +161,7 @@ const es = {
   'settings.emailLang': 'Idioma de los correos',
   'settings.emailLangHint': '(bienvenida, recibos y pagos rechazados)',
 
-  // Portada
+  // Home
   'home.topRated': 'EL MEJOR VALORADO',
   'home.featured': 'DESTACADO',
   'home.noDescription': 'Sin descripción todavía.',
@@ -188,7 +188,7 @@ const es = {
   'home.newest': 'Novedades',
   'home.seeNewest': 'Ver novedades',
 
-  // Catálogo
+  // Catalogo
   'browse.sort.newest': 'Más recientes',
   'browse.sort.best_selling': 'Más vendidos',
   'browse.sort.top_rated': 'Mejor valorados',
@@ -208,7 +208,7 @@ const es = {
   'browse.empty': 'No hay juegos con estos filtros',
   'browse.emptyHint': 'Prueba con otra búsqueda o quita algún filtro.',
 
-  // Carrito
+  // Carrello
   'cart.confirmClear': '¿Vaciar el carrito?',
   'cart.eyebrow': 'TU COMPRA',
   'cart.title': 'Carrito',
@@ -223,7 +223,7 @@ const es = {
   'cart.continue': 'Continuar al pago',
   'cart.simulated': 'Pago simulado: no se hace ningún cargo real.',
 
-  // Biblioteca y wishlist
+  // Libreria e wishlist
   'library.played': 'Has jugado {minutes} min a {title}',
   'library.eyebrow': 'TU COLECCIÓN',
   'library.empty': 'Tu biblioteca está vacía',
@@ -239,7 +239,7 @@ const es = {
   'wishlist.inCart': 'En el carrito',
   'wishlist.toCart': 'Al carrito',
 
-  // Ficha del juego
+  // Scheda del gioco
   'game.notFound': 'Este juego no existe o ya no está a la venta.',
   'game.backCatalog': 'Volver al catálogo',
   'game.reviews_one': '{count} reseña',
@@ -279,7 +279,7 @@ const es = {
   'review.textLabel': 'Texto de la reseña',
   'review.publish': 'Publicar reseña',
 
-  // Pedidos
+  // Ordini
   'orders.eyebrow': 'HISTORIAL',
   'orders.empty': 'Aún no has hecho ningún pedido',
   'orders.order': 'Pedido',
@@ -313,7 +313,7 @@ const es = {
   'orders.reference': 'Referencia',
   'orders.paidAt': 'Pagado',
 
-  // Panel del estudio
+  // Pannello dello studio
   'dev.discountRange': 'El descuento va de 0 a 100',
   'dev.discountApplied': 'Descuento del {pct}% aplicado a {count} juegos',
   'dev.eyebrow': 'TU ESTUDIO',
@@ -378,7 +378,7 @@ const es = {
   'genre.shooter': 'Shooter',
   'genre.platformer': 'Plataformas',
 
-  // Administración
+  // Amministrazione
   'admin.eyebrow': 'ADMINISTRACIÓN',
   'admin.tab.games': 'Juegos',
   'admin.tab.users': 'Usuarios',
@@ -431,7 +431,6 @@ const es = {
   'admin.genreName': 'Nombre del género',
   'admin.rename': 'Renombrar {name}',
   'admin.deleteName': 'Borrar {name}',
-  // Bloque B
   'reviewScore.OVERWHELMINGLY_POSITIVE': 'Extremadamente positivas',
   'reviewScore.VERY_POSITIVE': 'Muy positivas',
   'reviewScore.POSITIVE': 'Positivas',
@@ -451,7 +450,6 @@ const es = {
   'browse.minPositiveChip': '≥ {percent} %',
   'dev.positiveSummary': '{percent} % positivas ({count})',
 
-  // Bloque E
   'nav.friends': 'Amigos',
   'nav.myProfile': 'Mi perfil',
   'settings.profileSection': 'Perfil',
@@ -515,14 +513,12 @@ const es = {
   'profile.noFriends': 'Todavía no tiene amigos.',
   'profile.isFriend': 'Sois amigos',
   'profile.yourProfile': 'Este es tu perfil',
-  // Bloque G
   'cover.upload': 'Subir portada',
   'cover.uploading': 'Subiendo…',
   'cover.uploaded': 'Portada subida',
   'cover.saveFirst': 'Guarda el juego antes de subir una portada',
   'cover.tooLarge': 'La portada no puede pesar más de 5 MB',
   'cover.invalidType': 'La portada tiene que ser una imagen JPEG, PNG o WebP',
-  // Bloque D
   'assistant.open': 'Abrir el asistente',
   'assistant.title': 'Asistente de recomendaciones',
   'assistant.placeholder': 'Oscuro, difícil, con buena historia…',
@@ -534,10 +530,9 @@ const es = {
   'assistant.unavailableUi': 'El asistente no está disponible ahora',
   'assistant.rateLimitedUi': 'Has enviado demasiados mensajes. Inténtalo de nuevo más tarde.',
 
-  // Bloque D (arreglos)
   'assistant.badRequestUi': 'No he podido enviar ese mensaje',
 
-  // Demos jugables
+  // Demo giocabili
   'nav.demos': 'Demos',
   'demos.eyebrow': 'DEMOS',
   'demos.title': 'Prueba antes de comprar',
@@ -1008,7 +1003,6 @@ const en: Messages = {
   'admin.genreName': 'Genre name',
   'admin.rename': 'Rename {name}',
   'admin.deleteName': 'Delete {name}',
-  // Bloque B
   'reviewScore.OVERWHELMINGLY_POSITIVE': 'Overwhelmingly Positive',
   'reviewScore.VERY_POSITIVE': 'Very Positive',
   'reviewScore.POSITIVE': 'Positive',
@@ -1028,7 +1022,6 @@ const en: Messages = {
   'browse.minPositiveChip': '≥ {percent}%',
   'dev.positiveSummary': '{percent}% positive ({count})',
 
-  // Bloque E
   'nav.friends': 'Friends',
   'nav.myProfile': 'My profile',
   'settings.profileSection': 'Profile',
@@ -1092,14 +1085,12 @@ const en: Messages = {
   'profile.noFriends': 'No friends yet.',
   'profile.isFriend': 'You are friends',
   'profile.yourProfile': 'This is your profile',
-  // Bloque G
   'cover.upload': 'Upload cover',
   'cover.uploading': 'Uploading…',
   'cover.uploaded': 'Cover uploaded',
   'cover.saveFirst': 'Save the game before uploading a cover',
   'cover.tooLarge': 'The cover cannot be larger than 5 MB',
   'cover.invalidType': 'The cover must be a JPEG, PNG or WebP image',
-  // Bloque D
   'assistant.open': 'Open the assistant',
   'assistant.title': 'Recommendation assistant',
   'assistant.placeholder': 'Dark, hard, with a great story…',
@@ -1111,10 +1102,9 @@ const en: Messages = {
   'assistant.unavailableUi': 'The assistant is not available right now',
   'assistant.rateLimitedUi': 'You have sent too many messages. Try again later.',
 
-  // Bloque D (arreglos)
   'assistant.badRequestUi': 'I could not send that message',
 
-  // Demos jugables
+  // Demo giocabili
   'nav.demos': 'Demos',
   'demos.eyebrow': 'DEMOS',
   'demos.title': 'Try before you buy',
@@ -1582,7 +1572,6 @@ const it: Messages = {
   'admin.genreName': 'Nome del genere',
   'admin.rename': 'Rinomina {name}',
   'admin.deleteName': 'Elimina {name}',
-  // Bloque B
   'reviewScore.OVERWHELMINGLY_POSITIVE': 'Estremamente positive',
   'reviewScore.VERY_POSITIVE': 'Molto positive',
   'reviewScore.POSITIVE': 'Positive',
@@ -1602,7 +1591,6 @@ const it: Messages = {
   'browse.minPositiveChip': '≥ {percent}%',
   'dev.positiveSummary': '{percent}% positive ({count})',
 
-  // Bloque E
   'nav.friends': 'Amici',
   'nav.myProfile': 'Il mio profilo',
   'settings.profileSection': 'Profilo',
@@ -1666,14 +1654,12 @@ const it: Messages = {
   'profile.noFriends': 'Ancora nessun amico.',
   'profile.isFriend': 'Siete amici',
   'profile.yourProfile': 'Questo è il tuo profilo',
-  // Bloque G
   'cover.upload': 'Carica copertina',
   'cover.uploading': 'Caricamento…',
   'cover.uploaded': 'Copertina caricata',
   'cover.saveFirst': 'Salva il gioco prima di caricare una copertina',
   'cover.tooLarge': 'La copertina non può superare i 5 MB',
   'cover.invalidType': 'La copertina deve essere un’immagine JPEG, PNG o WebP',
-  // Bloque D
   'assistant.open': 'Apri l’assistente',
   'assistant.title': 'Assistente di consigli',
   'assistant.placeholder': 'Scuro, difficile, con una bella storia…',
@@ -1685,10 +1671,9 @@ const it: Messages = {
   'assistant.unavailableUi': 'L’assistente non è disponibile in questo momento',
   'assistant.rateLimitedUi': 'Hai inviato troppi messaggi. Riprova più tardi.',
 
-  // Bloque D (arreglos)
   'assistant.badRequestUi': 'Non sono riuscito a inviare quel messaggio',
 
-  // Demos jugables
+  // Demo giocabili
   'nav.demos': 'Demo',
   'demos.eyebrow': 'DEMO',
   'demos.title': 'Prova prima di comprare',

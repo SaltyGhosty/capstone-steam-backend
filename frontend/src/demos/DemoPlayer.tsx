@@ -18,9 +18,9 @@ function isTouchDevice(): boolean {
 }
 
 /**
- * Diálogo a pantalla grande con la demo de un juego. Se pausa solo cuando la ventana pierde el foco
- * o la pestaña se oculta, y sigue pausado hasta que el jugador pulsa «Continuar». El foco se queda
- * dentro mientras está abierto y vuelve a donde estaba al cerrarlo.
+  * Dialog a schermo intero con la demo di un gioco. Va in pausa da solo quando la finestra perde il focus
+  * o la scheda si nasconde, e resta in pausa finché il giocatore non preme «Continua». Il focus resta
+  * dentro finché è aperto e torna dov'era alla chiusura.
  */
 export function DemoPlayer({ game, onClose }: { game: GameSummary | GameDetail; onClose: () => void }) {
   const { t } = useI18n();
@@ -37,7 +37,7 @@ export function DemoPlayer({ game, onClose }: { game: GameSummary | GameDetail; 
   const [added, setAdded] = useState(false);
   const touch = isTouchDevice();
 
-  // El componente del minijuego se crea una vez por juego (no por render) para no volver a montarlo
+  // Il componente del minigioco si crea una volta per gioco (non a ogni render) per non rimontarlo
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const Game = useMemo(() => (def ? lazy(def.load) : null), [game.slug]);
 
@@ -57,7 +57,7 @@ export function DemoPlayer({ game, onClose }: { game: GameSummary | GameDetail; 
     };
   }, [onClose]);
 
-  // Al abrir: la página de fondo no se desplaza y el foco entra en el diálogo. Al cerrar, vuelve al botón que lo abrió.
+  // All'apertura: la pagina di sfondo non scorre e il focus entra nel dialog. Alla chiusura, torna al pulsante che l'ha aperto.
   useEffect(() => {
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -74,20 +74,20 @@ export function DemoPlayer({ game, onClose }: { game: GameSummary | GameDetail; 
     };
   }, []);
 
-  // Se consulta al abrir (no al terminar) para que la pantalla final sepa ya qué ofrecer
+  // Si consulta all'apertura (non alla fine) perché la schermata finale sappia già cosa offrire
   const ownership = useAsync(
     () => (user ? libraryApi.status(game.id) : Promise.resolve(null)),
     [user?.id, game.id],
   );
   const statusReady = !booting && !ownership.loading && (!user || ownership.data !== null || ownership.error !== null);
 
-  // «Continuar» recibe el foco al pausar; al reanudar, el foco vuelve al diálogo
+  // «Continua» riceve il focus in pausa; alla ripresa, il focus torna al dialog
   useEffect(() => {
     if (paused) resumeRef.current?.focus();
     else if (document.activeElement === document.body) dialogRef.current?.focus();
   }, [paused]);
 
-  // En la pantalla final, el foco va a la acción principal en cuanto aparece
+  // Nella schermata finale, il focus va all'azione principale appena compare
   useEffect(() => {
     if (result && statusReady) actionsRef.current?.querySelector<HTMLElement>('a, button')?.focus();
   }, [result, statusReady]);

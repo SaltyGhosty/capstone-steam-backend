@@ -1,7 +1,7 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import type { DemoInput } from './types';
 
-/** Tope del paso de tiempo: tras volver de otra pestaña, `dt` puede ser de segundos y atravesaría paredes. */
+/** Tetto del passo di tempo: tornando da un'altra scheda, `dt` può essere di secondi e attraverserebbe i muri. */
 export const MAX_DT = 0.05;
 
 export function clampDt(seconds: number): number {
@@ -9,8 +9,8 @@ export function clampDt(seconds: number): number {
 }
 
 /**
- * Bucle de juego con requestAnimationFrame. Con `paused` (o al desmontar) se cancela el fotograma
- * pendiente, así que no queda ningún rAF huérfano. Al reanudar, el primer `dt` es 0.
+  * Game loop con requestAnimationFrame. Con `paused` (o allo smontaggio) si cancella il frame
+  * pendente, quindi non resta nessun rAF orfano. Alla ripresa, il primo `dt` è 0.
  */
 export function useGameLoop(step: (dt: number) => void, draw: () => void, paused: boolean): void {
   const stepRef = useRef(step);
@@ -48,22 +48,22 @@ const KEY_MAP: Record<string, keyof DemoInput> = {
   x: 'secondary', X: 'secondary', Shift: 'secondary',
 };
 
-/** Los botones y campos conservan Espacio/Intro para activarse con el teclado. */
+/** I pulsanti e i campi conservano Spazio/Invio per attivarsi da tastiera. */
 function keepsActivationKey(e: KeyboardEvent): boolean {
   const el = e.target;
   return (e.key === ' ' || e.key === 'Enter') && el instanceof HTMLElement && ['BUTTON', 'INPUT', 'A'].includes(el.tagName);
 }
 
-/** Escribiendo en un campo (buscador, chat): las letras son suyas, no del juego. */
+/** Scrivendo in un campo (ricerca, chat): le lettere sono sue, non del gioco. */
 function isTyping(e: KeyboardEvent): boolean {
   const el = e.target;
   return el instanceof HTMLElement && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable);
 }
 
 /**
- * Si es una tecla de juego (flechas, WASD, Espacio, X, Shift), evita el scroll y corta la propagación
- * para que no llegue a atajos globales. Con Ctrl/Meta/Alt no toca nada (Ctrl K del buscador).
- * Devuelve el campo del `DemoInput` que le corresponde, o null si no la ha tratado.
+  * Se è un tasto di gioco (frecce, WASD, Spazio, X, Shift), evita lo scroll e interrompe la propagazione
+  * perché non arrivi alle scorciatoie globali. Con Ctrl/Meta/Alt non tocca nulla (Ctrl K della ricerca).
+  * Restituisce il campo del `DemoInput` che gli corrisponde, o null se non l'ha gestito.
  */
 export function guardGameKey(e: KeyboardEvent): keyof DemoInput | null {
   const field = KEY_MAP[e.key];
@@ -73,7 +73,7 @@ export function guardGameKey(e: KeyboardEvent): keyof DemoInput | null {
   return field;
 }
 
-/** Instala `guardGameKey` en la fase de captura de window mientras el componente está montado. */
+/** Installa `guardGameKey` nella fase di capture di window finché il componente è montato. */
 export function useGameKeyGuard(): void {
   useEffect(() => {
     window.addEventListener('keydown', guardGameKey, true);
@@ -81,7 +81,7 @@ export function useGameKeyGuard(): void {
   }, []);
 }
 
-/** Estado del teclado para los minijuegos de canvas. Al perder el foco se sueltan todas las teclas. */
+/** Stato della tastiera per i minigiochi canvas. Quando si perde il focus si rilasciano tutti i tasti. */
 export function useDemoKeys(): RefObject<DemoInput> {
   const input = useRef<DemoInput>({ ...EMPTY });
 

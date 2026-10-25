@@ -1,4 +1,4 @@
-// Botón «Subir portada»: valida el archivo en el cliente (el servidor vuelve a validarlo) y lo manda.
+// Pulsante «Carica copertina»: valida il file sul client (il server lo rivalida) e lo invia.
 import { useState, type ChangeEvent } from 'react';
 import { uploadsApi } from '@/api/endpoints';
 import type { GameDetail } from '@/api/types';
@@ -9,7 +9,7 @@ import { useAsync } from '@/lib/useAsync';
 const MAX_BYTES = 5 * 1024 * 1024;
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-/** true si el servidor tiene Cloudinary configurado; mientras carga o si falla, false (no se ofrece el botón). */
+/** true se il server ha Cloudinary configurato; durante il caricamento o in caso di errore, false (il pulsante non viene offerto). */
 export function useCoverUploadEnabled(): boolean {
   const status = useAsync(() => uploadsApi.coverStatus(), []);
   return status.data?.enabled === true;
@@ -27,7 +27,7 @@ export default function CoverUpload({ upload, onUploaded }: {
   const choose = async (e: ChangeEvent<HTMLInputElement>) => {
     const input = e.target;
     const file = input.files?.[0];
-    input.value = ''; // permite volver a elegir el mismo archivo
+    input.value = ''; // permette di scegliere di nuovo lo stesso file
     if (!file) return;
     if (file.size > MAX_BYTES) return setError(t('cover.tooLarge'));
     if (file.type && !TYPES.includes(file.type)) return setError(t('cover.invalidType'));

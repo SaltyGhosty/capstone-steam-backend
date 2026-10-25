@@ -1,4 +1,4 @@
-// Idiomas de la interfaz y de los correos (bienvenida, recibo, pago rechazado).
+// Lingue dell'interfaccia e delle email (benvenuto, ricevuta, pagamento rifiutato).
 import type { Locale } from '@/api/types';
 
 export const LOCALES: { value: Locale; label: string }[] = [
@@ -9,7 +9,7 @@ export const LOCALES: { value: Locale; label: string }[] = [
 
 const isLocale = (value: string): value is Locale => LOCALES.some((l) => l.value === value);
 
-/** Deduce el idioma de una etiqueta como "en-US" (por defecto, la del navegador). Si no es es/en/it → 'es'. */
+/** Deduce la lingua da un tag come "en-US" (di default, quello del browser). Se non è es/en/it → 'es'. */
 export function detectLocale(language: string | undefined = typeof navigator === 'undefined' ? undefined : navigator.language): Locale {
   const code = (language ?? '').slice(0, 2).toLowerCase();
   return isLocale(code) ? code : 'es';

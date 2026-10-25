@@ -1,5 +1,5 @@
-// Cliente HTTP mínimo sobre fetch: añade el Bearer token y convierte los ProblemDetail
-// (RFC 9457) del backend en ApiError con el mensaje y los errores por campo.
+// Client HTTP minimale sopra fetch: aggiunge il Bearer token e converte i ProblemDetail
+// (RFC 9457) del backend in ApiError con il messaggio e gli errori per campo.
 
 import { getLang, t } from '@/i18n';
 
@@ -7,14 +7,14 @@ const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 const TOKEN_KEY = 'arcade.token';
 const REFRESH_KEY = 'arcade.refresh';
 
-/** Swagger UI del backend: mismo origen con el proxy (Vite/Caddy) o VITE_API_URL en producción. */
+/** Swagger UI del backend: stessa origin con il proxy (Vite/Caddy) o VITE_API_URL in produzione. */
 export const API_DOCS_URL = `${BASE_URL}/swagger-ui/index.html`;
 
 export class ApiError extends Error {
   status: number;
   fieldErrors: Record<string, string>;
   body: unknown;
-  /** Clave del error del backend (p. ej. auth.emailNotVerified), para distinguir errores con el mismo status. */
+  /** Chiave dell'errore del backend (es. auth.emailNotVerified), per distinguere errori con lo stesso status. */
   readonly code?: string;
 
   constructor(status: number, message: string, fieldErrors: Record<string, string> = {}, body?: unknown, code?: string) {
@@ -39,7 +39,7 @@ export function setToken(token: string | null) {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
   } catch {
-    // almacenamiento bloqueado: la sesión solo dura lo que la pestaña
+    // storage bloccato: la sessione dura quanto la scheda
   }
 }
 
@@ -51,17 +51,17 @@ export function getRefreshToken(): string | null {
   }
 }
 
-/** setToken(null) no toca el refresh token: hay que borrarlo aparte con setRefreshToken(null). */
+/** setToken(null) non tocca il refresh token: va cancellato a parte con setRefreshToken(null). */
 export function setRefreshToken(token: string | null) {
   try {
     if (token) localStorage.setItem(REFRESH_KEY, token);
     else localStorage.removeItem(REFRESH_KEY);
   } catch {
-    // almacenamiento bloqueado: la sesión solo dura lo que la pestaña
+    // storage bloccato: la sessione dura quanto la scheda
   }
 }
 
-// Se avisa a AuthContext cuando el backend responde 401 con token (caducado o inválido).
+// Si avvisa AuthContext quando il backend risponde 401 con un token (scaduto o non valido).
 let onUnauthorized: (() => void) | null = null;
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
@@ -89,16 +89,16 @@ interface RequestOptions {
   method?: string;
   body?: unknown;
   query?: Query;
-  /** Estados distintos de 2xx que se devuelven como respuesta normal (p. ej. 402 del pago). */
+  /** Status diversi da 2xx che vengono restituiti come risposta normale (es. 402 del pagamento). */
   acceptStatus?: number[];
-  /** La petición sobrevive a una navegación inmediata (cierre de sesión). */
+  /** La richiesta sopravvive a una navigazione immediata (chiusura della sessione). */
   keepalive?: boolean;
 }
 
-// Renovación en curso, compartida: varias peticiones con 401 a la vez hacen un solo refresh.
+// Rinnovo in corso, condiviso: più richieste con 401 contemporanee fanno un solo refresh.
 let refreshing: Promise<boolean> | null = null;
 
-/** true si se guardaron tokens nuevos; false si el backend rechazó el refresh (sesión cerrada). */
+/** true se sono stati salvati token nuovi; false se il backend ha rifiutato il refresh (sessione chiusa). */
 function refreshSession(): Promise<boolean> {
   refreshing ??= doRefresh().finally(() => {
     refreshing = null;
@@ -111,14 +111,14 @@ async function doRefresh(): Promise<boolean> {
   if (!refreshToken) return false;
   let res: Response;
   try {
-    // fetch directo (no api()): un 401 aquí no debe volver a intentar refrescar
+    // fetch diretto (non api()): un 401 qui non deve ritentare il refresh
     res = await fetch(buildUrl('/api/auth/refresh'), {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'Accept-Language': getLang() },
       body: JSON.stringify({ refreshToken }),
     });
   } catch {
-    // sin conexión no se pierde la sesión: la petición original falla y ya se reintentará
+    // senza connessione non si perde la sessione: la richiesta originale fallisce e si riproverà
     throw new ApiError(0, t('common.serverDown'));
   }
   const data = res.ok ? ((await res.json().catch(() => null)) as { accessToken?: string; refreshToken?: string } | null) : null;
@@ -127,8 +127,8 @@ async function doRefresh(): Promise<boolean> {
     setRefreshToken(data.refreshToken);
     return true;
   }
-  // Solo un rechazo de autenticación (400/401) cierra la sesión; un 5xx o un 429 es un fallo
-  // temporal del servidor y no debe expulsar al usuario.
+  // Solo un rifiuto di autenticazione (400/401) chiude la sessione; un 5xx o un 429 è un errore
+  // temporaneo del server e non deve buttare fuori l'utente.
   if (res.status !== 400 && res.status !== 401) throw new ApiError(res.status, t('common.somethingWrong'));
   setToken(null);
   setRefreshToken(null);
@@ -143,9 +143,9 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 async function request<T>(path: string, options: RequestOptions, canRefresh: boolean): Promise<T> {
   const { method = 'GET', body, query, acceptStatus = [], keepalive } = options;
   const token = getToken();
-  // La API responde (errores, descripciones, motivos de pago) en el idioma de la interfaz
+  // L'API risponde (errori, descrizioni, motivi di pagamento) nella lingua dell'interfaccia
   const headers: Record<string, string> = { Accept: 'application/json', 'Accept-Language': getLang() };
-  // Un FormData (subida de archivos) va tal cual: el navegador pone el Content-Type con su boundary
+  // Un FormData (upload di file) va così com'è: il browser imposta il Content-Type con il suo boundary
   const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
   if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -171,14 +171,14 @@ async function request<T>(path: string, options: RequestOptions, canRefresh: boo
 
   if (res.status === 401 && token) {
     if (canRefresh && !path.startsWith('/api/auth/') && getRefreshToken()) {
-      // Otra petición ya renovó los tokens mientras esta volaba: basta con repetirla
-      // (solo vale si hay un token nuevo; sin token la sesión se cerró y no se repite sin credenciales)
+      // Un'altra richiesta ha già rinnovato i token mentre questa era in volo: basta ripeterla
+      // (vale solo se c'è un token nuovo; senza token la sessione è chiusa e non si ripete senza credenziali)
       const current = getToken();
       const renewed = (current !== null && current !== token) || (await refreshSession());
       if (renewed) return request<T>(path, options, false);
-      // refreshSession ya cerró la sesión y avisó una sola vez
+      // refreshSession ha già chiuso la sessione e avvisato una sola volta
     } else if (getToken() === token) {
-      // (si el token ya cambió o se borró, otra petición se ocupó de la sesión)
+      // (se il token è già cambiato o è stato cancellato, se ne è occupata un'altra richiesta)
       onUnauthorized?.();
     }
   }

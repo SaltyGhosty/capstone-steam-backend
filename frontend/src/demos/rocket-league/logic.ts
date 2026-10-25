@@ -1,4 +1,4 @@
-// Lógica pura del partido 2D (sin canvas): estado + step(dt, input).
+// Logica pura della partita 2D (senza canvas): stato + step(dt, input).
 import type { DemoInput } from '../types';
 
 export const MATCH_SECONDS = 60;
@@ -35,9 +35,9 @@ export interface MatchState {
   ball: { x: number; y: number; vx: number; vy: number };
   player: Car;
   ai: Car;
-  /** Turbo del jugador, de 0 a 100 */
+  /** Turbo del giocatore, da 0 a 100 */
   boost: number;
-  /** Segundos que quedan de parón tras un gol */
+  /** Secondi di pausa rimasti dopo un gol */
   freeze: number;
   finished: boolean;
 }
@@ -61,12 +61,12 @@ function drive(car: Car, dt: number, throttle: number, steer: number, turbo: boo
   else if (throttle < 0) speed -= (speed > 0 ? BRAKE : ACCEL * 0.6) * dt;
   else speed *= Math.exp(-COAST_DRAG * dt);
   speed = Math.min(turbo ? TURBO_SPEED : topSpeed, Math.max(-REVERSE_SPEED, speed));
-  // Sin velocidad el coche apenas gira; al ir marcha atrás gira al revés
+  // Senza velocità l'auto gira a malapena; in retromarcia gira al contrario
   const grip = Math.min(1, Math.abs(speed) / 80) * Math.sign(speed || 1);
   const angle = wrap(car.angle + steer * TURN_RATE * grip * dt);
   let x = car.x + Math.cos(angle) * speed * dt;
   let y = car.y + Math.sin(angle) * speed * dt;
-  // Las paredes frenan al coche
+  // Le pareti frenano l'auto
   const minX = CAR_RADIUS, maxX = FIELD_W - CAR_RADIUS, minY = CAR_RADIUS, maxY = FIELD_H - CAR_RADIUS;
   if (x < minX || x > maxX || y < minY || y > maxY) {
     x = Math.min(maxX, Math.max(minX, x));
@@ -76,7 +76,7 @@ function drive(car: Car, dt: number, throttle: number, steer: number, turbo: boo
   return { x, y, angle, speed };
 }
 
-/** La IA se coloca detrás del balón (en línea con la portería que ataca) y empuja. */
+/** L'IA si piazza dietro la palla (in linea con la porta che attacca) e spinge. */
 function aiInput(ai: Car, ball: MatchState['ball'], elapsed: number) {
   const goalX = 0;
   const goalY = FIELD_H / 2;
@@ -85,9 +85,9 @@ function aiInput(ai: Car, ball: MatchState['ball'], elapsed: number) {
   const gl = Math.hypot(gx, gy) || 1;
   const behind = { x: ball.x + (gx / gl) * 26, y: ball.y + (gy / gl) * 26 };
   const toBall = Math.hypot(ball.x - ai.x, ball.y - ai.y);
-  // Cerca del balón va a por él; si no, a su punto de ataque
+  // Vicino alla palla ci va dritta; altrimenti, al suo punto d'attacco
   const target = toBall < 60 ? ball : behind;
-  // Puntería imperfecta: el rumbo oscila, y cada pocos segundos se despista un momento
+  // Mira imperfetta: la direzione oscilla e ogni pochi secondi si distrae per un momento
   const wobble = toBall < 60 ? 0 : AI_WOBBLE * Math.sin(elapsed * 1.9);
   const diff = wrap(Math.atan2(target.y - ai.y, target.x - ai.x) - ai.angle + wobble);
   const distracted = elapsed % AI_DISTRACT_EVERY < AI_DISTRACT_FOR;
@@ -124,7 +124,7 @@ export function stepMatch(state: MatchState, dt: number, input: DemoInput): Matc
   const elapsed = state.elapsed + dt;
   const finished = elapsed >= MATCH_SECONDS;
 
-  // Parón tras un gol: nadie se mueve, pero el reloj sigue
+  // Pausa dopo un gol: nessuno si muove, ma il cronometro continua
   if (state.freeze > 0) return { ...state, elapsed, finished, freeze: Math.max(0, state.freeze - dt) };
 
   const turbo = input.action && input.up && state.boost > 0;
@@ -142,7 +142,7 @@ export function stepMatch(state: MatchState, dt: number, input: DemoInput): Matc
   ({ car: player, ball } = carHitsBall(player, ball));
   ({ car: ai, ball } = carHitsBall(ai, ball));
 
-  // Paredes: rebotan, salvo por la boca de las porterías
+  // Pareti: rimbalzano, tranne che dalla bocca delle porte
   if (ball.y < BALL_RADIUS) { ball.y = BALL_RADIUS; ball.vy = Math.abs(ball.vy) * BALL_BOUNCE; }
   if (ball.y > FIELD_H - BALL_RADIUS) { ball.y = FIELD_H - BALL_RADIUS; ball.vy = -Math.abs(ball.vy) * BALL_BOUNCE; }
   const inMouth = ball.y > GOAL_TOP && ball.y < GOAL_BOTTOM;
