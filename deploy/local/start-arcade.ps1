@@ -26,7 +26,7 @@ if ($Build -or -not (Test-Path $jar) -or -not (Test-Path $web)) {
     Write-Step 'Compilando el backend'
     Push-Location $Root
     try {
-        & .\mvnw.cmd -q -B package -DskipTests '-Djacoco.skip=true'
+        & .\mvnw.cmd -q -B package
         if ($LASTEXITCODE -ne 0) { throw 'Falló la compilación del backend' }
     } finally { Pop-Location }
     $built = Get-ChildItem (Join-Path $Root 'target\*.jar') | Where-Object Name -notlike '*plain*' | Select-Object -First 1

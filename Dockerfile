@@ -11,7 +11,7 @@ COPY mvnw pom.xml ./
 RUN chmod +x mvnw && ./mvnw -q -B dependency:go-offline
 COPY src src
 # Los tests ya corren en CI (.github/workflows/ci.yml)
-RUN ./mvnw -q -B package -DskipTests -Djacoco.skip=true
+RUN ./mvnw -q -B package
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app

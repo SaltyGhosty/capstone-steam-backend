@@ -15,8 +15,7 @@ Negozio di videogiochi in React 19 + Vite 8 + Tailwind CSS v4 + React Router 7. 
 
    In sviluppo, le richieste a `/api` passano dal proxy di Vite e arrivano a `http://localhost:8081`. Per usare un altro URL: `API_TARGET=http://localhost:8080 npm run dev`.
 
-3. `npm test` esegue i test (Vitest + Testing Library, senza backend: `fetch` è simulato).
-4. `npm run build` controlla i tipi con `tsc` e genera `dist/`. Se il frontend viene servito da un altro dominio, definisci `VITE_API_URL` (vedi `.env.example`) e aggiungi quell'origine a `CORS_ALLOWED_ORIGINS` nel backend.
+3. `npm run build` controlla i tipi con `tsc` e genera `dist/`. Se il frontend viene servito da un altro dominio, definisci `VITE_API_URL` (vedi `.env.example`) e aggiungi quell'origine a `CORS_ALLOWED_ORIGINS` nel backend.
 
 **Utenti demo** (dopo `node scripts/seed-demo.mjs` nella radice del repository; password `password123`):
 
@@ -42,7 +41,6 @@ src/
 ├── components/   Layout (barra laterale + barra superiore del design), GameCard, ReviewScoreBadge (etichetta e % di recensioni), AssistantChat (chat dell'assistente), CoverUpload (caricamento copertina), UserAvatar, Icon, ui (stati, prezzo, RequireAuth)
 ├── demos/        DemoPlayer, registry (per slug), loop (ciclo e tastiera) e un minigioco per cartella
 ├── lib/          format (€, date es-ES, tempo di gioco), useAsync
-├── test/         setup di Vitest, mock di fetch e render con router + StoreProvider
 ├── pages/        Discover, Browse, GameDetail, Cart, Orders, Collection (libreria e wishlist), Friends, Profile, Auth, Settings, Developer, Admin
 ├── index.css     CSS originale del design di Figma Make
 └── app.css       stili delle pagine nuove, con la stessa palette
@@ -81,7 +79,7 @@ Minigiochi propri (senza sprite, musica né nomi dei giochi reali) ispirati a qu
 | `balatro` | Carte: poker a punti (obiettivo 300) | Mouse, tastiera o tocco | Superare l'obiettivo o restare senza mani (5 mani, 2 scarti) |
 
 - Una demo compare solo se `GET /api/games/{slug}` risponde (gioco pubblicato). La registrazione per slug è in `demos/registry.ts`; ogni minigioco viene caricato con `React.lazy` all'apertura.
-- Ogni minigioco separa la logica pura (`logic.ts`: stato + `step(dt, input)`, testata con Vitest) dal disegno su `<canvas>` (`*Demo.tsx`). Balatro usa pulsanti del DOM.
+- Ogni minigioco separa la logica pura (`logic.ts`: stato + `step(dt, input)`) dal disegno su `<canvas>` (`*Demo.tsx`). Balatro usa pulsanti del DOM.
 - `demos/loop.ts`: ciclo con `requestAnimationFrame` che viene annullato alla pausa o allo smontaggio, `dt` limitato a 0,05 s e lettura della tastiera (frecce, WASD, Spazio, X) senza scroll né scorciatoie globali.
 - Va in pausa da sola quando la finestra o la scheda perde il focus e resta in pausa finché non si preme «Continua». Esc chiude.
 - Su mobile (`pointer: coarse`) Balatro si gioca con i tocchi e le altre tre mostrano «Demo disponibile su computer: serve la tastiera».
@@ -91,33 +89,6 @@ Minigiochi propri (senza sprite, musica né nomi dei giochi reali) ispirati a qu
 **Assistente.** Con la sessione, un pulsante flottante apre la chat (`AssistantChat`): testo più fino a 4 schede di giochi che aprono la loro scheda. La conversazione vive in memoria e si perde al ricaricamento; si inviano al massimo gli ultimi 10 messaggi. Un 503 mostra «L’assistente non è disponibile in questo momento» e un 429, l'avviso del limite (20 messaggi all'ora).
 
 **Sessione.** Il token di accesso (15 min) e il refresh token (7 giorni) si salvano in `localStorage` (`arcade.refresh` è la chiave del secondo). Se l'API risponde 401 con un token salvato, `api/client.ts` chiede **un solo** refresh (più richieste simultanee condividono lo stesso), salva i due nuovi token e ripete la richiesta. Se il backend rifiuta il refresh (400 o 401), elimina i due token, chiude la sessione e apre il login; un errore temporaneo (5xx, 429 o rete) non la cancella. Salvare il refresh in `localStorage` lascia una limitazione nota rispetto a XSS (vedi il [README principale](../README.md#limitazioni-note)).
-
-## Test
-
-`npm test`: 204 test in 26 file.
-
-| File | Cosa verifica |
-|---|---|
-| `api/client.test.ts` | Token nelle intestazioni, query dei filtri, `FormData` senza `Content-Type`, ProblemDetail → `ApiError` con errori per campo, 402 accettato, 401 → chiusura della sessione e il rinnovo con refresh token (un solo refresh condiviso, chiusura della sessione se fallisce con 400 o 401, un 5xx non la cancella, un 401 di `/auth/login` non fa refresh né ripete una richiesta senza token) |
-| `lib/format.test.ts` | Prezzi in €, tempo di gioco, copertine orizzontali e iniziali |
-| `pages/Auth.test.tsx` | Login corretto (token salvato e reindirizzamento), credenziali errate ed errori di validazione della registrazione; account in pausa (403) con «Recupera il mio account» o, se l'ha chiesta un admin, senza pulsante |
-| `pages/EmailVerification.test.tsx` | Registrazione → `/check-email`, reinvio, `/verify-email` (anteprima, password, password errata, link non valido, errori diversi da 400, `StrictMode`, studio verso `/developer` e senza token) |
-| `pages/Checkout.test.tsx` | Carrello → ordine → pagamento approvato; pagamento rifiutato (402) con il suo motivo; validazione della carta; carrello senza sessione → login |
-| `pages/Settings.test.tsx` | Mostra la lingua delle email dell'utente e la invia al salvataggio; «Elimina il mio account» con password, data prevista e chiusura della sessione |
-| `pages/Admin.test.tsx` | Elimina un utente (non nella propria riga), distintivo «Eliminazione il…» e annullamento della cancellazione |
-| `pages/Collection.test.tsx` | La libreria mostra lo studio, o «Studio eliminato» |
-| `pages/GameDetail.test.tsx` | Etichetta e % di recensioni positive, filtro per lingua e «Tutte le lingue», voto 👍/👎 con lingua e senza punteggio, l'elenco si aggiorna alla modifica, modificare conserva la lingua della recensione e cambiare lingua riporta alla pagina 0 |
-| `pages/Friends.test.tsx` | Cercare con 2 caratteri e inviare la richiesta, accettare, eliminare un amico, scartare una risposta di ricerca tardiva e non riempire i risultati se il termine scende sotto i 2 caratteri |
-| `pages/Profile.test.tsx` | Profilo privato (avviso, senza libreria) e visibile (giochi con ore giocate) |
-| `pages/Developer.test.tsx` | Caricare la copertina: `FormData` con il campo `file`, file con `type` vuoto, più di 5 MB senza chiamare il server, senza Cloudinary non c'è il pulsante e un gioco nuovo chiede di essere salvato prima |
-| `components/AssistantChat.test.tsx` | Senza sessione non c'è il pulsante, invio e risposta con scheda, massimo 10 messaggi precedenti, 503 e 429, e chiusura con Esc |
-| `components/Layout.test.tsx` | Un giocatore vede «Amici» e «Il mio profilo»; un developer e un admin no |
-| `context/StoreContext.test.tsx` | Un errore di rete nella convalida della sessione non la cancella; un 401 sì |
-| `lib/locale.test.ts` | `detectLocale`: le prime due lettere della lingua del browser; spagnolo se non è supportata |
-| `demos/DemoPlayer.test.tsx`, `demos/loop.test.tsx` | `clampDt`, dialogo e chiusura con Esc, pausa alla perdita del focus (e resta in pausa al ritorno), tasti di gioco senza scroll né scorciatoie globali, schermata finale con «Aggiungi al carrello» o «Ce l’hai già», avviso per mobile, ciclo senza `requestAnimationFrame` orfano |
-| `demos/*/logic.test.ts`, `demos/balatro/BalatroDemo.test.tsx` | Logica pura dei quattro minigiochi (salto e spinta, ondate e danno, gol, rimbalzi e turbo, giocate e punteggio del poker) e l'interfaccia delle carte |
-| `pages/Demos.test.tsx` | Una scheda per ogni demo pubblicata; una demo il cui gioco dà 404 non compare né rompe la pagina |
-| `i18n/i18n.test.tsx` | Le tre lingue hanno le stesse chiavi, variabili e plurali, le bandiere cambiano la lingua senza sessione e la ricordano, generi tradotti e `Accept-Language` nelle richieste |
 
 ## Deploy
 

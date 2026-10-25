@@ -6,9 +6,9 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 
 | | |
 |---|---|
-| **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail in locale, API di Brevo in produzione) · Cloudinary (copertine) · OpenRouter (assistente) · JUnit 5 + Mockito + H2 · Maven |
-| **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Test** | Backend: 536 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 208 test in 27 file · CI su GitHub Actions |
+| **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail in locale, API di Brevo in produzione) · Cloudinary (copertine) · OpenRouter (assistente) · Maven |
+| **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript |
+| **CI** | GitHub Actions: compila il backend (`./mvnw -B package`) e controlla i tipi e compila il frontend |
 | **API** | Swagger UI su `/swagger-ui.html` · 104 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -21,7 +21,7 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 5. [Architettura](#architettura)
 6. [Database (Flyway da V1 a V15)](#database-flyway-da-v1-a-v15)
 7. [API](#api)
-8. [Test](#test)
+8. [Verifica e CI](#verifica-e-ci)
 9. [Deploy](#deploy)
 10. [Decisioni tecniche](#decisioni-tecniche)
 
@@ -125,7 +125,6 @@ I pagamenti sono **simulati**: una carta che termina con `0000` viene sempre rif
 | Flyway da V1 a V4 (e da V5 a V15) | [db/migration](src/main/resources/db/migration) (vedi [sotto](#database-flyway-da-v1-a-v15)) |
 | Spring Mail + Gmail SMTP | [EmailService](src/main/java/com/capstone/steam/notification/EmailService.java), [EmailTemplates](src/main/java/com/capstone/steam/notification/EmailTemplates.java) e [MailTexts](src/main/java/com/capstone/steam/notification/MailTexts.java) (testi in es, en e it) |
 | Spring Events **AFTER_COMMIT** + `@Async` con **pool dedicato** | [MailListener](src/main/java/com/capstone/steam/notification/MailListener.java) e [AsyncConfig](src/main/java/com/capstone/steam/config/AsyncConfig.java) (`mailExecutor`, thread `mail-*`) |
-| JUnit 5 + Mockito + H2 | [src/test](src/test/java/com/capstone/steam): test unitari, di repository, di integrazione HTTP e di concorrenza |
 | PostgreSQL + Docker Compose | [docker-compose.yml](docker-compose.yml) (o un PostgreSQL locale) |
 | Frontend | [frontend/](frontend/): React che consuma tutta l'API ([dettagli](frontend/README.md)) |
 
@@ -261,10 +260,10 @@ La risposta HTTP non attende l'SMTP. Se la transazione fa rollback, non viene in
 | **V14** `friend_messages` | `friend_messages`: mittente, destinatario, la coppia ordinata (come `friendships`, con un `CHECK`), testo da 1 a 1.000 caratteri e `read_at`, con indici per la conversazione e per i non letti. I messaggi non dipendono dalla riga di `friendships`, quindi restano se finisce l'amicizia |
 | **V15** `friend_messages_indexes` | Indici di `friend_messages`: `(user_low_id, user_high_id, id)` per la paginazione e per l'ultimo messaggio di ogni conversazione, e `sender_id` per l'anonimizzazione |
 | **V13** `account_deletion` | `users.deletion_scheduled_at` (quando l'account verrà anonimizzato), `deletion_requested_by` (`SELF` o `ADMIN`, con `CHECK`) e `deleted_at` (account già anonimizzato), più un indice su `deletion_scheduled_at` per l'attività programmata. Gli account esistenti restano senza cancellazione in sospeso |
-| **V12.1** `username_lower_unique` | Indice univoco su `lower(username)`: il nome utente è univoco senza distinguere maiuscole e minuscole anche nel database. PostgreSQL usa un indice per espressione; H2 (test) una colonna generata `username_lower` con un `UNIQUE`, perché H2 non supporta gli indici per espressione |
+| **V12.1** `username_lower_unique` | Indice univoco su `lower(username)`: il nome utente è univoco senza distinguere maiuscole e minuscole anche nel database. Usa un indice per espressione di PostgreSQL |
 | **V12** `email_verification` | `users.email_verified` (gli account già esistenti restano verificati) e la tabella `email_verification_tokens`: SHA-256 del link (mai il token), scadenza, data di utilizzo, i dati della registrazione che lo ha generato (utente, password cifrata, nome, lingua e tipo di account) e il contatore delle password errate |
 
-La traccia del corso richiede V1 a V4; V5 a V15 sono state aggiunte in seguito (lingua delle email, traduzioni, Steam, recensioni in stile Steam, amici, refresh token, integrità della coppia di amici, verifica dell'email, cancellazione dell'account e messaggi tra amici con i loro indici). V1 a V3 e V5 a V15 sono SQL portabile; V4 e V12.1 hanno una variante per motore. V4 ha due versioni ([postgresql](src/main/resources/db/migration/postgresql) e [h2](src/main/resources/db/migration/h2)), perché H2 non supporta gli indici a trigrammi né quelli parziali. Flyway sceglie quella adatta con `locations: …/common, …/{vendor}`.
+La traccia del corso richiede V1 a V4; V5 a V15 sono state aggiunte in seguito (lingua delle email, traduzioni, Steam, recensioni in stile Steam, amici, refresh token, integrità della coppia di amici, verifica dell'email, cancellazione dell'account e messaggi tra amici con i loro indici). V1 a V3 e V5 a V15 sono SQL portabile; V4 si trova in [postgresql](src/main/resources/db/migration/postgresql) perché usa gli indici a trigrammi e quelli parziali. Flyway la trova con `locations: …/common, …/{vendor}`.
 
 Le regole di integrità sono garantite anche dal database, non solo dal codice Java: `CHECK` (prezzo ≥ 0, sconto da 0 a 100, `positive_count <= review_count`, lingua e stati validi), `UNIQUE` e chiavi esterne con `ON DELETE` pensato caso per caso.
 
@@ -351,27 +350,11 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 }
 ```
 
-## Test
+## Verifica e CI
 
-```bash
-./mvnw test      # 536 test (H2 in memoria, non serve PostgreSQL)
-./mvnw verify    # + report di copertura in target/site/jacoco/index.html (fallisce se scende sotto l'80 % di righe)
-```
+Il progetto non ha test automatici. L'API si verifica con la [collezione Postman](postman/Capstone-Steam.postman_collection.json) (104 richieste; eseguibile anche con Newman) contro un backend in esecuzione.
 
-| Tipo | Esempi | Cosa verificano |
-|---|---|---|
-| Unitari (Mockito) | `JwtServiceTest`, `AuthServiceTest`, `OrderServiceTest`, `ReviewServiceTest`, `CartServiceTest` | Regole di business isolate: token manomessi o scaduti, delta delle recensioni, pagamento approvato o rifiutato |
-| Repository (`@DataJpaTest` + Flyway reale) | `GameCriteriaRepositoryTest`, `RepositoryIntegrationTest` | Filtri e ordinamenti della Criteria API, UPDATE atomici e vincoli del database |
-| Integrazione HTTP (MockMvc) | `AuthIntegrationTest`, `CatalogIntegrationTest`, `CheckoutIntegrationTest`… | Flussi completi con JWT reale, 401/403/404/409/402 e il formato ProblemDetail |
-| Email asincrona | `MailEventIntegrationTest`, `EmailServiceTest`, `SupportIntegrationTest` | L'email parte **dopo il commit**, su un thread `mail-*`, e **non** parte se c'è rollback. I template fanno l'escape dell'HTML, la ricevuta collega solo copertine `https`, nel log l'email del destinatario compare mascherata (`l***@gmail.com`) e ogni email esce nella lingua dell'utente (es, en o it, con lo spagnolo se manca) |
-| Concorrenza | `AtomicUpdateConcurrencyTest`, `RefreshTokenConcurrencyTest` | Thread reali: nessuna vendita va persa, **esattamente 1** pagamento si aggiudica l'ordine e, tra più refresh simultanei con lo stesso token, **solo uno** riceve nuovi token |
-| Nuove funzioni | `ReviewScoreTest`, `FriendIntegrationTest`, `RefreshTokenIntegrationTest`, `CloudinaryCoverStorageTest`, `CoverIntegrationTest`, `RecommendationServiceTest` | Etichette delle recensioni con le regole di Steam, visibilità del profilo, rotazione e riutilizzo dei refresh token, validazione dell'immagine dai byte e limite di dimensione (Cloudinary simulato con `MockRestServiceServer`) e l'assistente con il client di OpenRouter simulato: nessun test chiama la rete |
-
-I test usano H2 in modalità PostgreSQL **con le stesse migrazioni Flyway** della produzione; non c'è `ddl-auto=create`.
-
-**Frontend** (`cd frontend && npm test`): 208 test in 27 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, il modulo di assistenza, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
-
-**CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) esegue `./mvnw verify` e i test e la build del frontend a ogni push su `main`.
+**CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) compila il backend (`./mvnw -B package`) e, per il frontend, esegue `npm ci`, il controllo dei tipi (`tsc -b`) e la build, a ogni push su `main`.
 
 ## Deploy
 
