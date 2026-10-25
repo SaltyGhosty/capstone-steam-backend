@@ -1,4 +1,4 @@
- # Capstone Steam
+# Capstone Steam
 
 Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un frontend in React ([`frontend/`](frontend/)) realizzato a partire da un design di Figma Make. Offre catalogo con ricerca avanzata, pannello per sviluppatori, carrello, wishlist, libreria, recensioni in stile Steam (👍/👎), amici e profilo, un assistente che consiglia giochi e acquisti con pagamento simulato. Le email di conferma vengono inviate in modo asincrono.
 
@@ -8,7 +8,7 @@ Negozio di videogiochi ispirato a Steam: un'API REST in Spring Boot e un fronten
 |---|---|
 | **Backend** | Java 25 · Spring Boot 4.1 · Spring Security + JWT · Spring Data JPA / Hibernate 7 · Flyway · PostgreSQL · Spring Mail (Gmail in locale, API di Brevo in produzione) · Cloudinary (copertine) · OpenRouter (assistente) · JUnit 5 + Mockito + H2 · Maven |
 | **Frontend** | React 19 · Vite 8 · Tailwind CSS v4 · React Router 7 · TypeScript · Vitest + Testing Library |
-| **Test** | Backend: 518 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 204 test in 26 file · CI su GitHub Actions |
+| **Test** | Backend: 536 test, con JaCoCo che richiede almeno l'80 % di righe coperte · Frontend: 208 test in 27 file · CI su GitHub Actions |
 | **API** | Swagger UI su `/swagger-ui.html` · 104 richieste nella [collezione Postman](postman/Capstone-Steam.postman_collection.json) |
 
 ---
@@ -104,9 +104,16 @@ I pagamenti sono **simulati**: una carta che termina con `0000` viene sempre rif
 
 **Assistente di consigli.** Un pulsante flottante apre una chat: il giocatore scrive degli aggettivi («cupo, difficile, con una bella storia») e l'assistente risponde con un breve testo e fino a 4 schede di giochi **del catalogo**.
 - `POST /api/recommendations/chat` (con sessione) chiama [OpenRouter](https://openrouter.ai) dal backend: la chiave non arriva mai al browser. Gli id inventati dal modello che non esistono o non sono pubblicati vengono scartati.
+- **Non consiglia giochi che l'utente già ha**: dal catalogo mandato al modello si tolgono quelli della sua libreria (e, se è uno sviluppatore, i propri); il prompt di sistema avvisa che esistono e non vanno citati. Come rete di sicurezza, gli id restituiti dal modello che corrispondono a quei giochi vengono comunque scartati.
 - Limite di 20 messaggi all'ora per utente, in memoria. Messaggi fino a 500 caratteri e un massimo di 10 per richiesta.
 - Senza `OPENROUTER_API_KEY` (o senza rete o senza quota) risponde **503** con un ProblemDetail e la chat mostra «L’assistente non è disponibile in questo momento». Il negozio non si rompe.
 - Il modello predefinito è uno `:free` di OpenRouter. Questi modelli richiedono di **attivare un'opzione di privacy** nell'account OpenRouter (quella che consente di usare i modelli gratuiti); senza di essa, anche l'assistente risponderà 503.
+
+**Assistenza clienti.** La pagina `/support` («Assistenza» nel piè di pagina e nel menu dell'avatar) è un modulo con oggetto e messaggio; senza sessione chiede anche l'email.
+- `POST /api/support` è pubblico e risponde **202 senza corpo**. Oggetto da 3 a 150 caratteri e messaggio da 10 a 3.000 (spazi ai bordi esclusi). Con la sessione si usa sempre l'email dell'account (quella del corpo si ignora); senza sessione l'email è obbligatoria e deve essere valida.
+- **Nulla si salva nel database**: il messaggio esiste solo nella casella di assistenza. L'endpoint pubblica un `SupportRequestEvent` e `MailListener` (in modo asincrono, sul pool `mail-*`; non c'è transazione, quindi niente AFTER_COMMIT) invia due email: l'avviso a `SUPPORT_EMAIL` con oggetto «[Asistenza ARCADE] …» e **`Reply-To` impostato sull'utente** (basta rispondere), e una conferma all'utente nella sua lingua (es, en o it) con una copia dell'oggetto. Senza `SUPPORT_EMAIL` (né `MAIL_FROM` né `MAIL_USERNAME`) si scrive un avviso nel log e parte solo la conferma.
+- Limiti: quello **per IP** delle rotte di autenticazione e **5 richieste all'ora per email**, in memoria (429 `support.rateLimited`). L'oggetto viene appiattito su una riga (nessuna iniezione di intestazioni) e il messaggio compare nell'email con l'escape dell'HTML.
+- `Reply-To` è un campo facoltativo di `EmailService.send` e del client di Brevo (campo JSON `replyTo`); sull'SMTP si usa `helper.setReplyTo`.
 
 ## Requisiti tecnici e dove sono soddisfatti
 
@@ -151,6 +158,7 @@ cp .env.example .env    # e compila i valori
 | `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Consigliata | Se `ADMIN_PASSWORD` ha un valore, l'admin iniziale viene creato all'avvio |
 | `MAIL_USERNAME`, `MAIL_APP_PASSWORD` | Opzionale | Account Gmail e [password per le app](https://myaccount.google.com/apppasswords). Se sono vuote, le email vengono solo scritte nel log |
 | `MAIL_FROM_NAME` | Opzionale | Nome con cui arrivano le email e marchio che vi compare (predefinito `ARCADE`) |
+| `SUPPORT_EMAIL` | Opzionale | Casella che riceve il modulo di assistenza (predefinita `MAIL_FROM`, poi `MAIL_USERNAME`). Con il valore vuoto non parte l'avviso all'assistenza, solo la conferma all'utente |
 | `BREVO_API_KEY` | In produzione | Chiave dell'API di [Brevo](https://www.brevo.com) (piano gratuito, 300 email al giorno). Se c'è, le email escono via HTTPS e non via SMTP: è necessaria su Render free, che blocca le porte SMTP. Il mittente (`MAIL_FROM` o `MAIL_USERNAME`) deve essere verificato in Brevo |
 | `MAIL_TIMEOUT` | Opzionale | Millisecondi di attesa per connessione, lettura e scrittura con l'SMTP (predefinito `15000`). Gli errori di connessione vengono ritentati fino a 3 volte (pause di 2 s e 6 s) |
 | `EMAIL_VERIFICATION_REQUIRED` | Opzionale | Predefinito `true`: creare un account invia un'email con un link e non si può accedere finché non lo si clicca. Con `false` gli account nascono verificati e la registrazione restituisce la sessione (lo usano solo i test) |
@@ -297,6 +305,7 @@ L'autenticazione è `Authorization: Bearer <accessToken>`. Il token si ottiene a
 | POST | `/api/developer/games/{id}/cover` · `/api/admin/games/{id}/cover` | developer (proprietario) · admin | Caricare la copertina (multipart, campo `file`; JPEG, PNG o WebP fino a 5 MB) → il gioco con il suo `coverUrl`. 400 se non è un'immagine valida, 413 se pesa di più, 503 se Cloudinary non è attivo |
 | GET | `/api/uploads/covers/status` | utente | `{"enabled": true\|false}`: indica se il caricamento delle copertine è attivo |
 | POST | `/api/recommendations/chat` | utente | Assistente: `{messages:[{role,content}]}` (massimo 10; l'ultimo, dell'utente) → `{reply, games}`. 429 oltre i 20 messaggi all'ora, 503 se l'assistente non è disponibile |
+| POST | `/api/support` | pubblico | Assistenza clienti: `{email?, subject, message}` → 202 senza corpo. Con la sessione l'email è quella dell'account; senza, `email` è obbligatoria (400 se manca o non è valida). 400 oggetto fuori da 3–150 o messaggio fuori da 10–3.000 caratteri; 429 `support.rateLimited` (limite per IP e 5 all'ora per email). Manda l'avviso a `SUPPORT_EMAIL` (con `Reply-To` sull'utente) e una conferma all'utente |
 | POST | `/api/developer/games/import` | developer | Importare un gioco dallo store di Steam tramite AppID |
 | GET / DELETE | `/api/cart` | utente | Vedere e svuotare il carrello |
 | PUT / DELETE | `/api/cart/items/{gameId}` | utente | Aggiungere e rimuovere (idempotenti) |
@@ -345,7 +354,7 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 ## Test
 
 ```bash
-./mvnw test      # 518 test (H2 in memoria, non serve PostgreSQL)
+./mvnw test      # 536 test (H2 in memoria, non serve PostgreSQL)
 ./mvnw verify    # + report di copertura in target/site/jacoco/index.html (fallisce se scende sotto l'80 % di righe)
 ```
 
@@ -354,13 +363,13 @@ Valori di `sort`: `newest` (predefinito), `price_asc`, `price_desc`, `top_rated`
 | Unitari (Mockito) | `JwtServiceTest`, `AuthServiceTest`, `OrderServiceTest`, `ReviewServiceTest`, `CartServiceTest` | Regole di business isolate: token manomessi o scaduti, delta delle recensioni, pagamento approvato o rifiutato |
 | Repository (`@DataJpaTest` + Flyway reale) | `GameCriteriaRepositoryTest`, `RepositoryIntegrationTest` | Filtri e ordinamenti della Criteria API, UPDATE atomici e vincoli del database |
 | Integrazione HTTP (MockMvc) | `AuthIntegrationTest`, `CatalogIntegrationTest`, `CheckoutIntegrationTest`… | Flussi completi con JWT reale, 401/403/404/409/402 e il formato ProblemDetail |
-| Email asincrona | `MailEventIntegrationTest`, `EmailServiceTest` | L'email parte **dopo il commit**, su un thread `mail-*`, e **non** parte se c'è rollback. I template fanno l'escape dell'HTML, la ricevuta collega solo copertine `https`, nel log l'email del destinatario compare mascherata (`l***@gmail.com`) e ogni email esce nella lingua dell'utente (es, en o it, con lo spagnolo se manca) |
+| Email asincrona | `MailEventIntegrationTest`, `EmailServiceTest`, `SupportIntegrationTest` | L'email parte **dopo il commit**, su un thread `mail-*`, e **non** parte se c'è rollback. I template fanno l'escape dell'HTML, la ricevuta collega solo copertine `https`, nel log l'email del destinatario compare mascherata (`l***@gmail.com`) e ogni email esce nella lingua dell'utente (es, en o it, con lo spagnolo se manca) |
 | Concorrenza | `AtomicUpdateConcurrencyTest`, `RefreshTokenConcurrencyTest` | Thread reali: nessuna vendita va persa, **esattamente 1** pagamento si aggiudica l'ordine e, tra più refresh simultanei con lo stesso token, **solo uno** riceve nuovi token |
 | Nuove funzioni | `ReviewScoreTest`, `FriendIntegrationTest`, `RefreshTokenIntegrationTest`, `CloudinaryCoverStorageTest`, `CoverIntegrationTest`, `RecommendationServiceTest` | Etichette delle recensioni con le regole di Steam, visibilità del profilo, rotazione e riutilizzo dei refresh token, validazione dell'immagine dai byte e limite di dimensione (Cloudinary simulato con `MockRestServiceServer`) e l'assistente con il client di OpenRouter simulato: nessun test chiama la rete |
 
 I test usano H2 in modalità PostgreSQL **con le stesse migrazioni Flyway** della produzione; non c'è `ddl-auto=create`.
 
-**Frontend** (`cd frontend && npm test`): 204 test in 26 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
+**Frontend** (`cd frontend && npm test`): 208 test in 27 file, con Vitest e Testing Library. Coprono il client HTTP (token, errori ProblemDetail, 401 e 402, e il rinnovo della sessione con refresh token), i formattatori, il rilevamento della lingua del browser e i flussi di login, registrazione, verifica dell'email, checkout (ordine → pagamento approvato o rifiutato), impostazioni, il modulo di assistenza, la scheda del gioco (recensioni 👍/👎 e filtro per lingua), amici e profilo, il caricamento delle copertine, la chat dell'assistente e le quattro demo giocabili sulle pagine reali con `fetch` simulato, oltre alla traduzione dell'interfaccia (stesse chiavi nelle tre lingue, bandiere e `Accept-Language`).
 
 **CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) esegue `./mvnw verify` e i test e la build del frontend a ogni push su `main`.
 
